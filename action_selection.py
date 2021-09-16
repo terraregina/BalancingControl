@@ -5,6 +5,293 @@ import scipy.special as scs
 from scipy.stats import entropy
 import matplotlib.pylab as plt
 
+
+# drift diffusion random walker
+class DDM_RandomWalker(object):
+
+    def __init__(self, trials, T, w = 1, s = 0.01, alpha = [-1,1], dt = 0.01, max=10000):
+
+        self.dt = 0.01
+        self.w = w
+        self.s = s
+        self.al = alpha[0]                     # decision boundries
+        self.au = alpha[1]
+        self.max = 10000
+        self.RT = np.zeros([trials,T-1])
+        self.walks = []
+
+    def select_desired_action(self, tau, step, prior, likelihood, posterior,  plot=False, *args):
+        
+        if(args != ()):
+            dt = args[0]
+            max = args[1]
+        else:
+            dt = self.dt
+            max = self.max
+
+        if len(args) > 2:
+            w,s = args[3,4]
+        else:                           # functions as a free parameter which can reflect noisiness of environment or individual capabilities?
+            w,s = [self.w, self.s]      # drift rate, learning dependent on quality of sensory info determining decision
+                                        # diffusion rate, noise?
+
+        d0 = prior[0] - prior[1]            # diff
+        # self.d = A*(prior[0]/prior[1])    # product
+
+                                               
+        Q = likelihood[0] - likelihood[1] # evidence
+
+        walk = [d0]
+        d = d0
+        t = 0
+
+        while(self.al < d and d < self.au):
+
+            if(t < max):
+                epsilon = np.random.normal(0,s)
+                d += w*Q*dt + epsilon
+                walk.append(d)
+                t += 1
+
+            else:
+                print('walk finished')
+                break
+
+
+        if (False):
+            plt.plot(range(0,t,1),walk)
+            plt.show()
+
+        action = d > self.au
+        self.RT[tau, step] = t
+        self.walks.append(walk)
+        
+        return action
+
+
+
+''' Implements the Advantage LBA model (van Ravenzwaaij et al, 2019)'''
+''' selects a decision from N-alternatives through propagating      '''
+''' linear evidence integrators. Decision d_i made when ............'''
+''' Basic equation for integrator:                                  '''
+''' dx_i = v_ij + s*dW                                              '''
+''' v_ij = v0_i + wd*(S_i - S_j) + ws*(S_i + S_j)                   '''
+''' dW = N(0,s)'''
+
+'''Parameters:                                                      '''
+''' z0_i = starting position                                        '''
+''' v0 = urgency                                                    '''
+''' wd, ws = advantage and sum term weights                         '''
+''' s = standard deviation                                          '''
+''' t0 (non-decision time) currently not considered                 '''
+''' b = decision threshold                                          '''
+
+
+# for policy likelihood and post look at perception update_beliefs
+# we want the context averaged out, so look into how it is with prior and likelihood
+# I can do either the free energy or the likelihood, maybe try both
+
+class AdvantageRacingDiffusionSelector(object):
+
+    def __init__ (self, trials, T, number_of_actions, wd = 1, ws = 1, s = 0.1, b= 1, A = 1, v0 = 1):
+        
+        self.s  = s      # standard deviation of decision variable
+        self.wd = wd     # weight of advantage term
+        self.ws = ws     # weight of sum turm 
+        self.v0 = v0     # urgency / bias term
+        self.b = b       # boundary, needs to be implemented
+        self.A = A       # range of possible starting points
+        self.B = b - A   # distance from max starting point to decision boundry
+        self.RT = np.zeros([trials,T-1])
+        self.type = 'ardm'
+        self.na = number_of_actions
+
+    def reset_beliefs(self):
+        pass
+        # self.control_probability[:,:,:] = 0
+
+
+    def set_pars(self, pars):
+        pass    
+
+
+    def log_prior(self):
+        return 0
+
+
+    # currently policies correspond to actions due to T=2
+    # when extended to habit SAT, still possible policies will be selected and pitted against
+    # each other. When policy selected the corresponding next action will be executed
+    
+
+    def select_desired_action(self,tau, t, posterior_pol, actions, *args): #avg_likelihood, prior, dt = 0.01, plot=False):
+        
+        avg_likelihood = args[0]
+        prior = args[1]
+        
+        if (len(args) == 3):
+            dt = args[3]
+        else: 
+            dt = 0.01
+
+        npi = prior.size                                            # number of policies
+        ni = np.math.factorial(npi) / np.math.factorial(npi-2)      # P(2,npi), number of integrators
+        ni = np.int(ni)
+
+        decision_log = np.zeros([10000,ni])                          # log for propagated decision variable
+        decision_log[0,:] = np.repeat(prior, (npi-1))*self.A    # initial conditions for v_ij
+
+        Q = np.tile(avg_likelihood, npi)                                  # set up (S_i - S_j) and (S_i + S_j) terms
+        Q_diff = np.repeat(avg_likelihood, (npi-1)) - np.delete(Q,[npi*i + i for i in np.arange(npi)])
+        Q_sum = np.repeat(avg_likelihood, (npi-1)) + np.delete(Q,[npi*i + i for i in np.arange(npi)])
+    
+        v0 = np.ones(ni)*self.v0                                    # vectorized urgency term
+    
+        bound_reached = np.zeros(npi, dtype = bool)                 # decision made when all integrators for a group are above bound b, Winner takes all strategy. 
+        integrators_that_crossed_bound = 0                          # if pi = 1,2,3, decision for policy 1 made when S_12, S_13 >= b before other sets
+        
+                                          
+        i = 0
+
+
+        while (not np.any(integrators_that_crossed_bound == (npi -1))):                             # if still no decision made
+
+            dW = np.random.normal(scale = self.s, size = ni)
+            decision_log[i+1,:] = decision_log[i,:] + (v0 + self.wd*Q_diff + self.ws*Q_sum)*dt + self.s*dW 
+            bound_reached = decision_log[i+1,:].reshape([npi,npi-1]) >= self.b
+            integrators_that_crossed_bound = bound_reached.sum(axis=1)
+            # print(integrators_that_crossed_bound)
+            i+=1
+
+            if (i > 10000):
+                print("COULDN'T REACH DECISION IN 10000 STEPS")
+                break
+        
+        print('steps taken: ', + i)
+
+        crossed = np.where(integrators_that_crossed_bound == (npi -1))[0][0]             # non-zero returns tuple by default
+
+        if (crossed.size > 1):
+            print('Two integrators crossed decision boundary at the same time')
+            choice = np.random.choice(crossed, p=np.ones(crossed.size)/crossed.size)
+            print(crossed, choice)
+        else:
+            choice = crossed
+
+        self.RT[tau,t] = i
+
+        action = actions[choice]
+
+        self.trajectory = decision_log[:i+1,:]
+        # print(tau,t)
+
+        return action   
+
+
+
+
+class RacingDiffusionSelector(object):
+
+
+    def __init__ (self, trials, T, number_of_actions, wd = 1, s = 0.1, b = 1, A = 1, v0 = 0):
+        
+        self.s  = s      # standard deviation of decision variable
+        self.wd = wd     # weight of advantage term
+        self.v0 = v0     # urgency / bias term
+        self.b = b       # boundary, needs to be implemented
+        self.A = A       # range of possible starting points
+        self.RT = np.zeros([trials,T-1])
+        self.type = 'rdm'
+        self.na = number_of_actions
+        self.control_probability = np.zeros((trials, T, self.na))
+
+    def reset_beliefs(self):
+        pass
+        # self.control_probability[:,:,:] = 0
+
+
+    def set_pars(self, pars):
+        pass    
+
+
+    def log_prior(self):
+        return 0
+
+
+    # currently policies correspond to actions due to T=2
+    # when extended to habit SAT, still possible policies will be selected and pitted against
+    # each other. When policy selected the corresponding next action will be executed
+    
+    #         self.actions[tau, t] = self.action_selection.select_desired_action(tau,
+    #                                    t, posterior_policies, controls, avg_likelihood, prior)
+    
+  # def select_desired_action(self, tau, t, posterior_policies, actions, *args):
+   
+    def select_desired_action(self,tau, t, posterior_pol, actions, *args): #avg_likelihood, prior, dt = 0.01, plot=False):
+        
+        avg_likelihood = args[0]
+        prior = args[1]
+        
+        if (len(args) == 3):
+            dt = args[3]
+        else: 
+            dt = 0.01
+
+        npi = prior.size                                         # number of policies
+        decision_log = np.zeros([10000,npi])                     # log for propagated decision variable
+        decision_log[0,:] = self.A*prior                         # initial conditions for v_ij
+
+        v0 = np.ones(npi)*self.v0                                # vectorized urgency term
+
+        bound_reached = np.zeros(npi, dtype = bool)
+
+        i = 0
+
+        while(not np.any(bound_reached)):                        # if still no decision made
+
+            dW = np.random.normal(scale = self.s, size = npi)
+            decision_log[i+1,:] = decision_log[i,:] + (v0 + self.wd*avg_likelihood)*dt + self.s*dW
+            bound_reached = decision_log[i+1,:] >= self.b
+            i+=1
+
+        crossed = bound_reached.nonzero()[0]                # non-zero returns tuple by default
+
+        if (crossed.size > 1):
+            # raise ValueError('Two integrators crossed decision boundary at the same time')
+            print('Two integrators crossed boundary at the same time, choosing the one that reached furthest in set amount of time')
+            choice = np.random.choice(crossed, p=np.ones(crossed.size)/crossed.size)
+            print(crossed, choice)
+
+        else:
+            choice = crossed[0]
+
+        self.RT[tau,t] = i
+
+        action = actions[choice]
+
+        self.trajectory = decision_log[:i+1,:]
+        # print(tau,t)
+
+        return action
+
+    def estimate_action_probability(self, tau, t, posterior_policies, actions, *args):
+
+        #estimate action probability
+        control_prob = np.zeros(self.na)
+        for a in range(self.na):
+            control_prob[a] = posterior_policies[actions == a].sum()
+
+        self.control_probability[tau, t] = control_prob
+
+'''
+fit it with grid world - look for decrease
+artificial script with 2/3 choices and various prior/like combos
+fitting of two stage task if 2/3 choices work
+flanker
+task switching
+
+'''
+
 class MCMCSelector(object):
 
     def __init__(self, trials = 1, T = 10, number_of_actions = 2, ESS = 50):
