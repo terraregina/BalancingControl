@@ -32,6 +32,7 @@ class DDM_RandomWalker(object):
         if len(args) > 2:
             w,s = args[3,4]
         else:                           # functions as a free parameter which can reflect noisiness of environment or individual capabilities?
+            # print("got here")
             w,s = [self.w, self.s]      # drift rate, learning dependent on quality of sensory info determining decision
                                         # diffusion rate, noise?
 
@@ -44,7 +45,7 @@ class DDM_RandomWalker(object):
         walk = [d0]
         d = d0
         t = 0
-
+        # print(s)
         while(self.al < d and d < self.au):
 
             if(t < max):
@@ -62,7 +63,8 @@ class DDM_RandomWalker(object):
             plt.plot(range(0,t,1),walk)
             plt.show()
 
-        action = d > self.au
+        # d > self.au coresponds to action 0
+        action = not d > self.au
         self.RT[tau, step] = t
         self.walks.append(walk)
         
@@ -193,7 +195,8 @@ class AdvantageRacingDiffusionSelector(object):
 class RacingDiffusionSelector(object):
 
 
-    def __init__ (self, trials, T, number_of_actions, wd = 1, s = 0.1, b = 1, A = 1, v0 = 0):
+    def __init__ (self, trials, T, number_of_actions=2, wd = 1, s = 0.05, b = 1, A = 1, v0 = 0):
+
         
         self.s  = s      # standard deviation of decision variable
         self.wd = wd     # weight of advantage term
@@ -204,6 +207,7 @@ class RacingDiffusionSelector(object):
         self.type = 'rdm'
         self.na = number_of_actions
         self.control_probability = np.zeros((trials, T, self.na))
+        self.walks = []
 
     def reset_beliefs(self):
         pass
@@ -250,7 +254,7 @@ class RacingDiffusionSelector(object):
         while(not np.any(bound_reached)):                        # if still no decision made
 
             dW = np.random.normal(scale = self.s, size = npi)
-            decision_log[i+1,:] = decision_log[i,:] + (v0 + self.wd*avg_likelihood)*dt + self.s*dW
+            decision_log[i+1,:] = decision_log[i,:] + (v0 + self.wd*avg_likelihood)*dt + dW
             bound_reached = decision_log[i+1,:] >= self.b
             i+=1
 
@@ -258,20 +262,16 @@ class RacingDiffusionSelector(object):
 
         if (crossed.size > 1):
             # raise ValueError('Two integrators crossed decision boundary at the same time')
-            print('Two integrators crossed boundary at the same time, choosing the one that reached furthest in set amount of time')
-            choice = np.random.choice(crossed, p=np.ones(crossed.size)/crossed.size)
-            print(crossed, choice)
-
+            print('Two integrators crossed boundary at the same time, choosing one at random')
+            action = np.random.choice(crossed, p=np.ones(crossed.size)/crossed.size)
         else:
-            choice = crossed[0]
+            action = crossed[0]
 
         self.RT[tau,t] = i
 
-        action = actions[choice]
-
-        self.trajectory = decision_log[:i+1,:]
-        # print(tau,t)
-
+        if True:
+            self.walks.append(decision_log[:i+1,:])
+        
         return action
 
     def estimate_action_probability(self, tau, t, posterior_policies, actions, *args):

@@ -148,15 +148,15 @@ test_vals[2].append([post,prior,like])
 
 
 
-for y in range(3):
-    print(y)
-    fig, ax = plt.subplots(2,2, figsize = (8,6))
-    ax = ax.reshape(ax.size)
-    for i in range(4):
-        ax[i].plot(test_vals[y][i][0], label='posterior')
-        ax[i].plot(test_vals[y][i][1], label='prior')
-        ax[i].plot(test_vals[y][i][2], label='likelihood')
-        ax[i].set_title(tests[i])
+# for y in range(3):
+#     print(y)
+#     fig, ax = plt.subplots(2,2, figsize = (8,6))
+#     ax = ax.reshape(ax.size)
+#     for i in range(4):
+#         ax[i].plot(test_vals[y][i][0], label='posterior')
+#         ax[i].plot(test_vals[y][i][1], label='prior')
+#         ax[i].plot(test_vals[y][i][2], label='likelihood')
+#         ax[i].set_title(tests[i])
 
     # plt.close()
 
@@ -209,9 +209,9 @@ def create_titles(mode, selector):
 def run_action_selection(post, prior, like, selector, mode, crit_factor= 0.5, trials = 100, T = 2, plotting=False):
     
     if (selector == 'ddm'): 
-        ac_sel = asl.DDM_RandomWalker(trials,T, s = 0.1)
+        ac_sel = asl.DDM_RandomWalker(trials,T, s = 0.01)
     elif (selector == 'rdm'):
-        ac_sel = asl.RacingDiffusionSelector(trials,T)
+        ac_sel = asl.RacingDiffusionSelector(trials,T, s=0.03)
     elif (selector == 'ardm'):
         ac_sel = asl.AdvantageRacingDiffusionSelector(trials, T)
     elif (selector == 'dirichlet'):
@@ -223,10 +223,10 @@ def run_action_selection(post, prior, like, selector, mode, crit_factor= 0.5, tr
     actions = []
 
     for t in range(trials):
-
+       
         if (selector == 'rdm' or selector == 'ardm'):
 
-            ac_sel.select_desired_action(t, 0, post, list(range(npi)), like, prior, plot=plotting)
+            actions.append(ac_sel.select_desired_action(t, 0, post, list(range(npi)), like, prior))
             # if (t%10 == 0 and (selector == 'rdm' or selector == 'ardm')):
             #     save_trajectory(mode, ac_sel, selector,t)
 
@@ -247,61 +247,167 @@ def save_trajectory(mode,selector,selector_type,t):
 
 
 
+# #%% Simulation with RDM 
+# trials = 100
+# cols = ['r','g','b','k']
+# modes = len(test_vals[0])
+# titles = ['conflict', 'agreement', 'goal','habit']
+# selector = 'rdm'
+# npi = [2,8,81]
+
+# for pol_regime in range(1):                       #for 2,8,81 policies
+#     RTs = []
+#     curr_test_vals = np.asarray(test_vals[pol_regime])
+#     npi = curr_test_vals.shape[2]
+
+#     for mode in range(modes):                                  #for conf,agreement...etc
+#         print(selector,'policy regime:',pol_regime, titles[mode])
+#         post = curr_test_vals[mode,0,:]
+#         prior = curr_test_vals[mode,1,:]
+#         like = curr_test_vals[mode,2,:]
+#         rt, sampler, actions = run_action_selection(post, prior, like, selector, titles[mode], trials=trials, plotting=True)
+#         RTs.append(rt)
+
+
+#         plt.close()
+#         # save example walks
+#         for i in range(len(sampler.walks)):
+#             plt.plot(range(0,len(sampler.walks[i])), sampler.walks[i][:,0], color="k")
+#             plt.plot(range(0,len(sampler.walks[i])), sampler.walks[i][:,1], color = "r")
+#         ttl = "walks_" + titles[mode] +"_npi-"+ str(npi)+"_s-"+str(sampler.s) + "_w-"+str(sampler.wd)+".png"
+#         plt.savefig(ttl)
+        
+        
+#         plt.close()
+#         fig,axs = plt.subplots(1,3, figsize=(7,4))
+        
+#         #plot rt histogram
+#         axs[0].plot(post, label="post")
+#         axs[0].plot(prior, label = "prior")
+#         axs[0].plot(like, label = "like")
+#         axs[0].legend()
+
+#         axs[1].hist(rt, bins=400, label=titles[mode], color=cols[mode])
+#         axs[1].legend()
+
+#         # plot actions and how they approximate posterior over actions
+
+#         height = np.asarray([np.asarray(actions).sum(), trials - np.asarray(actions).sum()])/trials
+#         bars = ('0', '1')
+
+#         # Choose the width of each bar and their positions
+#         width = [1,1]
+#         x_pos = [0,1]
+        
+#         # Make the plot
+#         axs[2].bar(x_pos, height, width=width, alpha=0.8, label="empirical")
+#         axs[2].bar(x_pos, post,width=width, alpha=0.5, label="post")
+#         # axs[2].set_xticks(x_pos, bars)
+#         axs[2].legend()
+#         ttl = selector+"_npi-2_" + titles[mode] + '.png'
+#         plt.savefig(ttl)
+
+#     df = pd.DataFrame(np.asarray(RTs).T, columns=titles)
+
+#     # plot and save
+#     plt.close()
+#     fig_ttl, file_ttl = create_titles(selector, sampler)
+#     plt.figure(figsize=(16, 12.5))
+#     ax = []
+#     miniax = []
+
+#     miniax.append(plt.subplot(4, 4, 1))
+#     miniax.append(plt.subplot(4, 4, 2))
+#     miniax.append(plt.subplot(4, 4, 5))
+#     miniax.append(plt.subplot(4, 4, 6))
+
+#     ax.append(miniax)
+#     ax.append(plt.subplot(2, 2, 2))
+#     ax.append(plt.subplot(2, 1, 2))
+
+
+#     for i in range(4):
+#         ax[0][i].plot(curr_test_vals[i][0], 'o--', label='posterior')
+#         ax[0][i].plot(curr_test_vals[i][1], 'o--', label='prior')
+#         ax[0][i].plot(curr_test_vals[i][2], 'o--', label='likelihood')
+#         ax[0][i].set_title(titles[i])
+
+#     df.boxplot(ax=ax[1], showmeans=True)
+
+#     for i in range(modes):
+#         ax[2].hist(RTs[i], alpha=(1-0.2*i), label=titles[i])
+#     ax[2].legend(loc="lower center",ncol=len(df.columns),bbox_to_anchor=(0.5, -0.1))
+
+#     plt.savefig(file_ttl, dpi=100)
+
 #%% Simulation with DDM 2 policies
 
-vals = np.asarray(test_vals[0])
-modes = vals.shape[0]
-RTs = []
-titles = ['conflict', 'agreement', 'goal', 'habit']
-trials = 5000
-plt.figure()
-selector = "ddm"
-for mode in range(1):
+# vals = np.asarray(test_vals[0])
+# modes = vals.shape[0]
+# RTs = []
+# titles = ['conflict', 'agreement', 'goal', 'habit']
+# cols = ['r','g','b','k']
+# trials = 1000
+# plt.figure()
+# selector = "ddm"
+# plt.close()
+# for mode in range(4):
+#     # simulate reaction times
+#     post = vals[mode,0,:]
+#     prior = vals[mode,1,:]
+#     like = vals[mode,2,:]
+#     rt, sampler, actions = run_action_selection(post, prior, like, selector,titles[mode], trials=trials)
 
-    post = vals[mode,0,:]
-    prior = vals[mode,1,:]
-    like = vals[mode,2,:]
-    rt, sampler, actions = run_action_selection(post, prior, like, selector,titles[mode], trials=trials)
-    RTs.append(rt)
+#     RTs.append(rt)
+
+#     fig,axs = plt.subplots(1,3, figsize=(7,4))
+    
+#     #plot rt histogram
+#     axs[0].plot(post, label="post")
+#     axs[0].plot(prior, label = "prior")
+#     axs[0].plot(like, label = "like")
+#     axs[0].legend()
+
+#     axs[1].hist(rt, bins=100, label=titles[mode], color=cols[mode])
+#     axs[1].legend()
+
+#     # # plot walks
+#     # for i in range(len(sampler.walks)):
+#     #     plt.plot(range(0,len(sampler.walks[i])), sampler.walks[i])
+#     # plt.show()
+
+#     # plot actions and how they approximate posterior over actions
+
+#     height = np.asarray([trials - np.asarray(actions).sum(), np.asarray(actions).sum()])/trials
+#     bars = ('0', '1')
+
+#     # Choose the width of each bar and their positions
+#     width = [1,1]
+#     x_pos = [0,1]
+    
+#     # Make the plot
+#     axs[2].bar(x_pos, height, width=width, alpha=0.8, label="empirical")
+#     axs[2].bar(x_pos, post,width=width, alpha=0.5, label="post")
+#     # axs[2].set_xticks(x_pos, bars)
+#     axs[2].legend()
+#     ttl = 'ddm_'+"npi-2_" + titles[mode] + '.png'
+#     plt.savefig(ttl)
 
 
-plt.hist(rt)
-plt.show()
-
-for i in range(len(sampler.walks)):
-    plt.plot(range(0,len(sampler.walks[i])), sampler.walks[i])
-plt.show()
-
-# plot actions
-height = np.asarray([np.asarray(actions).sum(), trials - np.asarray(actions).sum()])/trials
-bars = ('0', '1')
-
-# Choose the width of each bar and their positions
-width = [1,1]
-x_pos = [0,1]
- 
-# Make the plot
-plt.bar(x_pos, height, width=width, alpha=0.8)
-plt.bar(x_pos, post,width=width, alpha=0.5)
-plt.xticks(x_pos, bars)
-plt.show()
 
 
 
-#%% SIMULATION PARAMETERS
-
-trials = 500
-#%% simulate RDM
-
-
+#%% Simulation with RDM 
+trials = 1000
+cols = ['r','g','b','k']
 modes = len(test_vals[0])
 titles = ['conflict', 'agreement', 'goal','habit']
-selectors = ['ardm','rdm']
+selectors = ['rdm']
 # selectors = ['rdm','ardm','dirichlet']
-
+npi = [2,8,81]
 for sel in range(len(selectors)):                                  #for each action selection type
     selector = selectors[sel]
-    for pol_regime in range(len(test_vals)):                       #for 2,8,81 policies
+    for pol_regime in range(1):                       #for 2,8,81 policies
         RTs = []
         curr_test_vals = np.asarray(test_vals[pol_regime])
         npi = curr_test_vals.shape[2]
@@ -311,14 +417,49 @@ for sel in range(len(selectors)):                                  #for each act
             post = curr_test_vals[mode,0,:]
             prior = curr_test_vals[mode,1,:]
             like = curr_test_vals[mode,2,:]
-            rt, selector_object = run_action_selection(post, prior, like, selector, titles[mode], trials=trials, plotting=True)
+            rt, sampler, actions = run_action_selection(post, prior, like, selector, titles[mode], trials=trials, plotting=True)
             RTs.append(rt)
+            plt.close()
+            # save example walks
+            for i in range(len(sampler.walks)):
+                plt.plot(range(0,len(sampler.walks[i])), sampler.walks[i])
+            ttl = "walks_" + titles[mode] +"_npi-"+ str(npi)+"_s-"+str(sampler.s) + "_w-"+str(sampler.wd)+".png"
+            plt.savefig(ttl)
+            plt.close()
+
+            fig,axs = plt.subplots(1,3, figsize=(7,4))
+            
+            #plot rt histogram
+            axs[0].plot(post, label="post")
+            axs[0].plot(prior, label = "prior")
+            axs[0].plot(like, label = "like")
+            axs[0].legend()
+
+            axs[1].hist(rt, bins=400, label=titles[mode], color=cols[mode])
+            axs[1].legend()
+
+            # plot actions and how they approximate posterior over actions
+
+            height = np.asarray([trials - np.asarray(actions).sum(), np.asarray(actions).sum()])/trials
+            bars = ('0', '1')
+
+            # Choose the width of each bar and their positions
+            width = [1,1]
+            x_pos = [0,1]
+            
+            # Make the plot
+            axs[2].bar(x_pos, height, width=width, alpha=0.8, label="empirical")
+            axs[2].bar(x_pos, post,width=width, alpha=0.5, label="post")
+            # axs[2].set_xticks(x_pos, bars)
+            axs[2].legend()
+            ttl = selector+"_npi-2_" + titles[mode] + '.png'
+            plt.savefig(ttl)
 
         df = pd.DataFrame(np.asarray(RTs).T, columns=titles)
 
         # plot and save
         plt.close()
-        fig_ttl, file_ttl = create_titles(selector, selector_object)
+        fig_ttl, file_ttl = create_titles(selector, sampler)
         plt.figure(figsize=(16, 12.5))
         ax = []
         miniax = []
@@ -349,28 +490,28 @@ for sel in range(len(selectors)):                                  #for each act
 
 
 # # ######### PLOT RT DISTRIBUTIONS DIRICHLET
-test_vals = np.asarray(test_vals)
-modes = test_vals.shape[0]
-RTs = []
-titles = ['conflict', 'agreement', 'goal', 'habit']
+# test_vals = np.asarray(test_vals)
+# modes = test_vals.shape[0]
+# RTs = []
+# titles = ['conflict', 'agreement', 'goal', 'habit']
 
-plt.figure()
+# plt.figure()
 
-for mode in range(modes):
+# for mode in range(modes):
 
-    post = test_vals[mode,0,:]
-    prior = test_vals[mode,1,:]
-    like = test_vals[mode,2,:]
-    rt = run_action_selection(post, prior, like, trials,  crit_factor=0.5,calc_dkl=False)
-    RTs.append(rt)
+#     post = test_vals[mode,0,:]
+#     prior = test_vals[mode,1,:]
+#     like = test_vals[mode,2,:]
+#     rt = run_action_selection(post, prior, like, trials,  crit_factor=0.5,calc_dkl=False)
+#     RTs.append(rt)
 
-for i in range(modes):
-    plt.hist(RTs[i], alpha=(1-0.2*i), label=titles[i])
-plt.legend()
+# for i in range(modes):
+#     plt.hist(RTs[i], alpha=(1-0.2*i), label=titles[i])
+# plt.legend()
 
 
-df = pd.DataFrame(np.asarray(RTs).T, columns=titles)
-print(df.describe())
+# df = pd.DataFrame(np.asarray(RTs).T, columns=titles)
+# print(df.describe())
 
 # %%
 
@@ -386,13 +527,13 @@ print(df.describe())
 #     post = test_vals[mode,0,:]
 #     prior = test_vals[mode,1,:]
 #     like = test_vals[mode,2,:]
-#     rt, selector_object = run_action_selection_ddm(post, prior, like, selector, titles[mode], trials, plotting=True)
+#     rt, sampler = run_action_selection_ddm(post, prior, like, selector, titles[mode], trials, plotting=True)
 #     RTs.append(rt)
 
 # df = pd.DataFrame(np.asarray(RTs).T, columns=titles)
 
 # # plot and save
-# fig_ttl, file_ttl = create_titles(selector, selector_object)
+# fig_ttl, file_ttl = create_titles(selector, sampler)
 # plt.figure(figsize=(16, 12.5))
 # ax = []
 # miniax = []
@@ -420,4 +561,6 @@ print(df.describe())
 # ax[2].legend(loc="lower center",ncol=len(df.columns),bbox_to_anchor=(0.5, -0.1))
 
 # plt.savefig(file_ttl, dpi=100)
+
+
 
