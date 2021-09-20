@@ -259,7 +259,6 @@ class RacingDiffusionSelector(object):
             i+=1
 
         crossed = bound_reached.nonzero()[0]                # non-zero returns tuple by default
-
         if (crossed.size > 1):
             # raise ValueError('Two integrators crossed decision boundary at the same time')
             print('Two integrators crossed boundary at the same time, choosing one at random')
