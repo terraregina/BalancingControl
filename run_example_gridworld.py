@@ -32,15 +32,16 @@ plt.style.use('seaborn-whitegrid')
 set parameters
 """
 
+np.random.seed(12425)
 agent = 'bethe'
 #agent = 'meanfield'
 
-save_data = False
+save_data = True
 data_folder = os.path.join('/home/yourname/yourproject','data_folder')
 
 const = 0#1e-10
 
-trials = 200 #number of trials
+trials = 100 #number of trials
 T = 5 #number of time steps in each trial
 Lx = 4 #grid length
 Ly = 5
@@ -65,7 +66,8 @@ def run_agent(par_list, trials=trials, T=T, Lx = Lx, Ly = Ly, ns=ns, na=na):
     #state_unc: state transition uncertainty condition
     #goal_pol: evaluate only policies that lead to the goal
     #utility: goal prior, preference p(o)
-    obs_unc, state_unc, goal_pol, avg, context, utility, h, q = par_list
+    # over_actions -> ddm uses prior and likelihood over actions or policies
+    obs_unc, state_unc, goal_pol, avg, context, utility, over_actions, h, q = par_list
 
 
     """
@@ -234,25 +236,43 @@ def run_agent(par_list, trials=trials, T=T, Lx = Lx, Ly = Ly, ns=ns, na=na):
     """
     set action selection method
     """
+    selector = 'rdm'
+    sel = selector
+    over_actions = True
 
-    if avg:
-
-        sel = 'avg'
-
+    if selector == 'dir':
         ac_sel = asl.DirichletSelector(trials = trials, T = T, factor=0.5,
                                       number_of_actions = na, calc_entropy=False, calc_dkl=False, draw_true_post=True)
+    elif selector == 'ddm':
+        pass
+        # sel = 'max'
+
+        # ac_sel = asl.MaxSelector(trials = trials, T = T,
+                                    #   number_of_actions = na)
+
+    elif selector == 'rdm':
+        ac_sel = asl.RacingDiffusionSelector(trials = trials, T=T, number_of_actions=na, over_actions = over_actions)
+        # ac_sel.over_actions = True
+    elif selector == 'ardm':
+        pass
     else:
-
-        sel = 'max'
-
-        ac_sel = asl.MaxSelector(trials = trials, T = T,
-                                      number_of_actions = na)
-
-#    ac_sel = asl.AveragedPolicySelector(trials = trials, T = T,
-#                                        number_of_policies = npi,
-#                                        number_of_actions = na)
+        print('nothing selected')
 
 
+    name_str = '_rdm-test_'
+    # if avg:
+
+    #     sel = 'avg'
+
+    #     ac_sel = asl.DirichletSelector(trials = trials, T = T, factor=0.5,
+    #                                   number_of_actions = na, calc_entropy=False, calc_dkl=False, draw_true_post=True)
+    # else:
+
+    #     sel = 'max'
+
+    #     ac_sel = asl.MaxSelector(trials = trials, T = T,
+    #                                   number_of_actions = na)
+        
     """
     set up agent
     """
@@ -352,190 +372,190 @@ def run_agent(par_list, trials=trials, T=T, Lx = Lx, Ly = Ly, ns=ns, na=na):
  (199/255, 174/255, 147/255)]
 
     #set up figure params
-    # ~ factor = 3
-    # ~ grid_plot_kwargs = {'vmin': -2, 'vmax': 2, 'center': 0, 'linecolor': '#D3D3D3',
-                        # ~ 'linewidths': 7, 'alpha': 1, 'xticklabels': False,
-                        # ~ 'yticklabels': False, 'cbar': False,
-                        # ~ 'cmap': palette}#sns.diverging_palette(120, 45, as_cmap=True)} #"RdBu_r",
+    factor = 3
+    grid_plot_kwargs = {'vmin': -2, 'vmax': 2, 'center': 0, 'linecolor': '#D3D3D3',
+                        'linewidths': 7, 'alpha': 1, 'xticklabels': False,
+                        'yticklabels': False, 'cbar': False,
+                        'cmap': palette}#sns.diverging_palette(120, 45, as_cmap=True)} #"RdBu_r",
 
-    # ~ # plot grid
-    # ~ fig = plt.figure(figsize=[factor*5,factor*4])
+    # plot grid
+    fig = plt.figure(figsize=[factor*5,factor*4])
 
-    # ~ ax = fig.gca()
+    ax = fig.gca()
 
-    # ~ annot = np.zeros((Lx,Ly))
-    # ~ for i in range(Lx):
-        # ~ for j in range(Ly):
-            # ~ annot[i,j] = i*Ly+j
+    annot = np.zeros((Lx,Ly))
+    for i in range(Lx):
+        for j in range(Ly):
+            annot[i,j] = i*Ly+j
 
-    # ~ u = sns.heatmap(start_goal, ax = ax, **grid_plot_kwargs, annot=annot, annot_kws={"fontsize": 40})
-    # ~ ax.invert_yaxis()
-    # ~ plt.savefig('grid.svg', dpi=600)
-    # ~ #plt.show()
-
-    # ~ # set up paths figure
-    # ~ fig = plt.figure(figsize=[factor*5,factor*4])
-
-    # ~ ax = fig.gca()
-
-    # ~ u = sns.heatmap(start_goal, zorder=2, ax = ax, **grid_plot_kwargs)
-    # ~ ax.invert_yaxis()
-
-    # ~ #find paths and count them
-    # ~ n1 = np.zeros((ns, na))
-
-    # ~ for i in successfull_g1:
-
-        # ~ for j in range(T-1):
-            # ~ d = environment.hidden_states[i, j+1] - environment.hidden_states[i, j]
-            # ~ if d not in [1,-1,Ly,-Ly,0]:
-                # ~ print("ERROR: beaming")
-            # ~ if d == 1:
-                # ~ n1[environment.hidden_states[i, j],0] +=1
-            # ~ if d == -1:
-                # ~ n1[environment.hidden_states[i, j]-1,0] +=1
-            # ~ if d == Ly:
-                # ~ n1[environment.hidden_states[i, j],1] +=1
-            # ~ if d == -Ly:
-                # ~ n1[environment.hidden_states[i, j]-Ly,1] +=1
-
-    # ~ n2 = np.zeros((ns, na))
-
-    # ~ if context:
-        # ~ for i in successfull_g2:
-
-            # ~ for j in range(T-1):
-                # ~ d = environment.hidden_states[i, j+1] - environment.hidden_states[i, j]
-                # ~ if d not in [1,-1,Ly,-Ly,0]:
-                    # ~ print("ERROR: beaming")
-                # ~ if d == 1:
-                    # ~ n2[environment.hidden_states[i, j],0] +=1
-                # ~ if d == -1:
-                    # ~ n2[environment.hidden_states[i, j]-1,0] +=1
-                # ~ if d == Ly:
-                    # ~ n2[environment.hidden_states[i, j],1] +=1
-                # ~ if d == -Ly:
-                    # ~ n2[environment.hidden_states[i, j]-Ly,1] +=1
-
-    # ~ un = np.zeros((ns, na))
-
-    # ~ for i in unsuccessfull:
-
-        # ~ for j in range(T-1):
-            # ~ d = environment.hidden_states[i, j+1] - environment.hidden_states[i, j]
-            # ~ if d not in [1,-1,Ly,-Ly,0]:
-                # ~ print("ERROR: beaming")
-            # ~ if d == 1:
-                # ~ un[environment.hidden_states[i, j],0] +=1
-            # ~ if d == -1:
-                # ~ un[environment.hidden_states[i, j]-1,0] +=1
-            # ~ if d == Ly:
-                # ~ un[environment.hidden_states[i, j],1] +=1
-            # ~ if d == -Ly:
-                # ~ un[environment.hidden_states[i, j]-4,1] +=1
-
-    # ~ total_num = n1.sum() + n2.sum() + un.sum()
-
-    # ~ if np.any(n1 > 0):
-        # ~ n1 /= total_num
-
-    # ~ if np.any(n2 > 0):
-        # ~ n2 /= total_num
-
-    # ~ if np.any(un > 0):
-        # ~ un /= total_num
-
-    # ~ #plotting
-    # ~ for i in range(ns):
-
-        # ~ x = [i%Ly + .5]
-        # ~ y = [i//Ly + .5]
-
-        # ~ #plot uncertainties
-        # ~ if obs_unc:
-            # ~ plt.plot(x,y, 'o', color=(219/256,122/256,147/256), markersize=factor*12/(A[i,i])**2, alpha=1.)
-        # ~ if state_unc:
-            # ~ plt.plot(x,y, 'o', color=(100/256,149/256,237/256), markersize=factor*12/(cert_arr[i])**2, alpha=1.)
-
-        # ~ #plot unsuccessful paths
-        # ~ for j in range(2):
-
-            # ~ if un[i,j]>0.0:
-                # ~ if j == 0:
-                    # ~ xp = x + [x[0] + 1]
-                    # ~ yp = y + [y[0] + 0]
-                # ~ if j == 1:
-                    # ~ xp = x + [x[0] + 0]
-                    # ~ yp = y + [y[0] + 1]
-
-                # ~ plt.plot(xp,yp, '-', color='#D5647C', linewidth=factor*75*un[i,j],
-                         # ~ zorder = 9, alpha=1)
-
-    # ~ #set plot title
-    # ~ #plt.title("Planning: successful "+str(round(100*total/trials))+"%", fontsize=factor*9)
-
-    # ~ #plot successful paths on top
-    # ~ for i in range(ns):
-
-        # ~ x = [i%Ly + .5]
-        # ~ y = [i//Ly + .5]
-
-        # ~ for j in range(2):
-
-            # ~ if n1[i,j]>0.0:
-                # ~ if j == 0:
-                    # ~ xp = x + [x[0] + 1]
-                    # ~ yp = y + [y[0]]
-                # ~ if j == 1:
-                    # ~ xp = x + [x[0] + 0]
-                    # ~ yp = y + [y[0] + 1]
-                # ~ plt.plot(xp,yp, '-', color='#4682B4', linewidth=factor*75*n1[i,j],
-                         # ~ zorder = 10, alpha=1)
-
-    # ~ #plot successful paths on top
-    # ~ if context:
-        # ~ for i in range(ns):
-
-            # ~ x = [i%Ly + .5]
-            # ~ y = [i//Ly + .5]
-
-            # ~ for j in range(2):
-
-                # ~ if n2[i,j]>0.0:
-                    # ~ if j == 0:
-                        # ~ xp = x + [x[0] + 1]
-                        # ~ yp = y + [y[0]]
-                    # ~ if j == 1:
-                        # ~ xp = x + [x[0] + 0]
-                        # ~ yp = y + [y[0] + 1]
-                    # ~ plt.plot(xp,yp, '-', color='#55ab75', linewidth=factor*75*n2[i,j],
-                             # ~ zorder = 10, alpha=1)
-
-
-    # ~ #print("percent won", total/trials, "state prior", np.amax(utility))
-
-
-    # ~ plt.savefig('chosen_paths_'+name_str+'h'+str(h)+'.svg')
+    u = sns.heatmap(start_goal, ax = ax, **grid_plot_kwargs, annot=annot, annot_kws={"fontsize": 40})
+    ax.invert_yaxis()
+    plt.savefig('grid.svg', dpi=600)
     #plt.show()
 
-    # max_RT = np.amax(w.agent.action_selection.RT[:,0])
-    # plt.figure()
-    # plt.plot(w.agent.action_selection.RT[:,0], '.')
-    # plt.ylim([0,1.05*max_RT])
-    # plt.xlim([0,trials])
-    # plt.savefig("Gridworld_Dir_h"+str(h)+".svg")
-    # plt.show()
+    # set up paths figure
+    fig = plt.figure(figsize=[factor*5,factor*4])
+
+    ax = fig.gca()
+
+    u = sns.heatmap(start_goal, zorder=2, ax = ax, **grid_plot_kwargs)
+    ax.invert_yaxis()
+
+    #find paths and count them
+    n1 = np.zeros((ns, na))
+
+    for i in successfull_g1:
+
+        for j in range(T-1):
+            d = environment.hidden_states[i, j+1] - environment.hidden_states[i, j]
+            if d not in [1,-1,Ly,-Ly,0]:
+                print("ERROR: beaming")
+            if d == 1:
+                n1[environment.hidden_states[i, j],0] +=1
+            if d == -1:
+                n1[environment.hidden_states[i, j]-1,0] +=1
+            if d == Ly:
+                n1[environment.hidden_states[i, j],1] +=1
+            if d == -Ly:
+                n1[environment.hidden_states[i, j]-Ly,1] +=1
+
+    n2 = np.zeros((ns, na))
+
+    if context:
+        for i in successfull_g2:
+
+            for j in range(T-1):
+                d = environment.hidden_states[i, j+1] - environment.hidden_states[i, j]
+                if d not in [1,-1,Ly,-Ly,0]:
+                    print("ERROR: beaming")
+                if d == 1:
+                    n2[environment.hidden_states[i, j],0] +=1
+                if d == -1:
+                    n2[environment.hidden_states[i, j]-1,0] +=1
+                if d == Ly:
+                    n2[environment.hidden_states[i, j],1] +=1
+                if d == -Ly:
+                    n2[environment.hidden_states[i, j]-Ly,1] +=1
+
+    un = np.zeros((ns, na))
+
+    for i in unsuccessfull:
+
+        for j in range(T-1):
+            d = environment.hidden_states[i, j+1] - environment.hidden_states[i, j]
+            if d not in [1,-1,Ly,-Ly,0]:
+                print("ERROR: beaming")
+            if d == 1:
+                un[environment.hidden_states[i, j],0] +=1
+            if d == -1:
+                un[environment.hidden_states[i, j]-1,0] +=1
+            if d == Ly:
+                un[environment.hidden_states[i, j],1] +=1
+            if d == -Ly:
+                un[environment.hidden_states[i, j]-4,1] +=1
+
+    total_num = n1.sum() + n2.sum() + un.sum()
+
+    if np.any(n1 > 0):
+        n1 /= total_num
+
+    if np.any(n2 > 0):
+        n2 /= total_num
+
+    if np.any(un > 0):
+        un /= total_num
+
+    #plotting
+    for i in range(ns):
+
+        x = [i%Ly + .5]
+        y = [i//Ly + .5]
+
+        #plot uncertainties
+        if obs_unc:
+            plt.plot(x,y, 'o', color=(219/256,122/256,147/256), markersize=factor*12/(A[i,i])**2, alpha=1.)
+        if state_unc:
+            plt.plot(x,y, 'o', color=(100/256,149/256,237/256), markersize=factor*12/(cert_arr[i])**2, alpha=1.)
+
+        #plot unsuccessful paths
+        for j in range(2):
+
+            if un[i,j]>0.0:
+                if j == 0:
+                    xp = x + [x[0] + 1]
+                    yp = y + [y[0] + 0]
+                if j == 1:
+                    xp = x + [x[0] + 0]
+                    yp = y + [y[0] + 1]
+
+                plt.plot(xp,yp, '-', color='#D5647C', linewidth=factor*75*un[i,j],
+                         zorder = 9, alpha=1)
+
+    #set plot title
+    #plt.title("Planning: successful "+str(round(100*total/trials))+"%", fontsize=factor*9)
+
+    #plot successful paths on top
+    for i in range(ns):
+
+        x = [i%Ly + .5]
+        y = [i//Ly + .5]
+
+        for j in range(2):
+
+            if n1[i,j]>0.0:
+                if j == 0:
+                    xp = x + [x[0] + 1]
+                    yp = y + [y[0]]
+                if j == 1:
+                    xp = x + [x[0] + 0]
+                    yp = y + [y[0] + 1]
+                plt.plot(xp,yp, '-', color='#4682B4', linewidth=factor*75*n1[i,j],
+                         zorder = 10, alpha=1)
+
+    #plot successful paths on top
+    if context:
+        for i in range(ns):
+
+            x = [i%Ly + .5]
+            y = [i//Ly + .5]
+
+            for j in range(2):
+
+                if n2[i,j]>0.0:
+                    if j == 0:
+                        xp = x + [x[0] + 1]
+                        yp = y + [y[0]]
+                    if j == 1:
+                        xp = x + [x[0] + 0]
+                        yp = y + [y[0] + 1]
+                    plt.plot(xp,yp, '-', color='#55ab75', linewidth=factor*75*n2[i,j],
+                             zorder = 10, alpha=1)
+
+
+    #print("percent won", total/trials, "state prior", np.amax(utility))
+
+
+    plt.savefig('chosen_paths_'+name_str+'h'+str(h)+'.svg')
+    plt.show()
+
+    max_RT = np.amax(w.agent.action_selection.RT[:,0])
+    plt.figure()
+    plt.plot(w.agent.action_selection.RT[:,0], '.')
+    plt.ylim([0,1.05*max_RT])
+    plt.xlim([0,trials])
+    plt.savefig("Gridworld_Dir_h"+str(h)+".svg")
+    plt.show()
 
     """
     save data
     """
 
-    if save_data:
+    if False:
         jsonpickle_numpy.register_handlers()
 
         ut = np.amax(utility)
-        p_o = '{:02d}'.format(round(ut*10).astype(int))
-        fname = agnt+'_'+condition+'_'+sel+'_initUnc_'+p_o+'.json'
+        p_o ='{:02d}'.format(round(ut*10))
+        fname = agnt+'_'+sel+'_initUnc_'+p_o+'.json'
         fname = os.path.join(data_folder, fname)
         pickled = pickle.encode(w)
         with open(fname, 'w') as outfile:
@@ -561,11 +581,13 @@ def run_gridworld_simulations(repetitions):
     # action selection: avergaed or max selection
     avg = True
     tendencies = [1,1000]
-    context = True
+    context = False
     if context:
         name_str = "context_"
     else:
         name_str = ""
+    
+    over_actions = True
     # parameter list
     l = []
     
@@ -576,7 +598,7 @@ def run_gridworld_simulations(repetitions):
     #l.append([False, True, False, avg, utility])
     
     # or no uncertainty
-    l.append([False, False, False, avg, context, utility])
+    l.append([False, False, False, avg, context, utility, over_actions])
     
     par_list = []
     
@@ -698,7 +720,7 @@ def load_gridworld_simulations(repetitions):
     if context:
         name_str = "context_"
     else:
-        name_str = ""
+        name_str = "not-context"
     # parameter list
     l = []
     
@@ -744,7 +766,7 @@ def load_gridworld_simulations(repetitions):
             w = pickle.decode(data)
             #worlds.append(w)
             RTs[i*trials+n*(repetitions*trials):(i+1)*trials+n*(repetitions*trials)] = w.agent.action_selection.RT[:,0].copy()
-            posterior_policies = np.einsum('tpc,tc->tp', w.agent.posterior_policies[:,-1], w.agent.posterior_context[:,-1])
+            posterior_policies = np.einsum('tpc,tc->tp', w.agent[:,-1], w.agent.posterior_context[:,-1])
             chosen_pols[i*trials+n*(repetitions*trials):(i+1)*trials+n*(repetitions*trials)] = np.argmax(posterior_policies, axis=1)
             chosen = chosen_pols[i*trials+n*(repetitions*trials):(i+1)*trials+n*(repetitions*trials)]
             n_bin = 10
@@ -992,7 +1014,7 @@ def run_action_selection(post, prior, like, trials = trials, crit_factor = 0.4, 
         return ac_sel.RT.squeeze()
     
 
-repetitions = 5
+repetitions = 1
 
 run_gridworld_simulations(repetitions)
 

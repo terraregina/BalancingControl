@@ -6,6 +6,22 @@ from scipy.stats import entropy
 import matplotlib.pylab as plt
 
 
+
+'''
+_______   _______   __       __ 
+/       \ /       \ /  \     /  |
+$$$$$$$  |$$$$$$$  |$$  \   /$$ |
+$$ |  $$ |$$ |  $$ |$$$  \ /$$$ |
+$$ |  $$ |$$ |  $$ |$$$$  /$$$$ |
+$$ |  $$ |$$ |  $$ |$$ $$ $$/$$ |
+$$ |__$$ |$$ |__$$ |$$ |$$$/ $$ |
+$$    $$/ $$    $$/ $$ | $/  $$ |
+$$$$$$$/  $$$$$$$/  $$/      $$/ 
+                                 
+'''
+                                 
+
+
 # drift diffusion random walker
 class DDM_RandomWalker(object):
 
@@ -19,33 +35,63 @@ class DDM_RandomWalker(object):
         self.max = 10000
         self.RT = np.zeros([trials,T-1])
         self.walks = []
+        self.over_actions = True
+        self.type = 'ddm'
 
-    def select_desired_action(self, tau, step, prior, likelihood, posterior,  plot=False, *args):
+    def estimate_action_probability(self, tau, dist_policies, actions, *args):
+
+        #estimate action probability
+        na = np.unique(actions.size)
+        control_prob = np.zeros(na)
+
+        for a in range(na):
+            control_prob[a] = dist_policies[actions == a].sum()
+
+    #    normalize?
+
+        print(control_prob)
+        print( control_prob / control_prob.sum())
+        return  control_prob 
+        # return control_prob/control_prob.sum() 
         
+
+    # def select_desired_action(self, tau, step, prior, likelihood, posterior,  plot=False, *args):
+    def select_desired_action(self, tau, step, posterior, controls, *args):
+    
         if(args != ()):
-            dt = args[0]
-            max = args[1]
+            likelihood = args[0]
+            prior = args[1]
+            dt = args[2]
+            max = args[3]
         else:
             dt = self.dt
             max = self.max
 
-        if len(args) > 2:
+        if len(args) > 4:
             w,s = args[3,4]
         else:                           # functions as a free parameter which can reflect noisiness of environment or individual capabilities?
             # print("got here")
             w,s = [self.w, self.s]      # drift rate, learning dependent on quality of sensory info determining decision
                                         # diffusion rate, noise?
 
+
+        if self.over_actions:
+            # transform a likelihood and prior over policies to a likelihood and prior over actions
+            prior = self.estimate_action_probability(tau, prior, controls)
+            likelihood = self.estimate_action_probability(tau, likelihood, controls)
+
+
         d0 = prior[0] - prior[1]            # diff
         # self.d = A*(prior[0]/prior[1])    # product
 
-                                               
-        Q = likelihood[0] - likelihood[1] # evidence
+                                            
+        Q = likelihood[0] - likelihood[1]   # evidence
 
         walk = [d0]
         d = d0
         t = 0
         # print(s)
+
         while(self.al < d and d < self.au):
 
             if(t < max):
@@ -70,7 +116,20 @@ class DDM_RandomWalker(object):
         
         return action
 
-
+'''
+  ______           _______   _______   __       __ 
+ /      \         /       \ /       \ /  \     /  |
+/$$$$$$  |        $$$$$$$  |$$$$$$$  |$$  \   /$$ |
+$$ |__$$ | ______ $$ |__$$ |$$ |  $$ |$$$  \ /$$$ |
+$$    $$ |/      |$$    $$< $$ |  $$ |$$$$  /$$$$ |
+$$$$$$$$ |$$$$$$/ $$$$$$$  |$$ |  $$ |$$ $$ $$/$$ |
+$$ |  $$ |        $$ |  $$ |$$ |__$$ |$$ |$$$/ $$ |
+$$ |  $$ |        $$ |  $$ |$$    $$/ $$ | $/  $$ |
+$$/   $$/         $$/   $$/ $$$$$$$/  $$/      $$/ 
+'''
+                                                   
+                                                   
+                                                   
 
 ''' Implements the Advantage LBA model (van Ravenzwaaij et al, 2019)'''
 ''' selects a decision from N-alternatives through propagating      '''
@@ -191,11 +250,25 @@ class AdvantageRacingDiffusionSelector(object):
 
 
 
+'''
+ _______   _______   __       __ 
+/       \ /       \ /  \     /  |
+$$$$$$$  |$$$$$$$  |$$  \   /$$ |
+$$ |__$$ |$$ |  $$ |$$$  \ /$$$ |
+$$    $$< $$ |  $$ |$$$$  /$$$$ |
+$$$$$$$  |$$ |  $$ |$$ $$ $$/$$ |
+$$ |  $$ |$$ |__$$ |$$ |$$$/ $$ |
+$$ |  $$ |$$    $$/ $$ | $/  $$ |
+$$/   $$/ $$$$$$$/  $$/      $$/ 
+'''
+                                 
+                            
+
 
 class RacingDiffusionSelector(object):
 
 
-    def __init__ (self, trials, T, number_of_actions=2, wd = 1, s = 0.05, b = 1, A = 1, v0 = 0):
+    def __init__ (self, trials, T, number_of_actions=2, wd = 1, s = 0.03, b = 1, A = 1, v0 = 0, over_actions = False):
 
         
         self.s  = s      # standard deviation of decision variable
@@ -208,6 +281,10 @@ class RacingDiffusionSelector(object):
         self.na = number_of_actions
         self.control_probability = np.zeros((trials, T, self.na))
         self.walks = []
+        self.over_actions = over_actions
+        self.sample_posterior = False
+        self.prior_as_starting_point = True
+        self.sample_other = False
 
     def reset_beliefs(self):
         pass
@@ -222,49 +299,76 @@ class RacingDiffusionSelector(object):
         return 0
 
 
-    # currently policies correspond to actions due to T=2
-    # when extended to habit SAT, still possible policies will be selected and pitted against
-    # each other. When policy selected the corresponding next action will be executed
     
-    #         self.actions[tau, t] = self.action_selection.select_desired_action(tau,
-    #                                    t, posterior_policies, controls, avg_likelihood, prior)
+    def estimate_action_probability(self, tau, dist_policies, actions, *args):
+
+        #estimate action probability
+        na = np.unique(actions).size
+        control_prob = np.zeros(na)
+
+        for a in range(na):
+            control_prob[a] = dist_policies[actions == a].sum()
+
+    #    normalize?
+
+        # print(control_prob)
+        # print(control_prob /control_prob.sum())
+        return  control_prob 
+
+    def select_desired_action(self,tau, t, posterior, controls, *args): #avg_likelihood, prior, dt = 0.01, plot=False):
+    # self.action_selection.select_desired_action(tau, t, posterior_policies, controls, avg_likelihood, prior)
     
-  # def select_desired_action(self, tau, t, posterior_policies, actions, *args):
-   
-    def select_desired_action(self,tau, t, posterior_pol, actions, *args): #avg_likelihood, prior, dt = 0.01, plot=False):
-        
-        avg_likelihood = args[0]
+        likelihood = args[0]
         prior = args[1]
-        
+
+
         if (len(args) == 3):
             dt = args[3]
         else: 
             dt = 0.01
+    
+        if self.over_actions:
+            prior = self.estimate_action_probability(tau, prior, controls)
+            likelihood = self.estimate_action_probability(tau, likelihood, controls)
+            posterior = self.estimate_action_probability(tau, posterior, controls)
 
-        npi = prior.size                                         # number of policies
-        decision_log = np.zeros([10000,npi])                     # log for propagated decision variable
-        decision_log[0,:] = self.A*prior                         # initial conditions for v_ij
+        ni = prior.size                                            # number of integrators, = either na or npi
+        decision_log = np.zeros([10000,ni])                        # log for propagated decision variable
 
-        v0 = np.ones(npi)*self.v0                                # vectorized urgency term
+        if self.prior_as_starting_point:
+            decision_log[0,:] = self.A*prior                        # initial conditions for v_ij
 
-        bound_reached = np.zeros(npi, dtype = bool)
-
+        v0 = np.ones(ni)*self.v0                                    # vectorized urgency term
+        bound_reached = np.zeros(ni, dtype = bool)
         i = 0
 
-        while(not np.any(bound_reached)):                        # if still no decision made
+        if self.sample_posterior:
+            Q = posterior
+        elif self.sample_other:
+            Q  = likelihood+prior
+        else: 
+            Q = likelihood
 
-            dW = np.random.normal(scale = self.s, size = npi)
-            decision_log[i+1,:] = decision_log[i,:] + (v0 + self.wd*avg_likelihood)*dt + dW
+        while(not np.any(bound_reached)):                        # if still no decision made
+            dW = np.random.normal(scale = self.s, size = ni)
+            decision_log[i+1,:] = decision_log[i,:] + (v0 + self.wd*Q)*dt + dW
             bound_reached = decision_log[i+1,:] >= self.b
             i+=1
 
-        crossed = bound_reached.nonzero()[0]                # non-zero returns tuple by default
+        crossed = bound_reached.nonzero()[0]                      # non-zero returns tuple by default
+
+            
         if (crossed.size > 1):
             # raise ValueError('Two integrators crossed decision boundary at the same time')
             print('Two integrators crossed boundary at the same time, choosing one at random')
-            action = np.random.choice(crossed, p=np.ones(crossed.size)/crossed.size)
+            decision = np.random.choice(crossed, p=np.ones(crossed.size)/crossed.size)
         else:
-            action = crossed[0]
+            decision = crossed[0]
+
+        if self.over_actions:
+            action = decision
+        else:
+            action = controls[decision]
 
         self.RT[tau,t] = i
 
@@ -273,14 +377,6 @@ class RacingDiffusionSelector(object):
         
         return action
 
-    def estimate_action_probability(self, tau, t, posterior_policies, actions, *args):
-
-        #estimate action probability
-        control_prob = np.zeros(self.na)
-        for a in range(self.na):
-            control_prob[a] = posterior_policies[actions == a].sum()
-
-        self.control_probability[tau, t] = control_prob
 
 '''
 fit it with grid world - look for decrease
@@ -622,7 +718,7 @@ class MaxSelector(object):
         self.estimate_action_probability(tau, t, posterior_policies, actions)
 
         #generate the desired response from maximum policy probability
-        indices = np.where(posterior_policies == np.amax(posterior_policies))
+        indices = np.where(posterior_policies == np.amax(posterior_policies)) # same as np.argmax but selects all cases wher the max element appears
         u = np.random.choice(actions[indices])
 
         return u

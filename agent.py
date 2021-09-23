@@ -183,6 +183,8 @@ class BayesianPlanner(object):
         posterior_states = self.posterior_states[tau, t]
         posterior_policies = np.einsum('pc,c->p', self.posterior_policies[tau, t], self.posterior_context[tau, 0])
         posterior_policies /= posterior_policies.sum()
+        
+        # average likelihood refers to averaging over contexts
         avg_likelihood = np.einsum('pc,c->p', self.likelihood[tau,t], self.posterior_context[tau, 0])
         avg_likelihood /= avg_likelihood.sum()
         prior = np.einsum('pc,c->p', self.prior_policies[tau-1], self.posterior_context[tau, 0])
