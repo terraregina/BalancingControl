@@ -356,11 +356,12 @@ class RacingDiffusionSelector(object):
             i+=1
 
         crossed = bound_reached.nonzero()[0]                      # non-zero returns tuple by default
-
-            
+        # plt.close()
+        # plt.plot(decision_log[:i+1,:], color='r')
+        # plt.show()    
         if (crossed.size > 1):
             # raise ValueError('Two integrators crossed decision boundary at the same time')
-            print('Two integrators crossed boundary at the same time, choosing one at random')
+            # print('Two integrators crossed boundary at the same time, choosing one at random')
             decision = np.random.choice(crossed, p=np.ones(crossed.size)/crossed.size)
         else:
             decision = crossed[0]
