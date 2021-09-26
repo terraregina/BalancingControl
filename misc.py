@@ -4,6 +4,8 @@ import numpy as np
 import scipy.special as scs
 import matplotlib.pylab as plt
 import seaborn as sns
+import pickle
+import json
 
 def evolve_environment(env):
     trials = env.hidden_states.shape[0]
@@ -537,3 +539,29 @@ def plot_habit_learning(w, results, save_figs=False, fname=''):
 #        plt.savefig(fname+"_utility_a_habit.svg")
 #        plt.savefig(fname+"_utility_a_habit.png", bbox_inches = 'tight', dpi=300)
 #    plt.show()
+
+
+# always pass a list of classes   
+def save_data(file_name, objects):
+
+    with open(file_name, 'wb') as output_file:
+        pickle.dump(objects, output_file)
+
+def load_data(file_name):
+    
+    with open(file_name, 'rb') as file:
+        objects = pickle.load(file)
+
+    return objects
+
+    
+def extract_object(obj):
+
+    keys = []
+    obj_dict = obj.__dict__
+
+    for key in obj_dict:
+        keys.append(key)
+
+
+    return keys, obj_dict

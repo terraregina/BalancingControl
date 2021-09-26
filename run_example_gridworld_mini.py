@@ -68,7 +68,7 @@ data_folder = os.path.join('C:\\Users\\admin\\Desktop\\project\\BalancingControl
 
 const = 0#1e-10
 
-trials = 100 #number of trials
+trials = 200 #number of trials
 T = 5 #number of time steps in each trial
 Lx = 4 #grid length
 Ly = 5
@@ -99,7 +99,8 @@ print("save", save)
 print('\n\nrunning simulations\n\n')
 print('-------------------------')
 
-def run_agent(par_list, trials=trials, T=T, Lx = Lx, Ly = Ly, ns=ns, na=na,s=0.1,run=0):
+def run_agent(par_list, trials=trials, T=T, Lx = Lx, Ly = Ly, ns=ns, na=na,var=0.1,run=0,\
+              sample_post = False, sample_other = False, prior_start = True):
 
     #set parameters:
     #obs_unc: observation uncertainty condition
@@ -112,7 +113,7 @@ def run_agent(par_list, trials=trials, T=T, Lx = Lx, Ly = Ly, ns=ns, na=na,s=0.1
     print("q", q)
     print("h", h)
     
-    name_str = selector + '_s'+ str(s)+'_context_' + str(context) + '_over-actions_'+ str(over_actions)+'_h'+str(h) + '_'+str(run)
+    name_str = selector + '_s'+ str(var)+'_context_' + str(context) + '_over-actions_'+ str(over_actions)+'_h'+str(h) + '_'+str(run)
     """
     create matrices
     """
@@ -249,7 +250,10 @@ def run_agent(par_list, trials=trials, T=T, Lx = Lx, Ly = Ly, ns=ns, na=na,s=0.1
                                     #   number_of_actions = na)
 
     elif selector == 'rdm':
-        ac_sel = asl.RacingDiffusionSelector(trials = trials, T=T, number_of_actions=na, over_actions = over_actions)
+        ac_sel = asl.RacingDiffusionSelector(trials = trials, T=T, s=var, number_of_actions=na, over_actions = over_actions)
+        ac_sel.sample_other = sample_other
+        ac_sel.sample_posterior = sample_post
+        ac_sel.prior_as_starting_point = prior_start
     elif selector == 'ardm':
         pass
     else:
@@ -325,6 +329,7 @@ def run_agent(par_list, trials=trials, T=T, Lx = Lx, Ly = Ly, ns=ns, na=na,s=0.1
     """
     plot and evaluate results
     """
+    plt.close()
     #find successful and unsuccessful runs
     #goal = np.argmax(utility)
     successfull_g1 = np.where(environment.hidden_states[:,-1]==g1)[0]
@@ -517,8 +522,35 @@ def run_agent(par_list, trials=trials, T=T, Lx = Lx, Ly = Ly, ns=ns, na=na,s=0.1
 
 
     #print("percent won", total/trials, "state prior", np.amax(utility))
+    
+    name = 'chosen_path'
+    
+    if over_actions:
+        name += '_actions'
+    else:
+        name += '_policies' 
 
-    plt.savefig('chosen_paths_'+name_str+'.png')
+    if context:
+        name += '_cont-1'
+    else:
+        name += '_cont-0'
+
+    if prior_start:
+        name += '_prior-1'
+    else:
+        name += '_prior-0'
+    
+    if sample_post:
+        name += '_post'
+    elif sample_other:
+        name += '_like'
+    else:
+        name += '_stand'
+
+    b = w.agent.action_selection.b
+    name += '_h'+str(h) + '_s' + str(var) + '_b' + str(b) + '_' + str(run) + '.png'
+
+    plt.savefig(name)
     # plt.savefig('chosen_paths_'+name_str+'h'+str(h)+'.svg')
     # plt.show()
 
@@ -537,7 +569,8 @@ def run_agent(par_list, trials=trials, T=T, Lx = Lx, Ly = Ly, ns=ns, na=na,s=0.1
 set condition dependent up parameters
 """
 
-def run_gridworld_simulations(repetitions, s, over_actions, selector, context):
+def run_gridworld_simulations(repetitions, s, over_actions, selector, context,\
+                              sample_post=False, sample_other=False, prior_start = True):
     # prior over outcomes: encodes utility
     utility = []
 
@@ -550,10 +583,9 @@ def run_gridworld_simulations(repetitions, s, over_actions, selector, context):
     
 
     # action selection: avergaed or max selection
-    avg = True
     tendencies = [1,1000]
 
-    context = False
+
     if context:
         name_str = "context_"
     else:
@@ -575,16 +607,18 @@ def run_gridworld_simulations(repetitions, s, over_actions, selector, context):
     for n,pars in enumerate(par_list):
         h = pars[-1]
         q = qs[n]
-        #worlds = []
+        worlds = []
 
         for i in range(repetitions):
             print("i", i)
 
-            w = run_agent(pars+[q],s=s,run=i)
+            w = run_agent(pars+[q],var=s,run=i, sample_post=sample_post,\
+                                              sample_other=sample_other,\
+                                              prior_start=prior_start)
             # plot agent posterior over context
 
-            # if False:
-            if context:
+            if False:
+            # if context:
 
                 plt.figure()
                 plt.plot(w.agent.posterior_context[:,0,:])
@@ -605,14 +639,37 @@ def run_gridworld_simulations(repetitions, s, over_actions, selector, context):
                 plt.plot(np.einsum('tsc,tc->ts', w.agent.posterior_dirichlet_rew[:,0,1,:,:],w.agent.posterior_context[:,0]))
                 plt.title('unnormalized counts for rew_prob?')
                 plt.show()
+            fname = selector + '_grid'
+
 
             if over_actions:
-                fname = selector + '_gridworld' + '_over-actions_' + name_str +'h' + str(h) + '_rep_' + str(i)
+                fname += '_actions'
             else:
-                fname = selector + '_gridworld' + '_over-policies_' + name_str +'h' + str(h) + '_rep_' + str(i)
+                fname += '_policies' 
     
+            if context:
+                fname += '_cont-1'
+            else:
+                fname += '_cont-0'
 
-            save_data(fname, [w])
+            if prior_start:
+                fname += '_prior-1'
+            else:
+                fname += '_prior-0'
+            
+            if sample_post:
+                fname += '_post'
+            elif sample_other:
+                fname += '_like'
+            else:
+                fname += '_stand'
+
+            b = w.agent.action_selection.b
+            fname += '_h'+str(h) + '_s' + str(s) + '_b' + str(b) + '_' + str(i)
+
+            worlds.append(w)
+           
+        save_data(fname, worlds)
 
 
 
@@ -623,16 +680,79 @@ set parameters
 # np.random.seed(12425)
 agent = 'bethe'
 repetitions = 5
-s = 0.03
-context = False
-over_actions =True
-selector = 'rdm'
-print("selector", selector)
-print("s", s)
-print("agent", agent)
-print("repetitions", repetitions)
-print("over_actions", over_actions)
-print("context", context)
-print("over_actions", over_actions)
-#
-run_gridworld_simulations(repetitions,s, over_actions, selector, context)
+# selector = 'rdm'
+
+''''''
+
+''''
+SIMULATE ALL CONDITIONS
+'''
+# for s in [0.01, 0.03, 0.05, 0.07]:
+
+#     for context in [True, False]:
+#             for over_actions in [False, True]:
+
+#                 # control case
+#                 sample_posterior = False
+#                 sample_other = False
+#                 prior_as_starting_point = True
+
+#                 print('repetitions, s, over_actions, selector, context, sample_other, sample_post, prior_start')
+#                 print(repetitions, s, over_actions, selector, context, sample_other, sample_posterior, prior_as_starting_point)
+
+#                 run_gridworld_simulations(repetitions, s, over_actions, selector, context,\
+#                                         sample_other =sample_other,\
+#                                         sample_post = sample_posterior,\
+#                                         prior_start = prior_as_starting_point)
+
+
+#                 # sampling from posterior 
+
+#                 sample_posterior = True
+#                 sample_other = False
+#                 prior_as_starting_point = True
+#                 print('repetitions, s, over_actions, selector, context, sample_other, sample_post, prior_start')
+#                 print(repetitions, s, over_actions, selector, context, sample_other, sample_posterior, prior_as_starting_point)
+
+#                 run_gridworld_simulations(repetitions, s, over_actions, selector, context,\
+#                                         sample_other =sample_other,\
+#                                         sample_post = sample_posterior,\
+#                                         prior_start = prior_as_starting_point)
+
+
+#                 sample_posterior = True
+#                 sample_other = False
+#                 prior_as_starting_point = False
+#                 print('repetitions, s, over_actions, selector, context, sample_other, sample_post, prior_start')
+#                 print(repetitions, s, over_actions, selector, context, sample_other, sample_posterior, prior_as_starting_point)
+
+#                 run_gridworld_simulations(repetitions, s, over_actions, selector, context,\
+#                                         sample_other =sample_other,\
+#                                         sample_post = sample_posterior,\
+#                                         prior_start = prior_as_starting_point)
+
+
+#                 # sampling with drif rate = likelihood + prior 
+
+#                 sample_posterior = False
+#                 sample_other = True
+#                 prior_as_starting_point = True
+#                 print('repetitions, s, over_actions, selector, context, sample_other, sample_post, prior_start')
+#                 print(repetitions, s, over_actions, selector, context, sample_other, sample_posterior, prior_as_starting_point)
+
+#                 run_gridworld_simulations(repetitions, s, over_actions, selector, context,\
+#                                         sample_other =sample_other,\
+#                                         sample_post = sample_posterior,\
+#                                         prior_start = prior_as_starting_point)
+
+
+#                 sample_posterior = False
+#                 sample_other = True
+#                 prior_as_starting_point = False
+#                 print('repetitions, s, over_actions, selector, context, sample_other, sample_post, prior_start')
+#                 print(repetitions, s, over_actions, selector, context, sample_other, sample_posterior, prior_as_starting_point)
+
+#                 run_gridworld_simulations(repetitions, s, over_actions, selector, context,\
+#                                         sample_other =sample_other,\
+#                                         sample_post = sample_posterior,\
+#                                         prior_start = prior_as_starting_point)

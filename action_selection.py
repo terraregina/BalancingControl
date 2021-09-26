@@ -276,6 +276,7 @@ class RacingDiffusionSelector(object):
         self.v0 = v0     # urgency / bias term
         self.b = b       # boundary, needs to be implemented
         self.A = A       # range of possible starting points
+
         self.RT = np.zeros([trials,T-1])
         self.type = 'rdm'
         self.na = number_of_actions
@@ -285,6 +286,9 @@ class RacingDiffusionSelector(object):
         self.sample_posterior = False
         self.prior_as_starting_point = True
         self.sample_other = False
+        self.episode_walks = []
+        self.trials = trials
+        self.T = T
 
     def reset_beliefs(self):
         pass
@@ -351,15 +355,18 @@ class RacingDiffusionSelector(object):
 
         while(not np.any(bound_reached)):                        # if still no decision made
             dW = np.random.normal(scale = self.s, size = ni)
-            decision_log[i+1,:] = decision_log[i,:] + (v0 + self.wd*Q)*dt + dW
+            decision_log[i+1,:] = decision_log[i,:] + (v0 + self.wd*Q)*dt + (Q>0)*dW
             bound_reached = decision_log[i+1,:] >= self.b
             i+=1
 
         crossed = bound_reached.nonzero()[0]                      # non-zero returns tuple by default
-        # plt.close()
-        # plt.plot(decision_log[:i+1,:], color='r')
-        # plt.show()    
+        
+        
         if (crossed.size > 1):
+            vals = decision_log[i,crossed]
+            selected = np.argmax(vals)
+            decision = crossed[selected]
+
             # raise ValueError('Two integrators crossed decision boundary at the same time')
             # print('Two integrators crossed boundary at the same time, choosing one at random')
             decision = np.random.choice(crossed, p=np.ones(crossed.size)/crossed.size)
@@ -373,8 +380,23 @@ class RacingDiffusionSelector(object):
 
         self.RT[tau,t] = i
 
+
+        # if True:
+        #     print(prior)
+        #     print(likelihood)
+        #     plt.close()
+        #     plt.plot(range(i+1),decision_log[:i+1,:], color='k')
+        #     plt.plot(range(i+1),decision_log[:i+1,decision], color='r')
+        #     plt.title(decision)
+        #     plt.show()
+
         if True:
-            self.walks.append(decision_log[:i+1,:])
+            self.episode_walks.append(decision_log[:i+1,:])
+            if(t == self.T-2):
+                self.walks.append(self.episode_walks.copy())
+                self.episode_walks = []
+            elif self.T == 2:
+                self.walks.append(decision_log[:i+1,:])
         
         return action
 
