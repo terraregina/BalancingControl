@@ -24,28 +24,28 @@ prior = h1.copy()
 like = h2_conf.copy()
 post = prior*like
 post /= post.sum()
-test_vals[1].append([post,prior,like])
+test_vals[0].append([post,prior,like])
 
 # agreement
 prior = h1.copy()
 like = h2_agree.copy()
 post = prior*like
 post /= post.sum()
-test_vals[1].append([post,prior,like])
+test_vals[0].append([post,prior,like])
 
 #goal
 prior = flat
 like = h1.copy()
 post = prior*like
 post /= post.sum()
-test_vals[1].append([post,prior,like])
+test_vals[0].append([post,prior,like])
 
 # habit
 prior = h1.copy()
 like = flat
 post = prior*like
 post /= post.sum()
-test_vals[1].append([post,prior,like])
+test_vals[0].append([post,prior,like])
 
 
 ############# setup 8 policies
@@ -66,28 +66,28 @@ prior = h1.copy()
 like = h2_conf.copy()
 post = prior*like
 post /= post.sum()
-test_vals[0].append([post,prior,like])
+test_vals[1].append([post,prior,like])
 
 # agreement
 prior = h1.copy()
 like = h2_agree.copy()
 post = prior*like
 post /= post.sum()
-test_vals[0].append([post,prior,like])
+test_vals[1].append([post,prior,like])
 
 #goal
 prior = flat
 like = h1.copy()
 post = prior*like
 post /= post.sum()
-test_vals[0].append([post,prior,like])
+test_vals[1].append([post,prior,like])
 
 # habit
 prior = h1.copy()
 like = flat
 post = prior*like
 post /= post.sum()
-test_vals[0].append([post,prior,like])
+test_vals[1].append([post,prior,like])
 
 
 ############# setup 81 policies
@@ -160,14 +160,17 @@ def run_action_selection(selector, prior, like, post, trials=10, T=2, prior_as_s
     if selector == 'rdm':
         # not really over_actions, simply avoids passing controls
         ac_sel = action_selection.RacingDiffusionSelector(trials, T, number_of_actions=na, s=var, over_actions=False)
-        ac_sel.prior_as_starting_point = prior_as_start
-        ac_sel.sample_other = sample_other
-        ac_sel.sample_posterior = sample_post
-        print('prior as start, sample_other, sample_post')
-        print(ac_sel.prior_as_starting_point, ac_sel.sample_other, ac_sel.sample_posterior)
+    elif selector == 'ardm':
+        # not really over_actions, simply avoids passing controls
+        ac_sel = action_selection.AdvantageRacingDiffusionSelector(trials, T, number_of_actions=na, s=var, over_actions=False)
     else: 
         raise ValueError('Wrong or no action selection method passed')
     
+    ac_sel.prior_as_starting_point = prior_as_start
+    ac_sel.sample_other = sample_other
+    ac_sel.sample_posterior = sample_post
+    print('prior as start, sample_other, sample_post')
+    print(ac_sel.prior_as_starting_point, ac_sel.sample_other, ac_sel.sample_posterior)
     actions = []
     
     for trial in range(trials):
@@ -192,10 +195,10 @@ def calc_dkl(p,q):
 
 ###########################################
 
-pols = [8]
+pols = [3,8,81]
 vars = np.arange(0.01,0.11,0.01)
 trials = 1000
-
+method = 'ardm'
 
 for i, npi in enumerate(pols):
     dkl = np.zeros([len(pols), len(tests), len(vars)])
@@ -207,7 +210,7 @@ for i, npi in enumerate(pols):
             like = test_vals[i][r][2]
             post = test_vals[i][r][0]
             
-            actions, selector = run_action_selection('rdm', prior, like, post, trials=trials)
+            actions, selector = run_action_selection(method, prior, like, post, trials=trials)
 
             empirical = (np.bincount(actions + [x for x in range(npi)]) - 1) / len(actions)
             dkl[i,r,s] = calc_dkl(empirical, prior)
@@ -221,15 +224,15 @@ for i, npi in enumerate(pols):
         axes[1][r].plot(vars, dkl[i,r,:],'-o')
 
     plt.setp(axes, ylim=axes[0,0].get_ylim())
-    fig.suptitle(str(trials) + ' trials, likelihood as drift rate, DKL of empirical relative to posterior')        
-    ttl = 'dkl_npi'+str(npi)+'_standard.png'
+    fig.suptitle(method + ', ' + str(trials) + ' trials, likelihood as drift rate, DKL of empirical relative to posterior')        
+    ttl = 'dkl_'+method+'_npi'+str(npi)+'_standard.png'
     # plt.show()
     plt.savefig(ttl)
     plt.close()
 
 
         #  post, like , prior  
-params_list = [[True, False, False], [True, False, True], [False, True, False], [False, True, True]]
+params_list = [[False, True, True], [False, True, False]]#[[True, False, False], [True, False, True], [False, True, False], [False, True, True]]
 regimes = ['posterior, no starting point', 'posterior with prior as starting point', 'like+prior, no starting point', 'like+prior, prior as starting point']
 
 for p, pars in enumerate(params_list):
@@ -244,7 +247,7 @@ for p, pars in enumerate(params_list):
                 like = test_vals[i][r][2]
                 post = test_vals[i][r][0]
                 
-                actions, selector = run_action_selection('rdm', prior, like, post, trials=trials,\
+                actions, selector = run_action_selection(method, prior, like, post, trials=trials,\
                                                           sample_post=pars[0], sample_other=pars[1], prior_as_start=pars[2])
 
                 empirical = (np.bincount(actions + [x for x in range(npi)]) - 1) / len(actions)
@@ -259,7 +262,7 @@ for p, pars in enumerate(params_list):
             axes[1][r].plot(vars, dkl[i,r,:],'-o')
 
         plt.setp(axes, ylim=axes[0,0].get_ylim())
-        fig.suptitle(str(trials) + ' trials, ' + regimes[p] + ', DKL relative to posterior')        
-        ttl = 'dkl_npi'+str(npi)+'_'+ regimes[p]+'.png'
+        fig.suptitle(method + ', ' + str(trials) + ' trials, ' + regimes[p] + ', DKL relative to posterior')        
+        ttl = 'dkl_' + method +'_npi'+str(npi)+'_'+ regimes[p]+'.png'
         # plt.show()
         plt.savefig(ttl)

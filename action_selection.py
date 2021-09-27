@@ -154,7 +154,7 @@ $$/   $$/         $$/   $$/ $$$$$$$/  $$/      $$/
 
 class AdvantageRacingDiffusionSelector(object):
 
-    def __init__ (self, trials, T, number_of_actions, wd = 1, ws = 1, s = 0.1, b= 1, A = 1, v0 = 1):
+    def __init__ (self, trials, T, number_of_actions, wd = 1, ws = 0, s = 0.1, b= 1, A = 1, v0 = 1, over_actions=False):
         
         self.s  = s      # standard deviation of decision variable
         self.wd = wd     # weight of advantage term
@@ -162,10 +162,20 @@ class AdvantageRacingDiffusionSelector(object):
         self.v0 = v0     # urgency / bias term
         self.b = b       # boundary, needs to be implemented
         self.A = A       # range of possible starting points
-        self.B = b - A   # distance from max starting point to decision boundry
-        self.RT = np.zeros([trials,T-1])
+        # self.B = b - A   # distance from max starting point to decision boundry
+
         self.type = 'ardm'
+        self.trials = trials
+        self.T = T
+        self.RT = np.zeros([trials,T-1])
         self.na = number_of_actions
+        self.walks = []
+        self.episode_walks = []
+        self.over_actions = over_actions
+        self.prior_as_starting_point = True
+        self.sample_other = False
+        self.sample_posterior = False
+
 
     def reset_beliefs(self):
         pass
@@ -180,14 +190,10 @@ class AdvantageRacingDiffusionSelector(object):
         return 0
 
 
-    # currently policies correspond to actions due to T=2
-    # when extended to habit SAT, still possible policies will be selected and pitted against
-    # each other. When policy selected the corresponding next action will be executed
-    
+    def select_desired_action(self,tau, t, posterior, controls, *args): #avg_likelihood, prior, dt = 0.01, plot=False):
+    # def select_desired_action(self,tau, t, posterior, controls, *args): #avg_likelihood, prior, dt = 0.01, plot=False):
 
-    def select_desired_action(self,tau, t, posterior_pol, actions, *args): #avg_likelihood, prior, dt = 0.01, plot=False):
-        
-        avg_likelihood = args[0]
+        likelihood = args[0]
         prior = args[1]
         
         if (len(args) == 3):
@@ -195,58 +201,88 @@ class AdvantageRacingDiffusionSelector(object):
         else: 
             dt = 0.01
 
-        npi = prior.size                                            # number of policies
-        ni = np.math.factorial(npi) / np.math.factorial(npi-2)      # P(2,npi), number of integrators
-        ni = np.int(ni)
 
-        decision_log = np.zeros([10000,ni])                          # log for propagated decision variable
-        decision_log[0,:] = np.repeat(prior, (npi-1))*self.A    # initial conditions for v_ij
+        if self.over_actions:
+            prior = self.estimate_action_probability(tau, prior, controls)
+            likelihood = self.estimate_action_probability(tau, likelihood, controls)
+            posterior = self.estimate_action_probability(tau, posterior, controls)
 
-        Q = np.tile(avg_likelihood, npi)                                  # set up (S_i - S_j) and (S_i + S_j) terms
-        Q_diff = np.repeat(avg_likelihood, (npi-1)) - np.delete(Q,[npi*i + i for i in np.arange(npi)])
-        Q_sum = np.repeat(avg_likelihood, (npi-1)) + np.delete(Q,[npi*i + i for i in np.arange(npi)])
+
+        npi = prior.size                                               # number of policies
+        ni = np.int(np.math.factorial(npi) / np.math.factorial(npi-2)) # P(2,npi), number of integrators
+
+
+        decision_log = np.zeros([10000,ni])                            # log for propagated decision variable
+
+        if self.prior_as_starting_point:
+            decision_log[0,:] = np.repeat(prior, (npi-1))*self.A       # initial conditions for v_ij
+
+
+        if self.sample_posterior:
+            P = posterior
+        elif self.sample_other:
+            P = likelihood + prior
+        else:
+            P = likelihood
+
+        Q = np.tile(P, npi)                                            # set up (S_i - S_j) and (S_i + S_j) terms
+        Q_diff = np.repeat(P, (npi-1)) - np.delete(Q,[npi*i + i for i in np.arange(npi)])
+        Q_sum = np.repeat(P, (npi-1)) + np.delete(Q,[npi*i + i for i in np.arange(npi)])
     
-        v0 = np.ones(ni)*self.v0                                    # vectorized urgency term
+        v0 = np.ones(ni)*self.v0                                       # vectorized urgency term
     
-        bound_reached = np.zeros(npi, dtype = bool)                 # decision made when all integrators for a group are above bound b, Winner takes all strategy. 
-        integrators_that_crossed_bound = 0                          # if pi = 1,2,3, decision for policy 1 made when S_12, S_13 >= b before other sets
+        bound_reached = np.zeros(npi, dtype = bool)                    # decision made when all integrators for a group are above bound b, Winner takes all strategy. 
+        integrators_that_crossed_bound = 0                             # if pi = 1,2,3, decision for policy 1 made when S_12, S_13 >= b before other sets
         
                                           
         i = 0
 
 
-        while (not np.any(integrators_that_crossed_bound == (npi -1))):                             # if still no decision made
+        while (not np.any(integrators_that_crossed_bound == (npi -1))):                 # if still no decision made
 
             dW = np.random.normal(scale = self.s, size = ni)
-            decision_log[i+1,:] = decision_log[i,:] + (v0 + self.wd*Q_diff + self.ws*Q_sum)*dt + self.s*dW 
+            decision_log[i+1,:] = decision_log[i,:] + (v0 + self.wd*Q_diff + self.ws*Q_sum)*dt + dW 
             bound_reached = decision_log[i+1,:].reshape([npi,npi-1]) >= self.b
             integrators_that_crossed_bound = bound_reached.sum(axis=1)
-            # print(integrators_that_crossed_bound)
             i+=1
 
-            if (i > 10000):
+            if (i > 5000):
                 print("COULDN'T REACH DECISION IN 10000 STEPS")
-                break
-        
-        print('steps taken: ', + i)
+                break    
 
-        crossed = np.where(integrators_that_crossed_bound == (npi -1))[0][0]             # non-zero returns tuple by default
+        crossed = np.where(integrators_that_crossed_bound == (npi -1))[0]             # non-zero returns tuple by default
 
         if (crossed.size > 1):
-            print('Two integrators crossed decision boundary at the same time')
-            choice = np.random.choice(crossed, p=np.ones(crossed.size)/crossed.size)
-            print(crossed, choice)
+            # print('Two integrators crossed decision boundary at the same time')
+            total_dist_travelled_by_all_integrators = decision_log[i,:].reshape([npi,npi-1]).sum(axis=1)
+            dist_by_winners = total_dist_travelled_by_all_integrators[crossed]
+            selected = np.argmax(dist_by_winners)
+            decision = crossed[selected]
         else:
-            choice = crossed
+            decision = crossed[0]
+
+
+        if self.over_actions:
+            action = decision
+        else:
+            action = controls[decision]
+
 
         self.RT[tau,t] = i
-
-        action = actions[choice]
 
         self.trajectory = decision_log[:i+1,:]
         # print(tau,t)
 
-        return action   
+        if npi < 10:
+            self.episode_walks.append(decision_log[:i+1,:])
+
+            if(t == self.T-2):
+                self.walks.append(self.episode_walks.copy())
+                self.episode_walks = []
+            elif self.T == 2:
+                self.walks.append(decision_log[:i+1,:])
+        
+        return action
 
 
 
@@ -277,18 +313,18 @@ class RacingDiffusionSelector(object):
         self.b = b       # boundary, needs to be implemented
         self.A = A       # range of possible starting points
 
-        self.RT = np.zeros([trials,T-1])
         self.type = 'rdm'
+        self.trials = trials
+        self.T = T
+        self.RT = np.zeros([trials,T-1])
         self.na = number_of_actions
         self.control_probability = np.zeros((trials, T, self.na))
         self.walks = []
+        self.episode_walks = []
         self.over_actions = over_actions
-        self.sample_posterior = False
         self.prior_as_starting_point = True
         self.sample_other = False
-        self.episode_walks = []
-        self.trials = trials
-        self.T = T
+        self.sample_posterior = False
 
     def reset_beliefs(self):
         pass
@@ -320,8 +356,7 @@ class RacingDiffusionSelector(object):
         return  control_prob 
 
     def select_desired_action(self,tau, t, posterior, controls, *args): #avg_likelihood, prior, dt = 0.01, plot=False):
-    # self.action_selection.select_desired_action(tau, t, posterior_policies, controls, avg_likelihood, prior)
-    
+   
         likelihood = args[0]
         prior = args[1]
 
