@@ -169,8 +169,8 @@ def run_action_selection(selector, prior, like, post, trials=10, T=2, prior_as_s
     ac_sel.prior_as_starting_point = prior_as_start
     ac_sel.sample_other = sample_other
     ac_sel.sample_posterior = sample_post
-    print('prior as start, sample_other, sample_post')
-    print(ac_sel.prior_as_starting_point, ac_sel.sample_other, ac_sel.sample_posterior)
+    # print('prior as start, sample_other, sample_post')
+    # print(ac_sel.prior_as_starting_point, ac_sel.sample_other, ac_sel.sample_posterior)
     actions = []
     
     for trial in range(trials):
@@ -194,75 +194,142 @@ def calc_dkl(p,q):
 
 
 ###########################################
+import pickle
 
 pols = [3,8,81]
 vars = np.arange(0.01,0.11,0.01)
 trials = 1000
-method = 'ardm'
 
+all_dkls = []
+methods = ['rdm', 'ardm']
+
+             #  post, like , prior
+params_list = [[False, False, True],\
+               [True, False, False],\
+               [True, False, True],\
+               [False, True, False],\
+               [False, True, True]]
+
+regimes = ['standard','posterior, no starting point', 'posterior with prior as starting point', 'like+prior, no starting point', 'like+prior, prior as starting point']
+labs = ['standard', 'post', 'post, prior', 'like+prior', 'like+prior, prior']
+cols = ['k', 'tab:blue', 'tab:blue', 'tab:orange', 'tab:orange']
+linestyles =[ 'solid', 'dashed', 'solid','dashed', 'solid']
+markers = ['.', 'x', 'o', 'x', 'o']
 for i, npi in enumerate(pols):
-    dkl = np.zeros([len(pols), len(tests), len(vars)])
-    fig, axes = plt.subplots(2,4, figsize=(15,5))
-    axes[0,0].set_ylim([0,1])
-    for r, regime in enumerate(tests):
-        for s, var in enumerate(vars):
+    print(npi)
+    for method in methods:
+        dkl = np.zeros([len(pols), len(params_list), len(tests), len(vars)])
+        fig, axes = plt.subplots(2,4, figsize=(15,5))
+        axes[0,0].set_ylim([0,3])
+
+        for r, regime in enumerate(tests):
+            print(regime)
+
             prior = test_vals[i][r][1] 
             like = test_vals[i][r][2]
             post = test_vals[i][r][0]
-            
-            actions, selector = run_action_selection(method, prior, like, post, trials=trials)
 
-            empirical = (np.bincount(actions + [x for x in range(npi)]) - 1) / len(actions)
-            dkl[i,r,s] = calc_dkl(empirical, prior)
-            
-        axes[0][r].plot(prior, label='prior')
-        axes[0][r].plot(like, label='like')
-        axes[0][r].plot(post, label='post')
-        axes[0][r].legend()
-        axes[0][r].set_title(tests[r])
-
-        axes[1][r].plot(vars, dkl[i,r,:],'-o')
-
-    plt.setp(axes, ylim=axes[0,0].get_ylim())
-    fig.suptitle(method + ', ' + str(trials) + ' trials, likelihood as drift rate, DKL of empirical relative to posterior')        
-    ttl = 'dkl_'+method+'_npi'+str(npi)+'_standard.png'
-    # plt.show()
-    plt.savefig(ttl)
-    plt.close()
-
-
-        #  post, like , prior  
-params_list = [[False, True, True], [False, True, False]]#[[True, False, False], [True, False, True], [False, True, False], [False, True, True]]
-regimes = ['posterior, no starting point', 'posterior with prior as starting point', 'like+prior, no starting point', 'like+prior, prior as starting point']
-
-for p, pars in enumerate(params_list):
-
-    for i, npi in enumerate(pols):
-        dkl = np.zeros([len(pols), len(tests), len(vars)])
-        fig, axes = plt.subplots(2,4, figsize=(15,5))
-        axes[0,0].set_ylim([0,1])
-        for r, regime in enumerate(tests):
-            for s, var in enumerate(vars):
-                prior = test_vals[i][r][1] 
-                like = test_vals[i][r][2]
-                post = test_vals[i][r][0]
-                
-                actions, selector = run_action_selection(method, prior, like, post, trials=trials,\
-                                                          sample_post=pars[0], sample_other=pars[1], prior_as_start=pars[2])
-
-                empirical = (np.bincount(actions + [x for x in range(npi)]) - 1) / len(actions)
-                dkl[i,r,s] = calc_dkl(empirical, prior)
-                
             axes[0][r].plot(prior, label='prior')
             axes[0][r].plot(like, label='like')
             axes[0][r].plot(post, label='post')
             axes[0][r].legend()
             axes[0][r].set_title(tests[r])
 
-            axes[1][r].plot(vars, dkl[i,r,:],'-o')
+            for p, pars in enumerate(params_list):
+                print('post, like, prior')
+                print(pars)
+                
 
+                for s, var in enumerate(vars):
+                    
+                    print(var)
+                    actions, selector = run_action_selection(method, prior, like, post, trials=trials,\
+                                                            sample_post=pars[0], sample_other=pars[1], prior_as_start=pars[2])
+
+                    empirical = (np.bincount(actions + [x for x in range(npi)]) - 1) / len(actions)
+                    dkl[i,p,r,s] = calc_dkl(empirical, prior)
+                    
+
+                axes[1][r].plot(vars, dkl[i,p,r,:],color=cols[p], linestyle=linestyles[p], marker=markers[p], label=labs[p])
+            # axes[1][r].legend()
         plt.setp(axes, ylim=axes[0,0].get_ylim())
         fig.suptitle(method + ', ' + str(trials) + ' trials, ' + regimes[p] + ', DKL relative to posterior')        
-        ttl = 'dkl_' + method +'_npi'+str(npi)+'_'+ regimes[p]+'.png'
+        ttl = 'comparison_' + method + '_npi'+str(npi)+'.png'
         # plt.show()
         plt.savefig(ttl)
+
+        all_dkls.append(dkl)
+
+with open("all_dkls.txt", "wb") as fp:   #Pickling
+    pickle.dump(all_dkls, fp)
+
+# for i, npi in enumerate(pols):
+#     dkl = np.zeros([len(pols), len(tests), len(vars)])
+#     fig, axes = plt.subplots(2,4, figsize=(15,5))
+#     axes[0,0].set_ylim([0,1])
+#     for r, regime in enumerate(tests):
+#         for s, var in enumerate(vars):
+#             prior = test_vals[i][r][1] 
+#             like = test_vals[i][r][2]
+#             post = test_vals[i][r][0]
+            
+#             actions, selector = run_action_selection(method, prior, like, post, trials=trials)
+
+#             empirical = (np.bincount(actions + [x for x in range(npi)]) - 1) / len(actions)
+#             dkl[i,r,s] = calc_dkl(empirical, prior)
+            
+#         axes[0][r].plot(prior, label='prior')
+#         axes[0][r].plot(like, label='like')
+#         axes[0][r].plot(post, label='post')
+#         axes[0][r].legend()
+#         axes[0][r].set_title(tests[r])
+
+#         axes[1][r].plot(vars, dkl[i,r,:],'-o')
+
+#     plt.setp(axes, ylim=axes[0,0].get_ylim())
+#     fig.suptitle(method + ', ' + str(trials) + ' trials, likelihood as drift rate, DKL of empirical relative to posterior')        
+#     ttl = 'dkl_'+method+'_npi'+str(npi)+'_standard.png'
+#     # plt.show()
+#     plt.savefig(ttl)
+#     plt.close()
+
+
+             #  post, like , prior  
+# params_list = [[True, False, False], [True, False, True], [False, True, False], [False, True, True]]
+# regimes = ['posterior, no starting point', 'posterior with prior as starting point', 'like+prior, no starting point', 'like+prior, prior as starting point']
+
+# for p, pars in enumerate(params_list):
+#     print('post, like, prior')
+#     print(pars)
+#     for i, npi in enumerate(pols):
+#         print(npi)
+#         dkl = np.zeros([len(pols), len(tests), len(vars)])
+#         fig, axes = plt.subplots(2,4, figsize=(15,5))
+#         axes[0,0].set_ylim([0,1])
+#         for r, regime in enumerate(tests):
+#             print(regime)
+#             for s, var in enumerate(vars):
+#                 print(var)
+#                 prior = test_vals[i][r][1] 
+#                 like = test_vals[i][r][2]
+#                 post = test_vals[i][r][0]
+                
+#                 actions, selector = run_action_selection(method, prior, like, post, trials=trials,\
+#                                                           sample_post=pars[0], sample_other=pars[1], prior_as_start=pars[2])
+
+#                 empirical = (np.bincount(actions + [x for x in range(npi)]) - 1) / len(actions)
+#                 dkl[i,r,s] = calc_dkl(empirical, prior)
+                
+#             axes[0][r].plot(prior, label='prior')
+#             axes[0][r].plot(like, label='like')
+#             axes[0][r].plot(post, label='post')
+#             axes[0][r].legend()
+#             axes[0][r].set_title(tests[r])
+
+#             axes[1][r].plot(vars, dkl[i,r,:],'-o')
+
+#         plt.setp(axes, ylim=axes[0,0].get_ylim())
+#         fig.suptitle(method + ', ' + str(trials) + ' trials, ' + regimes[p] + ', DKL relative to posterior')        
+#         ttl = 'dkl_' + method +'_npi'+str(npi)+'_'+ regimes[p]+'.png'
+#         # plt.show()
+#         plt.savefig(ttl)
