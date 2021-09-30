@@ -147,9 +147,7 @@ if plot:
         plt.show()
 
 
-'''Calculate how posterior is approximated for different setups dependent on variance.
-Hence I will have a 2 x 4 figure where the top panel will have the engineered dists and
-below there will be DKL vs variance. I need to generate this for all variants.
+'''Calculate and compare how well posterior is approximated for different setups dependent on variance.
 '''
 
 
@@ -210,11 +208,14 @@ params_list = [[False, False, True],\
                [False, True, False],\
                [False, True, True]]
 
+
 regimes = ['standard','posterior, no starting point', 'posterior with prior as starting point', 'like+prior, no starting point', 'like+prior, prior as starting point']
 labs = ['standard', 'post', 'post, prior', 'like+prior', 'like+prior, prior']
 cols = ['k', 'tab:blue', 'tab:blue', 'tab:orange', 'tab:orange']
 linestyles =[ 'solid', 'dashed', 'solid','dashed', 'solid']
 markers = ['.', 'x', 'o', 'x', 'o']
+
+
 for i, npi in enumerate(pols):
     print(npi)
     for method in methods:
@@ -260,9 +261,11 @@ for i, npi in enumerate(pols):
 
         all_dkls.append(dkl)
 
-with open("all_dkls.txt", "wb") as fp:   #Pickling
-    pickle.dump(all_dkls, fp)
+# with open("all_dkls.txt", "wb") as fp:   #Pickling
+#    pickle.dump(all_dkls, fp)
 
+
+''' Do so for each method individually'''
 # for i, npi in enumerate(pols):
 #     dkl = np.zeros([len(pols), len(tests), len(vars)])
 #     fig, axes = plt.subplots(2,4, figsize=(15,5))

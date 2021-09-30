@@ -1,4 +1,4 @@
-from misc import ln, logBeta, Beta_function
+# from misc import ln, logBeta, Beta_function
 import numpy as np
 from statsmodels.tsa.stattools import acovf as acov
 import scipy.special as scs
@@ -304,7 +304,7 @@ $$/   $$/ $$$$$$$/  $$/      $$/
 class RacingDiffusionSelector(object):
 
 
-    def __init__ (self, trials, T, number_of_actions=2, wd = 1, s = 0.03, b = 1, A = 1, v0 = 0, over_actions = False):
+    def __init__ (self, trials, T, number_of_actions=2, wd = 1, s = 1, b = 1, A = 1, v0 = 0, over_actions = False):
 
         
         self.s  = s      # standard deviation of decision variable
