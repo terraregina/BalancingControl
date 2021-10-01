@@ -736,3 +736,31 @@ def calc_dkl(p,q):
         raise ValueError('is Nan')
 
     return p.dot(ln)
+
+def extract_params_from_ttl(ttl):
+    names = ['standard', 'post_prior1', 'post_prior0', 'like_prior1', 'like_prior0']
+
+    params_dict = {
+        'standard_b': [False, False, True],
+        'post_prior1': [True, False, True], 
+        'post_prior0': [True, False, False],
+        'like_prior1': [False, True, True], 
+        'like_prior0': [False, True, False]
+    }
+    pars = ttl.split('_')
+
+    for indx, par in enumerate(pars):
+        if par == 'b':
+            b = float(pars[indx+1])
+        if par == 's':
+            s = float(pars[indx+1])
+        if par == 'wd':
+            wd = float(pars[indx+1])
+
+    npi = int(pars[1])
+    selector = pars[2]
+    regime = '_'.join(pars[3:5])
+    pars = params_dict[regime]
+    print(pars)
+    return npi, selector, pars, regime, s, wd, b
+
