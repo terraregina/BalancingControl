@@ -29,7 +29,7 @@ class DDM_RandomWalker(object):
 
         self.dt = 0.01
         self.w = w
-        self.s = s
+        self.s = np.sqrt(s)
         self.al = alpha[0]                     # decision boundries
         self.au = alpha[1]
         self.max = 10000
@@ -156,7 +156,7 @@ class AdvantageRacingDiffusionSelector(object):
 
     def __init__ (self, trials, T, number_of_actions, wd = 1, ws = 0, s = 0.1, b= 1, A = 1, v0 = 1, over_actions=False):
         
-        self.s  = s      # standard deviation of decision variable
+        self.s  = np.sqrt(s)      # standard deviation of decision variable
         self.wd = wd     # weight of advantage term
         self.ws = ws     # weight of sum turm 
         self.v0 = v0     # urgency / bias term
@@ -307,11 +307,11 @@ class RacingDiffusionSelector(object):
     def __init__ (self, trials, T, number_of_actions=2, wd = 1, s = 1, b = 1, A = 1, v0 = 0, over_actions = False):
 
         
-        self.s  = s      # standard deviation of decision variable
-        self.wd = wd     # weight of advantage term
-        self.v0 = v0     # urgency / bias term
-        self.b = b       # boundary, needs to be implemented
-        self.A = A       # range of possible starting points
+        self.s  = np.sqrt(s)      # standard deviation of decision variable
+        self.wd = wd              # weight of advantage term
+        self.v0 = v0              # urgency / bias term
+        self.b = b                # boundary, needs to be implemented
+        self.A = A                # range of possible starting points
 
         self.type = 'rdm'
         self.trials = trials

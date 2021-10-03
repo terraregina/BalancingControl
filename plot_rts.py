@@ -70,7 +70,7 @@ def generate_data():
             
             actions, ac_sel = run_action_selection(selector, prior, like, post, trials,\
                             prior_as_start=prior_as_start, sample_other=sample_other, sample_post=sample_other,\
-                            var=s, wd=wd, b=b)
+                            var=, wd=wd, b=b)
 
             empirical[m,:] = (np.bincount(actions + [x for x in range(npi)]) - 1) / len(actions)
             RT[m,:] = ac_sel.RT.squeeze()
