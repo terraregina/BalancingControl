@@ -588,14 +588,16 @@ def run_action_selection(selector, prior, like, post, trials=10, T=2, prior_as_s
     ac_sel.sample_posterior = sample_post
     ac_sel.wd = wd
     ac_sel.b = b
-    ac_sel.s = var
+    ac_sel.s = np.sqrt(var)
+    # print('sdv:', ac_sel.s)
     # print('prior as start, sample_other, sample_post')
     # print(ac_sel.prior_as_starting_point, ac_sel.sample_other, ac_sel.sample_posterior)
     actions = []
+    # print(ac_sel.type, ac_sel.sample_posterior, ac_sel.sample_other, ac_sel.prior_as_starting_point, ac_sel.b, ac_sel.wd, ac_sel.s)
     
     for trial in range(trials):
         actions.append(ac_sel.select_desired_action(trial, 0, post, controls, like, prior))   #trial, t, post, control, like, prior
-
+    # print(ac_sel.RT[:20].T)
 
     return actions, ac_sel
 
@@ -764,3 +766,10 @@ def extract_params_from_ttl(ttl):
     print(pars)
     return npi, selector, pars, regime, s, wd, b
 
+params_dict = {
+    'standard_b': [False, False, True],
+    'post_prior1': [True, False, True], 
+    'post_prior0': [True, False, False],
+    'like_prior1': [False, True, True], 
+    'like_prior0': [False, True, False]
+}

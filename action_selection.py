@@ -190,6 +190,7 @@ class AdvantageRacingDiffusionSelector(object):
         return 0
 
 
+
     def select_desired_action(self,tau, t, posterior, controls, *args): #avg_likelihood, prior, dt = 0.01, plot=False):
     # def select_desired_action(self,tau, t, posterior, controls, *args): #avg_likelihood, prior, dt = 0.01, plot=False):
 
@@ -212,7 +213,7 @@ class AdvantageRacingDiffusionSelector(object):
         ni = np.int(np.math.factorial(npi) / np.math.factorial(npi-2)) # P(2,npi), number of integrators
 
 
-        decision_log = np.zeros([10000,ni])                            # log for propagated decision variable
+        decision_log = np.zeros([10005,ni])                            # log for propagated decision variable
 
         if self.prior_as_starting_point:
             decision_log[0,:] = np.repeat(prior, (npi-1))*self.A       # initial conditions for v_ij
@@ -237,7 +238,7 @@ class AdvantageRacingDiffusionSelector(object):
                                           
         i = 0
 
-
+        broken = False
         while (not np.any(integrators_that_crossed_bound == (npi -1))):                 # if still no decision made
 
             dW = np.random.normal(scale = self.s, size = ni)
@@ -246,7 +247,8 @@ class AdvantageRacingDiffusionSelector(object):
             integrators_that_crossed_bound = bound_reached.sum(axis=1)
             i+=1
 
-            if (i > 5000):
+            if (i > 10000):
+                broken = True
                 print("COULDN'T REACH DECISION IN 10000 STEPS")
                 break    
 
@@ -258,22 +260,24 @@ class AdvantageRacingDiffusionSelector(object):
             dist_by_winners = total_dist_travelled_by_all_integrators[crossed]
             selected = np.argmax(dist_by_winners)
             decision = crossed[selected]
-        else:
+        elif not broken:
             decision = crossed[0]
 
 
         if self.over_actions:
             action = decision
-        else:
+        elif not broken:
             action = controls[decision]
-
+        else:
+            action = -1
+            broken = False
 
         self.RT[tau,t] = i
 
         self.trajectory = decision_log[:i+1,:]
         # print(tau,t)
 
-        if npi < 10:
+        if False:
             self.episode_walks.append(decision_log[:i+1,:])
 
             if(t == self.T-2):
@@ -283,7 +287,6 @@ class AdvantageRacingDiffusionSelector(object):
                 self.walks.append(decision_log[:i+1,:])
         
         return action
-
 
 
 '''
@@ -372,7 +375,7 @@ class RacingDiffusionSelector(object):
             posterior = self.estimate_action_probability(tau, posterior, controls)
 
         ni = prior.size                                            # number of integrators, = either na or npi
-        decision_log = np.zeros([10000,ni])                        # log for propagated decision variable
+        decision_log = np.zeros([10005,ni])                        # log for propagated decision variable
 
         if self.prior_as_starting_point:
             decision_log[0,:] = self.A*prior                        # initial conditions for v_ij
@@ -388,11 +391,17 @@ class RacingDiffusionSelector(object):
         else: 
             Q = likelihood
 
+        broken = False
         while(not np.any(bound_reached)):                        # if still no decision made
             dW = np.random.normal(scale = self.s, size = ni)
             decision_log[i+1,:] = decision_log[i,:] + (v0 + self.wd*Q)*dt + (Q>0)*dW
             bound_reached = decision_log[i+1,:] >= self.b
             i+=1
+
+            if i > 10000:
+                action = -1
+                broken = True
+                break
 
         crossed = bound_reached.nonzero()[0]                      # non-zero returns tuple by default
         
@@ -405,13 +414,16 @@ class RacingDiffusionSelector(object):
             # raise ValueError('Two integrators crossed decision boundary at the same time')
             # print('Two integrators crossed boundary at the same time, choosing one at random')
             decision = np.random.choice(crossed, p=np.ones(crossed.size)/crossed.size)
-        else:
+        elif not broken:
             decision = crossed[0]
 
         if self.over_actions:
             action = decision
-        else:
+        elif not broken:
             action = controls[decision]
+        else:
+            action = -1
+            broken = False
 
         self.RT[tau,t] = i
 
@@ -425,7 +437,7 @@ class RacingDiffusionSelector(object):
         #     plt.title(decision)
         #     plt.show()
 
-        if True:
+        if False:
             self.episode_walks.append(decision_log[:i+1,:])
             if(t == self.T-2):
                 self.walks.append(self.episode_walks.copy())
