@@ -7,6 +7,7 @@ import seaborn as sns
 import pickle
 import json
 import action_selection as asl
+import pandas as pd
 
 def evolve_environment(env):
     trials = env.hidden_states.shape[0]
@@ -763,7 +764,7 @@ def extract_params_from_ttl(ttl):
     selector = pars[2]
     regime = '_'.join(pars[3:5])
     pars = params_dict[regime]
-    print(pars)
+    # print(pars)
     return npi, selector, pars, regime, s, wd, b
 
 params_dict = {
@@ -773,3 +774,283 @@ params_dict = {
     'like_prior1': [False, True, True], 
     'like_prior0': [False, True, False]
 }
+
+modes = ['conflict', 'agreement', 'goal', 'habit']
+nmodes = len(modes)
+
+params_list = [[False, False, True, 'standard'],\
+              [True, False, True, 'post_prior1' ],\
+              [True, False, False, 'post_prior0'],\
+              [False, True, True, 'like_prior1' ],\
+              [False, True, False, 'like_prior0']]
+
+
+# ss = [0.01, 0.03, 0.05, 0.07, 0.1]
+# wds = np.arange(0.5,2.5,0.5)
+# bs = np.arange(1, 2.5, 0.5)
+
+# ss = [0.01, 0.03, 0.05, 0.07, 0.1]
+# wds = [0.7, 0.9, 1.3, 1.7, 1.9, 2.1, 2.3]
+# bs = [1, 1.3, 1.7, 1.9, 2.1, 2.3]
+
+import itertools as itertools
+import os as os
+bs = np.arange(1,3,0.3).round(4)
+bs = np.arange(1,3,0.3).round(4)
+ss = np.arange(0.005, 0.011, 0.001).round(5)
+wds = np.arange(200, 10, -10)
+size = wds.size+1
+wds = wds[np.newaxis,:]*ss[:,np.newaxis]
+wds = wds + ss[:,np.newaxis]
+drift_var = np.column_stack((wds.ravel(), ss.repeat(size-1))).round(6)
+# print(drift_var)
+# print((0.01*0.5*drift_var[:,0] + drift_var[:,1]).reshape(len(ss), size-1))
+
+
+pols = np.array([3]) #,8,81]
+polss =  np.array([3,8,81])
+path = os.getcwd() + '\\parameter_data\\'
+par_list = []
+methods = ['rdm', 'ardm']
+parameter_names = ['npi', 'methods', 'b', 'wd', 's', 'params_list']
+for p in itertools.product(pols, methods, bs, drift_var, params_list):
+        par_list.append([p[0]]+[p[1]] + [p[2]]+ [p[3]]+ [p[4]])
+
+
+
+def load_data():
+    files = os.listdir(path)
+
+    posts = np.zeros([len(modes), 3])    # translate the posteriors
+    post = np.asarray(test_vals)[0,:,0]    # into a numpy array
+
+    for indx, p in enumerate(post):
+        posts[indx,:] = np.asarray(p)
+    
+    n = len(files)
+    npis = np.zeros(n,dtype="int32")
+    selectors = np.zeros(n).tolist()
+    bs = np.zeros(n, dtype="int32")
+    wds = np.zeros(n)
+    ss = np.zeros(n)
+    regimes = np.zeros(n).tolist()
+    post_fit = np.zeros(n)
+    conf_mode = np.zeros(n)
+    agr_mode = np.zeros(n)
+    goal_mode = np.zeros(n)
+    hab_mode = np.zeros(n)
+    conf_mean = np.zeros(n)
+    agr_mean = np.zeros(n)
+    goal_mean = np.zeros(n)
+    hab_mean = np.zeros(n)
+    conf_median = np.zeros(n)
+    agr_median = np.zeros(n)
+    goal_median = np.zeros(n)
+    hab_median = np.zeros(n)
+    ttls = ['fuck off']
+
+    for ind, f in enumerate(files):
+        if f != 'old':
+            npis[ind] , selectors[ind], [sample_post, sample_other, prior_as_start], regimes[ind], ss[ind], wds[ind], bs[ind] = \
+                extract_params_from_ttl(f)
+
+            # print('\n', f)
+            # print(extract_params_from_ttl(f))
+            
+            with open(path + f, 'rb') as fp:
+                data = pickle.load(fp)
+
+            empirical = np.asarray(data['empirical'])
+            RTs = np.asarray(data['RT'])
+            conf_mode[ind], agr_mode[ind], goal_mode[ind], hab_mode[ind] = np.asarray(stats.mode(RTs, axis=1)[0]).ravel()
+            conf_mean[ind], agr_mean[ind], goal_mean[ind], hab_mean[ind] = RTs.mean(axis=1)
+            conf_median[ind], agr_median[ind], goal_median[ind], hab_median[ind] = np.median(RTs, axis=1)
+            ttls.append(f)
+            post_fit[ind] = np.abs((posts - empirical)/posts).mean(axis=1).mean()
+
+    data = {'npi': npis,
+                 'selector':selectors,
+                 'b': bs,
+                 'w': wds,
+                 's': ss,
+                 'regime': regimes,
+                 'fit': post_fit,
+                 'conf_mode':conf_mode,
+                 'agr_mode': agr_mode,
+                 'goal_mode': goal_mode,
+                 'hab_mode': hab_mode,
+                 'conf_mean': conf_mean,
+                 'agr_mean': agr_mean,
+                 'goal_mean': goal_mean,
+                 'hab_mean': hab_mean,
+                 'conf_median': conf_median,
+                 'agr_median': agr_median,
+                 'goal_median': goal_median,
+                 'hab_median': hab_median,
+                 'title': ttls
+            }
+    df = pd.DataFrame(data)
+    # return best_fit, diff_best
+    return df
+
+
+
+def load_data_from_ttl():
+
+    posts = np.zeros([len(modes), 3])    # translate the posteriors
+    post = np.asarray(test_vals)[0,:,0]    # into a numpy array
+
+    for indx, p in enumerate(post):
+        posts[indx,:] = np.asarray(p)
+    
+    n = len(par_list)
+    npis = np.zeros(n,dtype="int32")
+    selectors = np.zeros(n).tolist()
+    bs = np.zeros(n, dtype="int32")
+    wds = np.zeros(n)
+    ss = np.zeros(n)
+    regimes = np.zeros(n).tolist()
+    post_fit = np.zeros(n)
+    conf_mode = np.zeros(n)
+    agr_mode = np.zeros(n)
+    goal_mode = np.zeros(n)
+    hab_mode = np.zeros(n)
+    conf_mean = np.zeros(n)
+    agr_mean = np.zeros(n)
+    goal_mean = np.zeros(n)
+    hab_mean = np.zeros(n)
+    conf_median = np.zeros(n)
+    agr_median = np.zeros(n)
+    goal_median = np.zeros(n)
+    hab_median = np.zeros(n)
+    ttls = []
+
+    for ind, p in enumerate(par_list):
+        # print(ind)
+
+        npis[ind] = p[0]
+        selectors[ind] = p[1]
+        bs[ind] = p[2]
+        wds[ind] = p[3]
+        ss[ind] = p[4]
+        sample_post, sample_other, prior_as_start, regimes[ind] = p[5]
+
+
+        ttl = '_'.join(['npi', str(npis[ind]), selectors[ind], regimes[ind] , 'b' ,str(bs[ind]), 'wd',\
+                        str(wds[ind]), 's', str(ss[ind]), '.txt']) 
+        
+        with open(path + ttl, 'rb') as fp:
+            data = pickle.load(fp)
+
+        empirical = np.asarray(data['empirical'])
+        RTs = np.asarray(data['RT'])
+        conf_mode[ind], agr_mode[ind], goal_mode[ind], hab_mode[ind] = np.asarray(stats.mode(RTs, axis=1)[0]).ravel()
+        conf_mean[ind], agr_mean[ind], goal_mean[ind], hab_mean[ind] = RTs.mean(axis=1)
+        conf_median[ind], agr_median[ind], goal_median[ind], hab_median[ind] = np.median(RTs, axis=1)
+        ttls.append(ttl)
+        post_fit[ind] = np.abs((posts - empirical)/posts).mean(axis=1).mean()
+
+    data = {'npi': npis,
+                 'selector':selectors,
+                 'b': bs,
+                 'w': wds,
+                 's': ss,
+                 'regime': regimes,
+                 'fit': post_fit,
+                 'conf_mode':conf_mode,
+                 'agr_mode': agr_mode,
+                 'goal_mode': goal_mode,
+                 'hab_mode': hab_mode,
+                 'conf_mean': conf_mean,
+                 'agr_mean': agr_mean,
+                 'goal_mean': goal_mean,
+                 'hab_mean': hab_mean,
+                 'conf_median': conf_median,
+                 'agr_median': agr_median,
+                 'goal_median': goal_median,
+                 'hab_median': hab_median,
+                 'title': ttls
+            }
+    df = pd.DataFrame(data)
+    # return best_fit, diff_best
+    return df
+
+# def load_data():
+
+#     posts = np.zeros([len(modes), 3])    # translate the posteriors
+#     post = np.asarray(test_vals)[0,:,0]    # into a numpy array
+
+#     for indx, p in enumerate(post):
+#         posts[indx,:] = np.asarray(p)
+    
+#     n = 3502
+#     n = len(par_list)
+#     npis = np.zeros(n,dtype="int32")
+#     selectors = np.zeros(n).tolist()
+#     bs = np.zeros(n, dtype='int32')
+#     wds = np.zeros(n)
+#     ss = np.zeros(n)
+#     regimes = np.zeros(n).tolist()
+#     post_fit = np.zeros(n)
+#     conf_mode = np.zeros(n)
+#     agr_mode = np.zeros(n)
+#     goal_mode = np.zeros(n)
+#     hab_mode = np.zeros(n)
+#     conf_mean = np.zeros(n)
+#     agr_mean = np.zeros(n)
+#     goal_mean = np.zeros(n)
+#     hab_mean = np.zeros(n)
+#     conf_median = np.zeros(n)
+#     agr_median = np.zeros(n)
+#     goal_median = np.zeros(n)
+#     hab_median = np.zeros(n)
+#     ttls = []
+
+#     for ind, p in enumerate(par_list):
+#         if ind < 3502:
+#             npis[ind] = p[0]
+#             selectors[ind] = p[1]
+#             bs[ind] = p[2]
+#             wds[ind] = p[3][0]
+#             ss[ind] = p[3][1]
+#             sample_post, sample_other, prior_as_start, regimes[ind] = p[4]
+
+
+#             ttl = '_'.join(['npi', str(npis[ind]), selectors[ind], regimes[ind] , 'b' ,str(bs[ind]), 'wd',\
+#                             str(wds[ind]), 's', str(ss[ind]), '.txt']) 
+            
+#             with open(path + ttl, 'rb') as fp:
+#                 data = pickle.load(fp)
+
+#             empirical = np.asarray(data['empirical'])
+#             RTs = np.asarray(data['RT'])
+#             conf_mode[ind], agr_mode[ind], goal_mode[ind], hab_mode[ind] = np.asarray(stats.mode(RTs, axis=1)[0]).ravel()
+#             conf_mean[ind], agr_mean[ind], goal_mean[ind], hab_mean[ind] = RTs.mean(axis=1)
+#             conf_median[ind], agr_median[ind], goal_median[ind], hab_median[ind] = np.median(RTs, axis=1)
+#             ttls.append(ttl)
+#             post_fit[ind] = np.abs((posts - empirical)/posts).mean(axis=1).mean()
+
+#     data = {'npi': npis,
+#                 'selector':selectors,
+#                 'b': bs,
+#                 'w': wds,
+#                 's': ss,
+#                 'regime': regimes,
+#                 'fit': post_fit,
+#                 'conf_mode':conf_mode,
+#                 'agr_mode': agr_mode,
+#                 'goal_mode': goal_mode,
+#                 'hab_mode': hab_mode,
+#                 'conf_mean': conf_mean,
+#                 'agr_mean': agr_mean,
+#                 'goal_mean': goal_mean,
+#                 'hab_mean': hab_mean,
+#                 'conf_median': conf_median,
+#                 'agr_median': agr_median,
+#                 'goal_median': goal_median,
+#                 'hab_median': hab_median,
+#                 'title': ttls
+#             }
+#     df = pd.DataFrame(data)
+#         # return best_fit, diff_best
+#     return df
