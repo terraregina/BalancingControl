@@ -254,8 +254,17 @@ def run_agent(par_list, trials=trials, T=T, Lx = Lx, Ly = Ly, ns=ns, na=na,var=0
         ac_sel.sample_other = sample_other
         ac_sel.sample_posterior = sample_post
         ac_sel.prior_as_starting_point = prior_start
+        ac_sel.b = 2
+        ac_sel.wd = 1.809
     elif selector == 'ardm':
-        pass
+        
+        ac_sel = asl.AdvantageRacingDiffusionSelector(trials = trials, T=T, s=var, number_of_actions=na, over_actions = over_actions)
+        ac_sel.sample_other = sample_other
+        ac_sel.sample_posterior = sample_post
+        ac_sel.prior_as_starting_point = prior_start
+        ac_sel.b = 2
+        ac_sel.wd = 1.809
+
     else:
         print('nothing selected')
 
@@ -639,7 +648,7 @@ def run_gridworld_simulations(repetitions, s, over_actions, selector, context,\
                 plt.plot(np.einsum('tsc,tc->ts', w.agent.posterior_dirichlet_rew[:,0,1,:,:],w.agent.posterior_context[:,0]))
                 plt.title('unnormalized counts for rew_prob?')
                 plt.show()
-            fname = selector + '_grid'
+            fname = 'new_' + selector + '_grid'
 
 
             if over_actions:
@@ -687,72 +696,73 @@ repetitions = 5
 ''''
 SIMULATE ALL CONDITIONS
 '''
-# for s in [0.01, 0.03, 0.05, 0.07]:
+selector = 'rdm'
+for s in [0.009]:
 
-#     for context in [True, False]:
-#             for over_actions in [False, True]:
+    for context in [True, False]:
+            for over_actions in [True]:
 
-#                 # control case
-#                 sample_posterior = False
-#                 sample_other = False
-#                 prior_as_starting_point = True
+                # # control case
+                # sample_posterior = False
+                # sample_other = False
+                # prior_as_starting_point = True
 
-#                 print('repetitions, s, over_actions, selector, context, sample_other, sample_post, prior_start')
-#                 print(repetitions, s, over_actions, selector, context, sample_other, sample_posterior, prior_as_starting_point)
+                # print('repetitions, s, over_actions, selector, context, sample_other, sample_post, prior_start')
+                # print(repetitions, s, over_actions, selector, context, sample_other, sample_posterior, prior_as_starting_point)
 
-#                 run_gridworld_simulations(repetitions, s, over_actions, selector, context,\
-#                                         sample_other =sample_other,\
-#                                         sample_post = sample_posterior,\
-#                                         prior_start = prior_as_starting_point)
-
-
-#                 # sampling from posterior 
-
-#                 sample_posterior = True
-#                 sample_other = False
-#                 prior_as_starting_point = True
-#                 print('repetitions, s, over_actions, selector, context, sample_other, sample_post, prior_start')
-#                 print(repetitions, s, over_actions, selector, context, sample_other, sample_posterior, prior_as_starting_point)
-
-#                 run_gridworld_simulations(repetitions, s, over_actions, selector, context,\
-#                                         sample_other =sample_other,\
-#                                         sample_post = sample_posterior,\
-#                                         prior_start = prior_as_starting_point)
+                # run_gridworld_simulations(repetitions, s, over_actions, selector, context,\
+                #                         sample_other =sample_other,\
+                #                         sample_post = sample_posterior,\
+                #                         prior_start = prior_as_starting_point)
 
 
-#                 sample_posterior = True
-#                 sample_other = False
-#                 prior_as_starting_point = False
-#                 print('repetitions, s, over_actions, selector, context, sample_other, sample_post, prior_start')
-#                 print(repetitions, s, over_actions, selector, context, sample_other, sample_posterior, prior_as_starting_point)
+                # # sampling from posterior 
 
-#                 run_gridworld_simulations(repetitions, s, over_actions, selector, context,\
-#                                         sample_other =sample_other,\
-#                                         sample_post = sample_posterior,\
-#                                         prior_start = prior_as_starting_point)
+                # sample_posterior = True
+                # sample_other = False
+                # prior_as_starting_point = True
+                # print('repetitions, s, over_actions, selector, context, sample_other, sample_post, prior_start')
+                # print(repetitions, s, over_actions, selector, context, sample_other, sample_posterior, prior_as_starting_point)
 
-
-#                 # sampling with drif rate = likelihood + prior 
-
-#                 sample_posterior = False
-#                 sample_other = True
-#                 prior_as_starting_point = True
-#                 print('repetitions, s, over_actions, selector, context, sample_other, sample_post, prior_start')
-#                 print(repetitions, s, over_actions, selector, context, sample_other, sample_posterior, prior_as_starting_point)
-
-#                 run_gridworld_simulations(repetitions, s, over_actions, selector, context,\
-#                                         sample_other =sample_other,\
-#                                         sample_post = sample_posterior,\
-#                                         prior_start = prior_as_starting_point)
+                # run_gridworld_simulations(repetitions, s, over_actions, selector, context,\
+                #                         sample_other =sample_other,\
+                #                         sample_post = sample_posterior,\
+                #                         prior_start = prior_as_starting_point)
 
 
-#                 sample_posterior = False
-#                 sample_other = True
-#                 prior_as_starting_point = False
-#                 print('repetitions, s, over_actions, selector, context, sample_other, sample_post, prior_start')
-#                 print(repetitions, s, over_actions, selector, context, sample_other, sample_posterior, prior_as_starting_point)
+                # sample_posterior = True
+                # sample_other = False
+                # prior_as_starting_point = False
+                # print('repetitions, s, over_actions, selector, context, sample_other, sample_post, prior_start')
+                # print(repetitions, s, over_actions, selector, context, sample_other, sample_posterior, prior_as_starting_point)
 
-#                 run_gridworld_simulations(repetitions, s, over_actions, selector, context,\
-#                                         sample_other =sample_other,\
-#                                         sample_post = sample_posterior,\
-#                                         prior_start = prior_as_starting_point)
+                # run_gridworld_simulations(repetitions, s, over_actions, selector, context,\
+                #                         sample_other =sample_other,\
+                #                         sample_post = sample_posterior,\
+                #                         prior_start = prior_as_starting_point)
+
+
+                # sampling with drif rate = likelihood + prior 
+
+                sample_posterior = False
+                sample_other = True
+                prior_as_starting_point = False
+                print('repetitions, s, over_actions, selector, context, sample_other, sample_post, prior_start')
+                print(repetitions, s, over_actions, selector, context, sample_other, sample_posterior, prior_as_starting_point)
+
+                run_gridworld_simulations(repetitions, s, over_actions, selector, context,\
+                                        sample_other =sample_other,\
+                                        sample_post = sample_posterior,\
+                                        prior_start = prior_as_starting_point)
+
+
+                # sample_posterior = False
+                # sample_other = True
+                # prior_as_starting_point = False
+                # print('repetitions, s, over_actions, selector, context, sample_other, sample_post, prior_start')
+                # print(repetitions, s, over_actions, selector, context, sample_other, sample_posterior, prior_as_starting_point)
+
+                # run_gridworld_simulations(repetitions, s, over_actions, selector, context,\
+                #                         sample_other =sample_other,\
+                #                         sample_post = sample_posterior,\
+                #                         prior_start = prior_as_starting_point)

@@ -571,16 +571,24 @@ def extract_object(obj):
 
 
 def run_action_selection(selector, prior, like, post, trials=10, T=2, prior_as_start=True, sample_post=False,\
-                         sample_other=False, var=0.01, wd=1, b=1):
+                         sample_other=False, var=0.01, wd=1, b=1,):
     
     na = prior.shape[0]
     controls = np.arange(0, na, 1)
+
+
     if selector == 'rdm':
         # not really over_actions, simply avoids passing controls
         ac_sel = asl.RacingDiffusionSelector(trials, T, number_of_actions=na, s=var, over_actions=False)
     elif selector == 'ardm':
         # not really over_actions, simply avoids passing controls
         ac_sel = asl.AdvantageRacingDiffusionSelector(trials, T, number_of_actions=na, over_actions=False)
+    elif selector == 'nardm':
+        # not really over_actions, simply avoids passing controls
+        ac_sel = asl.NewAdvantageRacingDiffusionSelector(trials, T, number_of_actions=na, over_actions=False)
+    elif selector == 'ddm':
+        ac_sel =asl.DDM_RandomWalker(trials, 2,)
+        ac_sel
     else: 
         raise ValueError('Wrong or no action selection method passed')
     
@@ -588,7 +596,12 @@ def run_action_selection(selector, prior, like, post, trials=10, T=2, prior_as_s
     ac_sel.sample_other = sample_other
     ac_sel.sample_posterior = sample_post
     ac_sel.wd = wd
-    ac_sel.b = b
+    if not selector == 'ddm':
+        ac_sel.b = b
+    else:
+        ac_sel.au = b
+        ac_sel.al = -b
+
     ac_sel.s = np.sqrt(var)
     # print('sdv:', ac_sel.s)
     # print('prior as start, sample_other, sample_post')
@@ -603,7 +616,7 @@ def run_action_selection(selector, prior, like, post, trials=10, T=2, prior_as_s
     return actions, ac_sel
 
 
-test_vals = [[],[],[]]
+test_vals = [[],[],[],[]]
 
 # ///////// setup 3 policies
 
@@ -728,6 +741,52 @@ post /= post.sum()
 test_vals[2].append([post,prior,like])
 
 
+#  ///////////// setup 2 policies
+
+
+
+npi = 2
+flat = [1./npi]*npi
+
+# conflict
+l = [0.8,0.2]
+conflict_prior = np.ones(2) - l + 0.1
+conflict_prior /= conflict_prior.sum()
+
+prior = np.array(conflict_prior)
+like = np.array(l)
+post = prior*like
+post /= post.sum()
+test_vals[3].append([post,prior,like])
+
+# agreement
+l = np.array([0.8,0.2])
+agree_prior = l + 0.3
+agree_prior /= agree_prior.sum()
+
+prior = np.array(agree_prior)
+like = np.array(l)
+post = prior*like
+post /= post.sum()
+test_vals[3].append([post,prior,like])
+
+# goal
+l = [0.8,0.2]
+prior = np.array(flat)
+like = np.array(l)
+post = prior*like
+post /= post.sum()
+test_vals[3].append([post,prior,like])
+
+# habit
+prior = np.array([0.8,0.2])
+like = np.array(flat)
+post = prior*like
+post /= post.sum()
+test_vals[3].append([post,prior,like])
+
+
+
 def calc_dkl(p,q):
     # print(p)
     # print(q)
@@ -767,6 +826,34 @@ def extract_params_from_ttl(ttl):
     # print(pars)
     return npi, selector, pars, regime, s, wd, b
 
+
+def extract_params(ttl):
+    names = ['standard', 'post_prior1', 'post_prior0', 'like_prior1', 'like_prior0']
+
+    params_dict = {
+        'standard_b': [False, False, True],
+        'post_prior1': [True, False, True], 
+        'post_prior0': [True, False, False],
+        'like_prior1': [False, True, True], 
+        'like_prior0': [False, True, False]
+    }
+    pars = ttl.split('_')
+
+    for indx, par in enumerate(pars):
+        if par == 'b':
+            b = float(pars[indx+1])
+        if par == 's':
+            s = float(pars[indx+1])
+        if par == 'wd':
+            wd = float(pars[indx+1])
+
+    npi = int(pars[1])
+    selector = pars[2]
+    regime = '_'.join(pars[3:5])
+    pars = params_dict[regime]
+    # print(pars)
+    return [npi, selector, b, [wd,s], pars + [regime]]
+
 params_dict = {
     'standard_b': [False, False, True],
     'post_prior1': [True, False, True], 
@@ -795,6 +882,8 @@ params_list = [[False, False, True, 'standard'],\
 
 import itertools as itertools
 import os as os
+from scipy import stats
+
 bs = np.arange(1,3,0.3).round(4)
 bs = np.arange(1,3,0.3).round(4)
 ss = np.arange(0.005, 0.011, 0.001).round(5)
@@ -848,7 +937,7 @@ def load_data():
     goal_median = np.zeros(n)
     hab_median = np.zeros(n)
     ttls = ['fuck off']
-
+    ttls = np.zeros(n,dtype="object")
     for ind, f in enumerate(files):
         if f != 'old':
             npis[ind] , selectors[ind], [sample_post, sample_other, prior_as_start], regimes[ind], ss[ind], wds[ind], bs[ind] = \
@@ -865,7 +954,7 @@ def load_data():
             conf_mode[ind], agr_mode[ind], goal_mode[ind], hab_mode[ind] = np.asarray(stats.mode(RTs, axis=1)[0]).ravel()
             conf_mean[ind], agr_mean[ind], goal_mean[ind], hab_mean[ind] = RTs.mean(axis=1)
             conf_median[ind], agr_median[ind], goal_median[ind], hab_median[ind] = np.median(RTs, axis=1)
-            ttls.append(f)
+            ttls[ind] = f
             post_fit[ind] = np.abs((posts - empirical)/posts).mean(axis=1).mean()
 
     data = {'npi': npis,
@@ -1054,3 +1143,63 @@ def load_data_from_ttl():
 #     df = pd.DataFrame(data)
 #         # return best_fit, diff_best
 #     return df
+
+
+cols = plt.rcParams['axes.prop_cycle'].by_key()['color']
+polss = np.asarray([3,8,81,2])
+
+def simulate(selector, b, s, wd, sample_post, sample_other, prior_as_start, plot=False, calc_fit=False,npi=3, trials=1000):
+    empirical = np.zeros([nmodes, npi])
+    RT = np.zeros([nmodes, trials])
+
+    if plot:
+        x_positions = []
+        for i in range(4):
+            x_positions.append([x for x in range(i*npi + i, i*npi + i + npi)])
+
+        fig, ax = plt.subplots(2,1)
+
+    for m, mode in enumerate(modes):
+        i = np.where(polss == npi)[0][0]
+        prior = test_vals[i][m][1]
+        like = test_vals[i][m][2]
+        post = test_vals[i][m][0]
+        # print('variance:', s)
+        actions, ac_sel = run_action_selection(selector, prior, like, post, trials,\
+                        prior_as_start=prior_as_start, sample_other=sample_other, sample_post=sample_post,\
+                        var=s, wd=wd, b=b)
+
+        actions = np.asarray(actions)
+        actions = actions[actions != -1]
+        actions = actions.tolist()
+        empirical[m,:] = (np.bincount(actions + [x for x in range(npi)]) - 1) / len(actions)
+        RT[m,:] = ac_sel.RT.squeeze()
+
+        if plot:
+            x_pos = x_positions[m]
+            lab =' '.join([mode, 'mode',  str(stats.mode(ac_sel.RT)[0][0][0]), 'median', str(np.median(ac_sel.RT)), 'mean', str(ac_sel.RT.mean())])
+            ax[0].hist(ac_sel.RT, bins=100, alpha=0.5, label=lab)
+            
+            if m == 0:
+                ax[1].bar(x_pos, post, alpha=0.5, color='k', label = "post" )
+            else:
+                ax[1].bar(x_pos, post, alpha=0.5, color='k')
+
+            ax[1].bar(x_pos, empirical[m,:], label=mode + ' empir', alpha=0.5, color=cols[m])
+
+    
+
+def make_title(params,add=None, format='.png'):
+    npi = params[0]
+    selector = params[1]
+    b = params[2]
+    wd = params[3][0]
+    s = params[3][1]
+    sample_post, sample_other, prior_as_start, reg = params[4]
+    if add == None:
+        ttl = '_'.join(['npi', str(npi), selector, reg, 'b' ,str(b), 'wd',\
+                    str(wd), 's', str(s), format])
+    else:
+        ttl = '_'.join([add, 'npi', str(npi), selector, reg, 'b' ,str(b), 'wd',\
+                    str(wd), 's', str(s), format])
+    return ttl

@@ -15,7 +15,7 @@ import pickle
 
 tests = ["conflict", "agreement", "goal", "habit"]
 num_tests = len(tests)
-test_vals = [[],[],[]]
+test_vals = [[],[],[],[]]
 
 # ///////// setup 2 policies
 
@@ -138,6 +138,48 @@ like = np.array(flat)
 post = prior*like
 post /= post.sum()
 test_vals[2].append([post,prior,like])
+
+
+
+npi = 2
+flat = [1./npi]*npi
+
+# conflict
+l = [0.8,0.2]
+conflict_prior = np.ones(2) - l + 0.1
+conflict_prior /= conflict_prior.sum()
+
+prior = np.array(conflict_prior)
+like = np.array(l)
+post = prior*like
+post /= post.sum()
+test_vals[3].append([post,prior,like])
+
+# agreement
+l = np.array([0.8,0.2])
+agree_prior = l + 0.3
+agree_prior /= agree_prior.sum()
+
+prior = np.array(agree_prior)
+like = np.array(l)
+post = prior*like
+post /= post.sum()
+test_vals[3].append([post,prior,like])
+
+# goal
+l = [0.8,0.2]
+prior = np.array(flat)
+like = np.array(l)
+post = prior*like
+post /= post.sum()
+test_vals[3].append([post,prior,like])
+
+# habit
+prior = np.array([0.8,0.2])
+like = np.array(flat)
+post = prior*like
+post /= post.sum()
+test_vals[3].append([post,prior,like])
 
 
 plot = False
