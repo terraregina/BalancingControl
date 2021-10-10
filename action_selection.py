@@ -4,6 +4,7 @@ from statsmodels.tsa.stattools import acovf as acov
 import scipy.special as scs
 from scipy.stats import entropy
 import matplotlib.pylab as plt
+from misc import *
 
 
 
@@ -257,7 +258,7 @@ class AdvantageRacingDiffusionSelector(object):
         while (not np.any(integrators_that_crossed_bound == (npi -1))):                 # if still no decision made
 
             dW = np.random.normal(scale = self.s, size = ni)
-            decision_log[i+1,:] = decision_log[i,:] + (v0 + self.wd*Q_diff + self.ws*Q_sum)*dt + (Q_diff > 0)*dW 
+            decision_log[i+1,:] = decision_log[i,:] + (v0 + self.wd*Q_diff + self.ws*Q_sum)*dt + dW 
             bound_reached = decision_log[i+1,:].reshape([npi,npi-1]) >= self.b
             integrators_that_crossed_bound = bound_reached.sum(axis=1)
             i+=1
@@ -289,177 +290,6 @@ class AdvantageRacingDiffusionSelector(object):
 
         self.RT[tau,t] = i
 
-        self.trajectory = decision_log[:i+1,:]
-        # print(tau,t)
-
-        if True:
-            self.episode_walks.append(decision_log[:i+1,:])
-            plt.plot(np.arange(0, decision_log[:i+1,:]), decision_log[:i+1,:])
-            plt.show()
-            if(t == self.T-2):
-                self.walks.append(self.episode_walks.copy())
-                self.episode_walks = []
-            elif self.T == 2:
-                self.walks.append(decision_log[:i+1,:])
-        
-        return action
-
-############################################################################
-############################################################################
-############################################################################
-############################################################################
-############################################################################
-############################################################################
-############################################################################
-############################################################################
-############################################################################
-############################################################################
-############################################################################
-
-
-class NewAdvantageRacingDiffusionSelector(object):
-
-    def __init__ (self, trials, T, number_of_actions, wd = 1, ws = 0, s = 0.1, b= 1, A = 1, v0 = 1, over_actions=False):
-        
-        self.s  = np.sqrt(s)      # standard deviation of decision variable
-        self.wd = wd     # weight of advantage term
-        self.ws = ws     # weight of sum turm 
-        self.v0 = v0     # urgency / bias term
-        self.b = b       # boundary, needs to be implemented
-        self.A = A       # range of possible starting points
-        # self.B = b - A   # distance from max starting point to decision boundry
-
-        self.type = 'nardm'
-        self.trials = trials
-        self.T = T
-        self.RT = np.zeros([trials,T-1])
-        self.na = number_of_actions
-        self.walks = []
-        self.episode_walks = []
-        self.over_actions = over_actions
-        self.prior_as_starting_point = True
-        self.sample_other = False
-        self.sample_posterior = False
-
-
-    def reset_beliefs(self):
-        pass
-        # self.control_probability[:,:,:] = 0
-
-
-    def set_pars(self, pars):
-        pass    
-
-
-    def log_prior(self):
-        return 0
-
-    def estimate_action_probability(self, tau, dist_policies, actions, *args):
-
-        #estimate action probability
-        na = np.unique(actions).size
-        control_prob = np.zeros(na)
-
-        for a in range(na):
-            control_prob[a] = dist_policies[actions == a].sum()
-
-    #    normalize?
-
-        # print(control_prob)
-        # print(control_prob /control_prob.sum())
-        return  control_prob 
-
-    def select_desired_action(self,tau, t, posterior, controls, *args): #avg_likelihood, prior, dt = 0.01, plot=False):
-     # def select_desired_action(self,tau, t, posterior, controls, *args): #avg_likelihood, prior, dt = 0.01, plot=False):
-
-        likelihood = args[0]
-        prior = args[1]
-        
-        if (len(args) == 3):
-            dt = args[3]
-        else: 
-            dt = 0.01
-
-
-        if self.over_actions:
-            prior = self.estimate_action_probability(tau, prior, controls)
-            likelihood = self.estimate_action_probability(tau, likelihood, controls)
-            posterior = self.estimate_action_probability(tau, posterior, controls)
-
-
-        npi = prior.size                                               # number of policies
-        ni = np.int(np.math.factorial(npi) / np.math.factorial(npi-2)) # P(2,npi), number of integrators
-
-
-        decision_log = np.zeros([10005,ni])                            # log for propagated decision variable
-
-
-
-        if self.sample_posterior:
-            P = posterior
-        elif self.sample_other:
-            P = likelihood + prior
-        else:
-            P = likelihood
-
-
-
-        Q = np.tile(P, npi)                                            # set up (S_i - S_j) and (S_i + S_j) terms
-        Q_diff = np.repeat(P, (npi-1)) - np.delete(Q,[npi*i + i for i in np.arange(npi)])
-
-
-        S = np.tile(prior, npi)                                        # set up (S_i - S_j) and (S_i + S_j) terms
-        d0 = np.repeat(prior, (npi-1)) - np.delete(S,[npi*i + i for i in np.arange(npi)])
-
-        if self.prior_as_starting_point:
-            decision_log[0,:] = d0                                     # initial conditions for v_ij
-
-        v0 = np.ones(ni)*self.v0                                       # vectorized urgency term
-    
-        bound_reached = np.zeros(npi, dtype = bool)                    # decision made when all integrators for a group are above bound b, Winner takes all strategy. 
-        integrators_that_crossed_bound = 0                             # if pi = 1,2,3, decision for policy 1 made when S_12, S_13 >= b before other sets
-        
-                                          
-        i = 0
-
-        broken = False
-        while (not np.any(integrators_that_crossed_bound == (npi -1))):                 # if still no decision made
-
-            dW = np.random.normal(scale = self.s, size = ni)
-            decision_log[i+1,:] = decision_log[i,:] + self.wd*Q_diff*dt + dW 
-            bound_reached = decision_log[i+1,:].reshape([npi,npi-1]) >= self.b
-            integrators_that_crossed_bound = bound_reached.sum(axis=1)
-            i+=1
-
-            if (i > 10000):
-                broken = True
-                print("COULDN'T REACH DECISION IN 10000 STEPS")
-                break    
-
-        crossed = np.where(integrators_that_crossed_bound == (npi -1))[0]             # non-zero returns tuple by default
-
-        if (crossed.size > 1):
-            # print('Two integrators crossed decision boundary at the same time')
-            total_dist_travelled_by_all_integrators = decision_log[i,:].reshape([npi,npi-1]).sum(axis=1)
-            dist_by_winners = total_dist_travelled_by_all_integrators[crossed]
-            selected = np.argmax(dist_by_winners)
-            decision = crossed[selected]
-        elif not broken:
-            decision = crossed[0]
-
-
-        if self.over_actions:
-            action = decision
-        elif not broken:
-            action = controls[decision]
-        else:
-            action = -1
-            broken = False
-
-        self.RT[tau,t] = i
-
-        self.trajectory = decision_log[:i+1,:]
-        # print(tau,t)
 
         if False:
             self.episode_walks.append(decision_log[:i+1,:])
@@ -473,6 +303,8 @@ class NewAdvantageRacingDiffusionSelector(object):
         
         return action
 
+
+ 
 '''
  _______   _______   __       __ 
 /       \ /       \ /  \     /  |
@@ -614,7 +446,7 @@ class RacingDiffusionSelector(object):
 
 
 
-        if True:
+        if False:
             self.episode_walks.append(decision_log[:i+1,:])
             if(t == self.T-2):
                 self.walks.append(self.episode_walks.copy())

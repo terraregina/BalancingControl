@@ -55,8 +55,8 @@ def exponential(x, b=1., c=0., d=0.):
 def lognormal(x, mu, sigma):
     return -.5*(x-mu)*(x-mu)/(2*sigma) - .5*ln(2*np.pi*sigma)
 
-def lognormal3(x, mu, sigma, c):
-    return 1./((x-a)*sigma*np.sqrt(2*np.pi)) * exp(-(ln(x-a)-mu)**2/(2*sigma**2))
+# def lognormal3(x, mu, sigma, c):
+#     return 1./((x-a)*sigma*np.sqrt(2*np.pi)) * exp(-(ln(x-a)-mu)**2/(2*sigma**2))
 
 def Beta_function(a):
     return scs.gamma(a).prod()/scs.gamma(a.sum())
@@ -571,7 +571,7 @@ def extract_object(obj):
 
 
 def run_action_selection(selector, prior, like, post, trials=10, T=2, prior_as_start=True, sample_post=False,\
-                         sample_other=False, var=0.01, wd=1, b=1,):
+                         sample_other=False, var=0.01, wd=1, b=1,A=1):
     
     na = prior.shape[0]
     controls = np.arange(0, na, 1)
@@ -596,6 +596,8 @@ def run_action_selection(selector, prior, like, post, trials=10, T=2, prior_as_s
     ac_sel.sample_other = sample_other
     ac_sel.sample_posterior = sample_post
     ac_sel.wd = wd
+    ac_sel.A = A
+    # print(ac_sel.type, ac_sel.A)
     if not selector == 'ddm':
         ac_sel.b = b
     else:
@@ -787,18 +789,24 @@ test_vals[3].append([post,prior,like])
 
 
 
-def calc_dkl(p,q):
+def calc_dkl(empirical, post):
     # print(p)
     # print(q)
-    p[p == 0] = 10**(-300)
-    q[q == 0] = 10**(-300)
-
-    ln = np.log(p/q)
-    if np.isnan(p.dot(ln)):
-        raise ValueError('is Nan')
-
-    return p.dot(ln)
-
+    dkls = np.zeros(4)
+        
+    for m in range(4):
+        p = empirical[m,:]
+        q = post[m,:]
+        p[p == 0] = 10**(-300)
+        q[q == 0] = 10**(-300)
+    
+        ln = np.log(p/q)
+        if np.isnan(p.dot(ln)):
+            raise ValueError('is Nan')
+    
+        dkls[m] = p.dot(ln)
+        
+    return dkls
 def extract_params_from_ttl(ttl):
     names = ['standard', 'post_prior1', 'post_prior0', 'like_prior1', 'like_prior0']
 
@@ -1148,7 +1156,8 @@ def load_data_from_ttl():
 cols = plt.rcParams['axes.prop_cycle'].by_key()['color']
 polss = np.asarray([3,8,81,2])
 
-def simulate(selector, b, s, wd, sample_post, sample_other, prior_as_start, plot=False, calc_fit=False,npi=3, trials=1000):
+
+def simulate(selector, b, s, wd, A, sample_post, sample_other, prior_as_start, plot=False, calc_fit=False,npi=3, trials=1000):
     empirical = np.zeros([nmodes, npi])
     RT = np.zeros([nmodes, trials])
 
@@ -1167,7 +1176,7 @@ def simulate(selector, b, s, wd, sample_post, sample_other, prior_as_start, plot
         # print('variance:', s)
         actions, ac_sel = run_action_selection(selector, prior, like, post, trials,\
                         prior_as_start=prior_as_start, sample_other=sample_other, sample_post=sample_post,\
-                        var=s, wd=wd, b=b)
+                        var=s, wd=wd, b=b, A=A)
 
         actions = np.asarray(actions)
         actions = actions[actions != -1]
@@ -1176,6 +1185,7 @@ def simulate(selector, b, s, wd, sample_post, sample_other, prior_as_start, plot
         RT[m,:] = ac_sel.RT.squeeze()
 
         if plot:
+            print('dont do this')
             x_pos = x_positions[m]
             lab =' '.join([mode, 'mode',  str(stats.mode(ac_sel.RT)[0][0][0]), 'median', str(np.median(ac_sel.RT)), 'mean', str(ac_sel.RT.mean())])
             ax[0].hist(ac_sel.RT, bins=100, alpha=0.5, label=lab)
@@ -1187,19 +1197,42 @@ def simulate(selector, b, s, wd, sample_post, sample_other, prior_as_start, plot
 
             ax[1].bar(x_pos, empirical[m,:], label=mode + ' empir', alpha=0.5, color=cols[m])
 
+    return RT, empirical
+
     
 
-def make_title(params,add=None, format='.png'):
+def make_title(params,add_text=None, extra_param = None, format='.png'):
     npi = params[0]
     selector = params[1]
     b = params[2]
-    wd = params[3][0]
-    s = params[3][1]
-    sample_post, sample_other, prior_as_start, reg = params[4]
-    if add == None:
-        ttl = '_'.join(['npi', str(npi), selector, reg, 'b' ,str(b), 'wd',\
+    # wd = params[3][0]
+    # s = params[3][1]
+    wd= params[3]
+    s = params[4]
+    a = params[5]
+    sample_post, sample_other, prior_as_start, reg = params[6]
+
+    if add_text == None:
+        if extra_param == None:
+            ttl = '_'.join(['npi', str(npi), selector, reg, 'b' ,str(b), 'wd',\
                     str(wd), 's', str(s), format])
+        else: 
+            ttl = '_'.join(['npi', str(npi), selector, reg, 'b' ,str(b), 'wd',\
+                    str(wd), 's', str(s), extra_param[0], extra_param[1], format])
     else:
-        ttl = '_'.join([add, 'npi', str(npi), selector, reg, 'b' ,str(b), 'wd',\
+        if extra_param == None:
+            ttl = '_'.join([add_text, 'npi', str(npi), selector, reg, 'b' ,str(b), 'wd',\
                     str(wd), 's', str(s), format])
+        else: 
+
+            ttl = '_'.join([add_text, 'npi', str(npi), selector, reg, 'b' ,str(b), 'wd',\
+                    str(wd), 's', str(s), extra_param[0], extra_param[1], format])
+   
     return ttl
+
+
+def load_file(ttl):
+    with open (ttl, 'rb') as fp:
+        data = pickle.load(fp)
+    
+    return data
