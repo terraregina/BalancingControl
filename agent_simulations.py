@@ -32,11 +32,6 @@ import itertools as itertools
 import numpy as np
 
 
-
-
-
-
-
 save = True
 data_folder = os.path.join('C:\\Users\\admin\\Desktop\\project\\BalancingControl','data')
 
@@ -58,26 +53,27 @@ g2 = 10
 start = 2
 
 
-print("start", start)
-print("g2", g2)
-print("g1", g1)
-print("nc", nc)
-print("nr", nr)
-print("npi", npi)
-print("na", na)
-print("ns", ns)
-print("no", no)
-print("trials", trials)
-print("data_folder", data_folder)
-print("save", save)
-print('\n\nrunning simulations\n\n')
-print('-------------------------')
+# print("start", start)
+# print("g2", g2)
+# print("g1", g1)
+# print("nc", nc)
+# print("nr", nr)
+# print("npi", npi)
+# print("na", na)
+# print("ns", ns)
+# print("no", no)
+# print("trials", trials)
+# print("data_folder", data_folder)
+# print("save", save)
+# print('\n\nrunning simulations\n\n')
+# print('-------------------------')
 
 # def run_agent(par_list, trials=trials, T=T, Lx = Lx, Ly = Ly, ns=ns, na=na,var=0.1,run=0,\
 #               sample_post = False, sample_other = False, prior_start = True):
 
 
-def run_agent(par_list, trials=trials, T=T, Lx = Lx, Ly = Ly, ns=ns, na=na,var=0.1,run=0):
+def run_agent(par_list, trials=trials, T=T, Lx = Lx, Ly = Ly, ns=ns, na=na,run=0,\
+              path=None, print_thoughts = False, print_walks=False):
     #set parameters:
     #obs_unc: observation uncertainty condition
     #state_unc: state transition uncertainty condition
@@ -92,7 +88,6 @@ def run_agent(par_list, trials=trials, T=T, Lx = Lx, Ly = Ly, ns=ns, na=na,var=0
 
     print("q", q)
     print("h", h)
-    path = os.getcwd() + '/agent_sims/'    
     """
     set action selection method
     """
@@ -121,6 +116,8 @@ def run_agent(par_list, trials=trials, T=T, Lx = Lx, Ly = Ly, ns=ns, na=na,var=0
     ac_sel.b = b
     ac_sel.wd = wd
     ac_sel.s = np.sqrt(s)
+    if print_walks:
+        ac_sel.print_walks = True
     # name_str = selector + '_s'+ str(var)+'_context_' + str(context) + '_over-actions_'+ str(over_actions)+'_h'+str(h) + '_'+str(run)
     """
     create matrices
@@ -299,10 +296,10 @@ def run_agent(par_list, trials=trials, T=T, Lx = Lx, Ly = Ly, ns=ns, na=na,var=0
     """
 
     if not context:
-        w.simulate_experiment()
+        w.simulate_experiment(print_thoughts=print_thoughts)
         print("Rho", Rho)
     else:
-        w.simulate_experiment(curr_trials=range(0, trials//2))
+        w.simulate_experiment(curr_trials=range(0, trials//2),print_thoughts=print_thoughts)
         Rho_new = np.zeros((nr,ns)) + const
         Rho_new[0,:] = 1 - (nr-1)*const
         Rho_new[:,g2] = [0+const, 1-(nr-1)*const]
@@ -507,7 +504,7 @@ def run_agent(par_list, trials=trials, T=T, Lx = Lx, Ly = Ly, ns=ns, na=na,var=0
 
 
     #print("percent won", total/trials, "state prior", np.amax(utility))
-    
+    over_actions, selector, b, wd, s, A,  = par_list[1:-3]
     name = 'chosen_path'
     
     if over_actions:
@@ -532,8 +529,7 @@ def run_agent(par_list, trials=trials, T=T, Lx = Lx, Ly = Ly, ns=ns, na=na,var=0
     else:
         name += '_stand'
 
-    b = w.agent.action_selection.b
-    name += '_h'+str(h) + '_s' + str(var) + '_b' + str(b) + '_' + str(run) + '.png'
+    name += '_h'+str(h) + '_s' + str(s) + '_b' + str(b)+ '_a' + str(A) + '_' + str(run) + '.png'
 
     plt.savefig(path + name)
 
@@ -553,7 +549,7 @@ def run_agent(par_list, trials=trials, T=T, Lx = Lx, Ly = Ly, ns=ns, na=na,var=0
 set condition dependent up parameters
 """
 
-def run_gridworld_simulations(repetitions):
+def run_gridworld_simulations(repetitions, print_walks=False, print_thoughts=False, my_par=None):
     # prior over outcomes: encodes utility
     utility = []
 
@@ -576,13 +572,18 @@ def run_gridworld_simulations(repetitions):
     
     l = []                           # parameter list
     l.append([False, False, False, avg, context, utility])
+    print(my_par)
+    if my_par==None:
+        
+        my_par_list  = load_file('sim_params.txt')
+        # uncertainty observation, state,
+    else:
+        my_par_list = my_par
     
-    my_par_list  = load_file('sim_params.txt')
     for indx, p in enumerate(my_par_list):
         if my_par_list[indx][0] == 3:
             my_par_list[indx][0] = True
         my_par_list[indx] = l + my_par_list[indx] 
-    # uncertainty observation, state,
     
     par_list = []
     
@@ -596,16 +597,45 @@ def run_gridworld_simulations(repetitions):
         h = pars[-1]
         q = qs[n]
         worlds = []
-
         over_actions, selector, b, wd, s, A,  = pars[1:-2]
         sample_post, sample_other, prior_as_start, regime = pars[-2]
-        for i in range(repetitions):
-            print("i", i)
 
+        dirname = selector + '_grid'
+        if over_actions:
+            dirname += '_actions'
+        else:
+            dirname += '_policies' 
+
+        if context:
+            dirname += '_cont-1'
+        else:
+            dirname += '_cont-0'
+
+        if prior_as_start:
+            dirname += '_prior-1'
+        else:
+            dirname += '_prior-0'
+        
+        if sample_post:
+            dirname += '_post'
+        elif sample_other:
+            dirname += '_like'
+        else:
+            dirname += '_stand'
+        
+        dirname += '_h'+str(h) + '_s' + str(s)+ '_wd' + str(wd) + '_b' + str(b) + '_a' + str(A)
+        os.mkdir(os.getcwd() + '\\agent_sims\\' + dirname)
+        path = os.getcwd() + '\\agent_sims\\' + dirname + '\\'
+
+        for i in range(repetitions):
+            # dir = os.mkdir(os.getcwd() + '/agent_sims/' + 'test')
+            fname = path + dirname + '_' + str(i)
+            print("i", i)
+            w = run_agent(pars+[q], run=i, print_thoughts = print_thoughts, print_walks = print_walks, path=path)
+            
             # w = run_agent(pars+[q],var=s,run=i, sample_post=sample_post,\
             #                                   sample_other=sample_other,\
             #                                   prior_start=prior_start)
-            w = run_agent(pars+[q], run=i)
             # plot agent posterior over context
 
             if False:
@@ -634,31 +664,6 @@ def run_gridworld_simulations(repetitions):
 
             over_actions, selector, b, wd, s, A,  = pars[1:-2]
             sample_post, sample_other, prior_as_start, regime = pars[-2]
-            fname = os.getcwd() + '/agent_sims/'  + selector + '_grid'
-
-            if over_actions:
-                fname += '_actions'
-            else:
-                fname += '_policies' 
-    
-            if context:
-                fname += '_cont-1'
-            else:
-                fname += '_cont-0'
-
-            if prior_as_start:
-                fname += '_prior-1'
-            else:
-                fname += '_prior-0'
-            
-            if sample_post:
-                fname += '_post'
-            elif sample_other:
-                fname += '_like'
-            else:
-                fname += '_stand'
-            
-            fname += '_h'+str(h) + '_s' + str(s)+ '_wd' + str(wd) + '_b' + str(b) + '_' + str(i)
            
             save_data(fname, w)
 
@@ -668,29 +673,78 @@ def run_gridworld_simulations(repetitions):
 set parameters
 """
 
-# np.random.seed(12425)
 agent = 'bethe'
-repetitions = 5
+repetitions = 10
 
-run_gridworld_simulations(repetitions)
+p = [[True, 'rdm', 3, 1, 0.0034, 1, [True, False, True, 'post_prior1']],\
+     [True, 'rdm', 3, 1.5, 0.0034,  1, [True, False, True, 'post_prior1']],\
+     [True, 'rdm', 3, 1, 0.0034,  0.8, [True, False, True, 'post_prior1']]]
 
+run_gridworld_simulations(repetitions,my_par=p)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+#%%
+# rootdir = os.getcwd() + '\\agent_sims\\'
+# print(rootdir)
+# subdirs = []
+# for subdir, dirs, files in os.walk(rootdir):
+#     subdirs.append(subdir)
+    # for file in files:
+    #     print(os.path.join(subdir, file))
 
 
 
 
+# sim_modes = ['\\rdm_bad_post', '\\rdm_bad_like','\\rdm_good_post','\\rdm_good_like','\\ardm_bad_post', '\\ardm_bad_like','\\ardm_good_post','\\ardm_good_like']
+# sim_modes = ['\\new']
+# # h = 'h1_'
+# for sim_mode in sim_modes:
+#     file_ttls = []
+#     for subdir, dirs, files in os.walk(rootdir):
+#         if subdir.__contains__(sim_mode):
+#             for file in files:
+#                 # if (file.__contains__(h) and not file.__contains__('.png') ):
+#                 if (not file.__contains__('.png') ):
+#                     file_ttls.append(file)
 
 
+#     worlds = []
+#     for title in file_ttls:
+#         if not title == 'desktop.ini':
+#             worlds.append(load_file(rootdir + sim_mode[1:] + '\\' + title))
+#     # #%%
+#     # import pandas as pd
+#     # import seaborn as sns
+
+#     print(worlds)
+#     trials = 200
+#     na = 4
+#     nagents = len(worlds)
+#     rt = np.zeros([nagents*trials, na])
+#     agent = np.arange(nagents).repeat(trials)
+#     trial = np.tile(np.arange(0,trials),nagents)
+#     h = np.zeros(trials*nagents)
+#     # RTs = np.arange(800).reshape([200,4])
+
+#     names = ['agent', 'trial', 'a1','a2','a3','a4']
+
+#     for ind, world in enumerate(worlds):
+#         h[ind*trials:(ind+1)*trials] = np.min(world.agent.perception.dirichlet_pol_params).repeat(trials)
+#         ac_sel = world.agent.action_selection
+#         rt[ind*trials:(ind+1)*trials,:] = ac_sel.RT
+
+#     df = pd.DataFrame(rt, columns =['a1','a2','a3','a4'])
+#     df['trials'] = trial
+#     df['agent'] = agent
+#     df['h'] = h
+# #%%
+#     plt.figure()
+#     sns.lineplot(data=df, x="trials",y="a1", hue="h", palette="Accent")
+#     plt.savefig(rootdir + sim_mode[1:] + '\\rt_figure.png', dpi=300)
+#     # plt.close()
+
+# #%%
+
+
+# my_par_list  = load_file('sim_params.txt')
+# for indx, p in enumerate(my_par_list):
+#     print(p)

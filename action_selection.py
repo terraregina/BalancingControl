@@ -178,6 +178,7 @@ class AdvantageRacingDiffusionSelector(object):
         self.prior_as_starting_point = True
         self.sample_other = False
         self.sample_posterior = False
+        self.print_walks = False
 
 
     def reset_beliefs(self):
@@ -291,15 +292,16 @@ class AdvantageRacingDiffusionSelector(object):
         self.RT[tau,t] = i
 
 
-        if False:
-            self.episode_walks.append(decision_log[:i+1,:])
-            plt.plot(np.arange(0, decision_log[:i+1,:]), decision_log[:i+1,:])
-            plt.show()
-            if(t == self.T-2):
-                self.walks.append(self.episode_walks.copy())
-                self.episode_walks = []
-            elif self.T == 2:
-                self.walks.append(decision_log[:i+1,:])
+        if self.print_walks:
+            # self.episode_walks.append(decision_log[:i+1,:])
+            plt.plot(np.arange(0, i+1), decision_log[:i+1,:])
+            plt.savefig('ardm_walk_tau' + str(tau) + '_t' + str(t) + '.png' )
+            plt.close()
+            # if(t == self.T-2):
+            #     self.walks.append(self.episode_walks.copy())
+            #     self.episode_walks = []
+            # elif self.T == 2:
+            #     self.walks.append(decision_log[:i+1,:])
         
         return action
 
@@ -344,6 +346,7 @@ class RacingDiffusionSelector(object):
         self.prior_as_starting_point = True
         self.sample_other = False
         self.sample_posterior = False
+        self.print_walks = False
 
     def reset_beliefs(self):
         pass
@@ -446,13 +449,20 @@ class RacingDiffusionSelector(object):
 
 
 
-        if False:
-            self.episode_walks.append(decision_log[:i+1,:])
-            if(t == self.T-2):
-                self.walks.append(self.episode_walks.copy())
-                self.episode_walks = []
-            elif self.T == 2:
-                self.walks.append(decision_log[:i+1,:])
+        if self.print_walks:
+            # self.episode_walks.append(decision_log[:i+1,:])
+            for a in range(self.na):
+                plt.legend()
+                plt.plot(np.arange(0, i+1), decision_log[:i+1,a], label='prior: ' +  str(prior[a].round(3)) + ' posterior: ' + str(Q[a].round(3)))
+                plt.legend()
+            plt.title('tau: ' +  str(tau) + ' t: ' + str(t))
+            plt.savefig('rdm_walk_tau' + str(tau) + '_t' + str(t) + '.png' )
+            plt.close()
+            # if(t == self.T-2):
+            #     self.walks.append(self.episode_walks.copy())
+            #     self.episode_walks = []
+            # elif self.T == 2:
+            #     self.walks.append(decision_log[:i+1,:])
         
         return action
 

@@ -16,6 +16,8 @@ import time
 import os as os
 import itertools as itertools
 import string as string
+path = os.getcwd() + '\\parameter_data\\'
+tests = np.asarray(['conflict', 'agreement','goal', 'habit'],dtype="object")
 
 # %%
 '''
@@ -27,6 +29,8 @@ As = [1]
 ws = [1]
 ss = [0.0004]
 selectors = ['rdm', 'ardm']  #
+path = os.getcwd() + '\\parameter_data\\'
+tests = np.asarray(['conflict', 'agreement','goal', 'habit'],dtype="object")
 
 par_list = []
 
@@ -205,6 +209,108 @@ def load_fits(trials=1000):
     df = pd.DataFrame(dict_data)
     return df,fucked
 
+def load_fits_from_data(pars, trials=1000):
+
+    tests = np.asarray(['conflict', 'agreement','goal', 'habit'],dtype="object")
+    names = ['npi', 'selector','b','w','s','A', 'regime', 'post_fit','individual_fit','avg_fit','ID','file_ttl','stats']
+    nmodes = 4
+    path = os.getcwd() + '/parameter_data/'
+    files = os.listdir(path)
+    total = len(pars)
+    npis = np.zeros(total)
+    selectors = np.zeros(total, dtype='object')
+    bs = np.zeros(total, dtype="float")
+    ws = np.zeros(total)
+    ss = np.zeros(total)
+    As = np.zeros(total)
+    regimes = np.zeros(total, dtype="object")
+    post_fit = np.zeros(total)
+    individual_fit = np.zeros(total, dtype="object")
+    post_fit_avg = np.zeros(total)
+    polss = np.array([3,8,81])
+    ID = np.zeros(total)
+    titles = np.zeros(total, dtype="object")
+    stats = np.zeros(total, dtype="object")
+    fucked = []
+    for ind, p in enumerate(pars):
+        if ind < total:
+            # print(ind)
+            # print(f)
+            npi = p[0]
+            print(p)
+            print(npi)
+            print(polss)
+            print(np.where(polss == npi))
+            y = np.where(polss == npi)[0][0]    
+            posts = np.zeros([nmodes, npi])    # translate the posteriors
+            post = np.asarray(test_vals)[y,:,0]    # into a numpy array
+            
+            for indx, ps in enumerate(post):
+                posts[indx,:] = np.asarray(ps)
+                
+            selector = p[1]
+            b = p[2]
+            w = p[3]
+            s = p[4]
+            A = p[5]
+            post, other, prior, regime = p[6]
+            regime = regime
+            ttl =  make_title(p, extra_param = ['a',str(A)], format='.txt')
+            # print(ind)
+            with open(path + ttl, 'rb')as fp:
+                data = pickle.load(fp)
+            
+            RT = data['RT']
+            
+            
+            rt_df = {
+                'rts': RT.ravel() ,
+                'mode': tests.repeat(trials)
+                }
+            
+            rt_df = pd.DataFrame(rt_df)
+            
+            stats[ind] = rt_df.groupby(['mode']).agg(
+                mean = ("rts","mean"),
+                median = ("rts", "median"),
+                var = ("rts", "var"),
+                skew =("rts", "skew"),
+            )
+            
+            empirical = data['empirical']
+            
+            if np.isnan(np.unique(data['empirical'])[-1]):
+                fucked.append(f)
+                fits = np.nan
+                post_fit[ind] =  np.nan
+                post_fit_avg[ind] =  np.nan
+                individual_fit[ind] = np.nan
+            else:
+                fits = calc_dkl(empirical, posts)
+                post_fit[ind] =  fits.mean()
+                post_fit_avg[ind] =  np.abs((posts - empirical)/posts).mean(axis=1).mean()
+                individual_fit[ind] = fits
+            
+            ID[ind] = ind
+            npis[ind] = npi
+            selectors[ind] = selector
+            bs[ind] = b
+            ws[ind] = w
+            ss[ind] = s
+            As[ind] = A
+            regimes[ind] = regime
+            bs[ind] = b
+            titles[ind] = ttl
+        
+    cols = [npis, selectors, bs, ws, ss, As, regimes, post_fit, individual_fit, post_fit_avg,ID,titles,stats]
+    dict_data = {}
+    
+    for c, col in enumerate(cols):
+        dict_data[names[c]] = col
+    
+    df = pd.DataFrame(dict_data)
+    return df,fucked
+
 
 def load_data(trials=1000):
     nmodes = 4
@@ -315,6 +421,7 @@ def load_data_from_ttl(par_list, trials=1000):
     polss = np.array([3,8,81])
     ID = np.zeros(total)
     titles = np.zeros(total, dtype="object")
+
     for ind, p in enumerate(par_list):
         npi = np.array([p[0]])
         selector = np.asarray(p[1], dtype="object")
@@ -390,7 +497,7 @@ def plot_figure(df,q):
 
 def generate_data(pars):
     posts, none = extract_post()
-    
+    path = os.getcwd() + '/parameter_data/'
     parameter_names = ['npi','selelctor', 'b','w','s','a','regime']
     for ind, p in enumerate(par_list):
         polss = np.asarray([3,8,81,2])
@@ -424,7 +531,7 @@ def generate_data(pars):
         
         stop = time.perf_counter()
         print((stop - start)/60)  
-df, naned = load_fits()
+# df, naned = load_fits()
 
 #%%
 
@@ -467,6 +574,7 @@ for ind, row in best.iterrows():
         print(row['goal_diff'])
         print(row['conf_diff'])
         titles_close.append(row['file_ttl'])
+
         rt_df = {
             'rts': data['RT'].ravel() ,
             'mode': tests.repeat(1000)
@@ -502,6 +610,57 @@ for title in titles_close:
 with open('sim_params.txt', 'wb') as fp:
     pickle.dump(par_list, fp)
     
+
+#%%
+pols = [3]
+bs = [3]
+As = [0.8]
+ws = [1]
+ss = [0.0034]
+# ss = [0.0012]
+ws = [1]
+selectors = ['rdm']
+
+p = [True, 'rdm', 3, 1, 0.0034, 1, [True, False, True, 'post_prior1']]
+
+par_list = []
+pars = [params_list[1]] 
+for p in itertools.product(pols, selectors, bs, ws, ss, As, pars):
+        par_list.append([p[0]]+[p[1]] + [p[2]]+ [p[3]]+ [p[4]] + [p[5]] + [p[6]])
+
+
+print(par_list)
+generate_data(pars)
+df, fucked = load_fits_from_data(par_list)
+
+
+for ind, row in df.iterrows():
+    print(row.stats)
+
+    data = load_file(path + row.file_ttl)
+    rt_df = {
+        'rts': data['RT'].ravel() ,
+        'mode': tests.repeat(1000)
+    }
+
+    rt_df = pd.DataFrame(rt_df)
+    plt.plot()
+    sns.histplot(data=rt_df, x="rts", hue="mode")
+    plt.show()
+    plt.close()
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
