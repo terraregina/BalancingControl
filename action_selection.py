@@ -1,6 +1,6 @@
 # from misc import ln, logBeta, Beta_function
 import numpy as np
-from statsmodels.tsa.stattools import acovf as acov
+# from statsmodels.tsa.stattools import acovf as acov
 import scipy.special as scs
 from scipy.stats import entropy
 import matplotlib.pylab as plt
@@ -247,6 +247,9 @@ class AdvantageRacingDiffusionSelector(object):
         Q_diff = np.repeat(P, (npi-1)) - np.delete(Q,[npi*i + i for i in np.arange(npi)])
         Q_sum = np.repeat(P, (npi-1)) + np.delete(Q,[npi*i + i for i in np.arange(npi)])
     
+        if tau == 0:
+            print(Q_diff.reshape([3,2]))
+            print(decision_log[0,:].reshape([3,2]))
         v0 = np.ones(ni)*self.v0                                       # vectorized urgency term
     
         bound_reached = np.zeros(npi, dtype = bool)                    # decision made when all integrators for a group are above bound b, Winner takes all strategy. 
@@ -347,6 +350,9 @@ class RacingDiffusionSelector(object):
         self.sample_other = False
         self.sample_posterior = False
         self.print_walks = False
+        self.drifts = []
+        self.priors = []
+        self.action_from_posterior = False
 
     def reset_beliefs(self):
         pass
@@ -399,6 +405,7 @@ class RacingDiffusionSelector(object):
         if self.prior_as_starting_point:
             decision_log[0,:] = self.A*prior                        # initial conditions for v_ij
 
+        
         v0 = np.ones(ni)*self.v0                                    # vectorized urgency term
         bound_reached = np.zeros(ni, dtype = bool)
         i = 0
@@ -410,6 +417,9 @@ class RacingDiffusionSelector(object):
         else: 
             Q = likelihood
 
+        self.priors.append(decision_log[0,:])
+        self.drifts.append(Q)
+        
         broken = False
         while(not np.any(bound_reached)):                        # if still no decision made
             dW = np.random.normal(scale = self.s, size = ni)
@@ -425,27 +435,26 @@ class RacingDiffusionSelector(object):
         crossed = bound_reached.nonzero()[0]                      # non-zero returns tuple by default
         
         
-        if (crossed.size > 1):
-            vals = decision_log[i,crossed]
-            selected = np.argmax(vals)
-            decision = crossed[selected]
+        # if (crossed.size > 1):
+        #     vals = decision_log[i,crossed]
+        #     selected = np.argmax(vals)
+        #     decision = crossed[selected]
 
-            # raise ValueError('Two integrators crossed decision boundary at the same time')
-            # print('Two integrators crossed boundary at the same time, choosing one at random')
-            decision = np.random.choice(crossed, p=np.ones(crossed.size)/crossed.size)
-        elif not broken:
-            decision = crossed[0]
+        #     # raise ValueError('Two integrators crossed decision boundary at the same time')
+        #     # print('Two integrators crossed boundary at the same time, choosing one at random')
+        #     decision = np.random.choice(crossed, p=np.ones(crossed.size)/crossed.size)
+        # elif not broken:
+        #     decision = crossed[0]
 
-        if self.over_actions:
-            action = decision
-        elif not broken:
-            action = controls[decision]
-        else:
-            action = -1
-            broken = False
-
+        # if self.over_actions:
+        #     action = decision
+        # elif not broken:
+        #     action = controls[decision]
+        # else:
+        #     action = -1
+        #     broken = False
         self.RT[tau,t] = i
-
+        action = np.random.choice(np.arange(self.na), p=posterior)
 
 
 

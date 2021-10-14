@@ -765,6 +765,7 @@ def load_gridworld_simulations(repetitions):
 
             w = pickle.decode(data)
             #worlds.append(w)
+            
             RTs[i*trials+n*(repetitions*trials):(i+1)*trials+n*(repetitions*trials)] = w.agent.action_selection.RT[:,0].copy()
             posterior_policies = np.einsum('tpc,tc->tp', w.agent[:,-1], w.agent.posterior_context[:,-1])
             chosen_pols[i*trials+n*(repetitions*trials):(i+1)*trials+n*(repetitions*trials)] = np.argmax(posterior_policies, axis=1)

@@ -1,4 +1,4 @@
-_# To add a new cell, type '# %%'
+# To add a new cell, type '# %%'
 # To add a new markdown cell, type '# %% [markdown]'
 # %%
 import pandas as pd
@@ -71,15 +71,22 @@ def extract_params(ttl):
             if not len(pars[indx+1]) == 1: 
                 b = float(pars[indx+1])
             else:
-                b = float(pars[indx+1])
+                b = int(pars[indx+1])
         if par == 's':
             s = float(pars[indx+1])
         if par == 'wd':
-            wd = float(pars[indx+1])
+            if not len(pars[indx+1]) == 1: 
+                wd = float(pars[indx+1])
+            else:
+                wd = int(pars[indx+1])
         if par == 'a':
             a_present = True
-            a = int(pars[indx+1])
-            
+            if not len(pars[indx+1]) == 1: 
+                a = float(pars[indx+1])
+            else:
+                a = int(pars[indx+1])
+            # a = float(pars[indx+1])
+    # print(pars)            
     npi = int(pars[1])
     selector = pars[2]
     regime = '_'.join(pars[3:5])
@@ -88,12 +95,10 @@ def extract_params(ttl):
     if regime == 'standard_b':
         regime = 'standard'
     if a_present:
-        
         return [npi, selector, b, wd,s, a, pars + [regime]]
     else:
         return [npi, selector, b, wd,s, 1, pars + [regime]]
                 
-
 def extract_post(npi=3, nmodes=4):
     x_positions = []
     for i in range(nmodes):
@@ -112,6 +117,7 @@ def extract_post(npi=3, nmodes=4):
     return posts, x_positions
 
 def load_fits(trials=1000):
+
     tests = np.asarray(['conflict', 'agreement','goal', 'habit'],dtype="object")
     names = ['npi', 'selector','b','w','s','A', 'regime', 'post_fit','individual_fit','avg_fit','ID','file_ttl','stats']
     nmodes = 4
@@ -214,7 +220,7 @@ def load_fits_from_data(pars, trials=1000):
     tests = np.asarray(['conflict', 'agreement','goal', 'habit'],dtype="object")
     names = ['npi', 'selector','b','w','s','A', 'regime', 'post_fit','individual_fit','avg_fit','ID','file_ttl','stats']
     nmodes = 4
-    path = os.getcwd() + '/parameter_data/'
+    path = os.getcwd() + '\\parameter_data\\'
     files = os.listdir(path)
     total = len(pars)
     npis = np.zeros(total)
@@ -491,12 +497,8 @@ def plot_figure(df,q):
     plt.figure()
     sns.histplot(data=df, x='rts', hue="mode", bins=100, alpha=0.5)
     plt.title(q)
-    
-    
 
-
-def generate_data(pars):
-    posts, none = extract_post()
+def generate_data(par_list):
     path = os.getcwd() + '/parameter_data/'
     parameter_names = ['npi','selelctor', 'b','w','s','a','regime']
     for ind, p in enumerate(par_list):
@@ -510,6 +512,7 @@ def generate_data(pars):
         s = p[4]
         A = p[5]
         sample_post, sample_other, prior_as_start, reg = p[6]
+        posts, none = extract_post(npi=npi)
 
         ttl = '_'.join(['npi', str(npi), selector, reg, 'b' ,str(b), 'wd' ,str(wd), 's', str(s), 'a', str(A), '.txt']) 
         print('\n' + ttl)
@@ -531,63 +534,368 @@ def generate_data(pars):
         
         stop = time.perf_counter()
         print((stop - start)/60)  
-# df, naned = load_fits()
+
+def show_rts(pars):
+    df, nanend = load_fits_from_data(pars)
+    for ind, row in df.iterrows():    
+            data = load_file(os.getcwd() + '/parameter_data/' + row['file_ttl'])
+            print(row['file_ttl'])
+            print(row['stats'].sort_values(by=['mode']))
+
+            rt_df = {
+                'rts': data['RT'].ravel() ,
+                'mode': tests.repeat(1000)
+                }
+            
+            rt_df = pd.DataFrame(rt_df)
+        
+            sns.histplot(data=rt_df, x='rts', hue='mode',bins=150)
+            plt.show()
+            plt.title(str(row['avg_fit']))
+
 
 #%%
+pols = [3]
+bs = [3]
+As = [0.8]
+ws = [1]
+ss = [0.0034]
+ws = [1]
+selectors = ['rdm']
 
+# p = [True, 'rdm', 3, 1, 0.0034, 1, [True, False, True, 'post_prior1']]
+
+# par_list = []
+# pars = [params_list[1]] 
+# for p in itertools.product(pols, selectors, bs, ws, ss, As, pars):
+#         par_list.append([p[0]]+[p[1]] + [p[2]]+ [p[3]]+ [p[4]] + [p[5]] + [p[6]])
+
+
+# print(par_list)
+# # generate_data(pars)
+# df, fucked = load_fits_from_data(par_list)
+
+# for ind, row in df.iterrows():
+#     print(row.stats)
+
+#     data = load_file(path + row.file_ttl)
+#     rt_df = {
+#         'rts': data['RT'].ravel(),
+#         'mode': tests.repeat(1000)
+#     }
+
+#     rt_df = pd.DataFrame(rt_df)
+#     plt.plot()
+#     plt.subplot(2,1,1)
+#     sns.histplot(data=rt_df, x="rts", hue="mode")
+#     plt.subplot(2,1,2)
+#     empirical = data['empirical']
+#     posts, x_positions = extract_post()
+       
+#     for m in range(4):
+#         post = posts[m,:]
+#         x_pos = x_positions[m]
+#         plt.bar(x_pos, post, alpha=0.5, color='k')
+#         plt.bar(x_pos, empirical[m,:], alpha=0.5, color=cols[m])
+    
+#     print('fit conservative')
+#     print(np.abs((posts - empirical)/posts).mean())
+#     plt.show()
+#     plt.close()
+
+
+
+
+#%%
+df, naned = load_fits()
+#%%
+df.to_csv('fits.csv')
+#%%
+# wdf = pd.read_csv('fits.csv')
 wdf = df.copy()
-
-
-
-#%%
-
-tests = np.asarray(['conflict', 'agreement','goal', 'habit'],dtype="object")
-wdf = df.query("regime == 'like_prior1' | regime == 'post_prior1'").reset_index()
-conf_diff = np.zeros(wdf.shape[0])
-goal_diff = np.zeros(wdf.shape[0])
+conf_mean_diff = np.zeros(wdf.shape[0])
+goal_mean_diff = np.zeros(wdf.shape[0])
+conf_med_diff = np.zeros(wdf.shape[0])
+goal_med_diff = np.zeros(wdf.shape[0])
 agr_mean = np.zeros(wdf.shape[0])
+goal_mean = np.zeros(wdf.shape[0])
+
 for ind, row in wdf.iterrows():
     
     means = row['stats']['mean']
     agr_mean[ind] = means[0]
-    conf_diff[ind] = (means[3] - means[1])
-    goal_diff[ind]= (means[3] - means[2])
+    goal_mean[ind] = means[2]
 
-wdf['conf_diff'] = conf_diff
-wdf['goal_diff'] = goal_diff
-wdf['agr_mean'] = agr_mean
+    conf_mean_diff[ind] = ((means[3] - means[1])/means[3])
+    goal_mean_diff[ind]= ((means[3] - means[2])/means[3])
 
-wdf = wdf[wdf['agr_mean'] > 100]
-
-
-grouped = wdf.groupby(['npi','selector', 'regime'])['post_fit'].transform('min')
-wdf['best_fit'] = grouped
-wdf['optimal'] = wdf['best_fit'] == wdf['post_fit']
-
-best = wdf[wdf['optimal']  == 1].sort_values(by=['npi', 'selector'])
-titles_close = []
-for ind, row in best.iterrows():    
-    if row['npi'] == 3:
-        data = load_file(os.getcwd() + '/parameter_data/' + row['file_ttl'])
-        print(row['file_ttl'])
-        print(row['stats'])
-        print(row['goal_diff'])
-        print(row['conf_diff'])
-        titles_close.append(row['file_ttl'])
-
-        rt_df = {
-            'rts': data['RT'].ravel() ,
-            'mode': tests.repeat(1000)
-            }
-        
-        rt_df = pd.DataFrame(rt_df)
     
-        plt.figure()
-        sns.histplot(data=rt_df, x='rts', hue='mode')
-        plt.title(str(row['avg_fit']))
+    meds = row['stats']['median']
+    conf_med_diff[ind] = ((meds[3] - meds[1])/meds[3])
+    goal_med_diff[ind]= ((meds[3] - meds[2])/meds[3])
+
+wdf['conf_mean_diff'] = conf_mean_diff
+wdf['goal_mean_diff'] = goal_mean_diff
+wdf['conf_med_diff'] = conf_med_diff
+wdf['goal_med_diff'] = goal_med_diff
+wdf['agr_mean'] = agr_mean
+wdf['goal_mean'] = goal_mean
+
+df = wdf.copy()
+wdf.to_csv('fits.csv')
+
+#%%
+test = df.query("regime == 'standard' & goal_mean < 150 & goal_mean > 130 ").reset_index()
+
+test.shape
+
+for ind, row in test.iterrows():
+    # # if ind<2:
+    data = load_file(os.getcwd() + '/parameter_data/' + row['file_ttl'])
+    print(row['file_ttl'])
+    print(row['stats'])
+    print(row['goal_med_diff'])
+    print(row['conf_med_diff'])
+    # titles_close.append(row['file_ttl'])
+
+    rt_df = {
+        'rts': data['RT'].ravel() ,
+        'mode': tests.repeat(1000)
+        }
+    
+
+    rt_df = pd.DataFrame(rt_df)
+
+    sns.histplot(data=rt_df, x='rts', hue='mode')
+    # plt.xlim(0, 700)
+    plt.show()
+    plt.savefig(row['file_ttl'] + '.png', dpi=300)
+    plt.close()
+
+
+
+
+
+
+
+
+
 
 
 #%%
+pars_for_fig = ['npi_3_rdm_standard_b_1_wd_0.1280639999999999_s_6.399999999999994e-05_.txt',\
+                'npi_81_rdm_standard_b_1.0_wd_0.1280639999999999_s_6.399999999999994e-05_a_3.5_.txt',\
+                'npi_3_rdm_post_prior1_b_3_wd_1_s_0.0034_a_1_.txt',\
+                'npi_81_rdm_post_prior1_b_3_wd_1_s_0.001_a_4_.txt',\
+                'npi_3_rdm_like_prior1_b_7_wd_1_s_0.0034_a_2_.txt',\
+                'npi_81_rdm_like_prior1_b_4_wd_1_s_0.001_a_4_.txt']
+
+
+
+
+
+
+
+
+
+#%% GONNA FIND THOSE BASTARDS
+
+# pars = load_file('standard_params.txt')
+
+# params = []
+# # for i in [1, 2, 3, 4, 5]:
+
+# p = pars[5]
+# p[0] = 81
+# # p[5] = 3.5
+
+
+p = extract_params('npi_3_rdm_standard_b_1_wd_0.1280639999999999_s_6.399999999999994e-05_.txt')
+
+# p = [3, 'rdm', 3, 1, 0.0034, 1, [True, False, True, 'post_prior1']]
+
+# p = extract_params('npi_81_rdm_post_prior1_b_3_wd_1_s_0.001_a_4_.txt')
+# p = [81, 'rdm', 4, 1, 0.001, 4, [False, True, True, 'like_prior1']]
+# par_list = []
+# pars = [params_list[1]] 
+# for p in itertools.product(pols, selectors, bs, ws, ss, As, pars):
+#         par_list.append([p[0]]+[p[1]] + [p[2]]+ [p[3]]+ [p[4]] + [p[5]] + [p[6]])
+
+
+# _s6.399999999999994e-05_wd0.1280639999999999_b1.0_a3.5
+# print(params)
+
+s = np.asarray([0.1, 0.06, 0.02])
+s = s**2
+s = [0.01  , 0.0036, 0.0004]
+
+p = [3, 'rdm', 1, 1, 0.001, 1, [False, True, True, 'like_prior1']]
+p = [3, 'rdm', 1, 1, 0.001, 1, params_list[1]]
+p = [81, 'rdm', 1, 1, s[2], 1, params_list[3]]
+
+p = [[3, 'rdm', 1, 1, s[0], 1, params_list[1]],
+     [3, 'rdm', 1, 1, s[0], 1, params_list[2]],
+     [3, 'rdm', 1, 1, s[1], 1, params_list[1]],
+     [3, 'rdm', 1, 1, s[1], 1, params_list[2]],
+     [3, 'rdm', 1, 1, s[2], 1, params_list[1]],
+     [3, 'rdm', 1, 1, s[2], 1, params_list[2]],
+     [81, 'rdm', 1, 1, s[0], 1, params_list[1]],
+     [81, 'rdm', 1, 1, s[0], 1, params_list[2]],
+     [81, 'rdm', 1, 1, s[1], 1, params_list[1]],
+     [81, 'rdm', 1, 1, s[1], 1, params_list[2]],
+     [81, 'rdm', 1, 1, s[2], 1, params_list[1]],
+     [81, 'rdm', 1, 1, s[2], 1, params_list[2]]]
+generate_data(p)
+# show_rts([p])
+
+
+#%% RDM posterior
+
+# p = extract_params('npi_3_ardm_standard_b_3_wd_0.06_s_0.004_a_1_.txt')
+# p[5] = 2.5
+# p = [p]
+# generate_data(p)
+# show_rts(p)
+
+# p = extract_params('npi_81_ardm_standard_b_3_wd_0.01_s_0.002_a_1_.txt')
+# p[5] = 3
+# p = [p]
+# generate_data(p)
+# show_rts(p)
+
+p = extract_params('npi_3_rdm_post_prior0_b_2.5_wd_1.629_s_0.009_.txt')
+p[5] = 2.5
+p = [p]
+generate_data(p)
+show_rts(p)
+
+#%% ARDM
+
+# p = extract_params('npi_3_ardm_standard_b_3_wd_0.06_s_0.004_a_1_.txt')
+# p[5] = 2.5
+# p = [p]
+# generate_data(p)
+# show_rts(p)
+
+# p = extract_params('npi_81_ardm_standard_b_3_wd_0.01_s_0.002_a_1_.txt')
+# p[5] = 3
+# p = [p]
+# generate_data(p)
+# show_rts(p)
+
+p = extract_params('npi_8_ardm_standard_b_2_wd_1_s_0.0006_a_2_.txt')
+# p[5] = 2.5
+p = [p]
+generate_data(p)
+show_rts(p)
+
+#%%
+df = pd.read_csv('fits.csv')
+npi = 81
+reg = 0
+selector = 'rdm'
+queries = []
+for regime in params_list:
+    queries.append("regime == '" + regime[3] + "' & npi == " + str(npi)+ " & selector == '" + selector + "'")
+print(queries)
+
+wdf = df.query(queries[reg]).reset_index()
+wdf = wdf[(wdf['agr_mean'] > 120 ) ]
+
+
+
+# wdf = wdf[(wdf['conf_med_diff'] < -0.05) & (wdf['goal_med_diff'] < -0.05) ]
+wdf = wdf[(wdf['conf_med_diff'] < -0.05)]
+
+print(wdf.shape)
+
+wdf = wdf.sort_values(by = ['goal_med_diff']).reset_index()
+
+titles_close = []
+for ind, row in wdf.iterrows():
+    # # if ind<2:
+    print('hi')
+    data = load_file(os.getcwd() + '/parameter_data/' + row['file_ttl'])
+    print(row['file_ttl'])
+    print(row['stats'])
+    print(row['goal_med_diff'])
+    print(row['conf_med_diff'])
+    titles_close.append(row['file_ttl'])
+
+    rt_df = {
+        'rts': data['RT'].ravel() ,
+        'mode': tests.repeat(1000)
+        }
+    
+
+    rt_df = pd.DataFrame(rt_df)
+
+    sns.histplot(data=rt_df, x='rts', hue='mode')
+    # plt.xlim(0, 700)
+    plt.title(row['file_ttl'])
+    plt.show()
+    plt.savefig(row['file_ttl'] + '.png', dpi=300)
+    plt.close()
+
+
+
+
+
+
+
+
+
+
+#%% STANDARD MODE CANDIDATES
+# wdf = df.query(queries[0]).reset_index()
+reduced = titles_close[-10:]
+sim_params = []
+for title in reduced:
+    sim_params.append(extract_params(title))
+
+with open('standard_params.txt', 'wb') as fp:
+    pickle.dump(sim_params, fp)
+
+#%%
+
+
+
+# grouped = wdf.groupby(['npi','selector', 'regime'])['post_fit'].transform('min')
+# wdf['best_fit'] = grouped
+# wdf['optimal'] = wdf['best_fit'] == wdf['post_fit']
+
+# wdf = wdf[wdf['agr_mean'] > 100]
+# best = wdf[wdf['optimal']  == 1].sort_values(by=['npi', 'selector'])
+# titles_close = []
+
+# for ind, row in best.iterrows():    
+#     if row['npi'] == 3:
+#         data = load_file(os.getcwd() + '/parameter_data/' + row['file_ttl'])
+#         print(row['file_ttl'])
+#         print(row['stats'])
+#         print(row['goal_diff'])
+#         print(row['conf_diff'])
+#         titles_close.append(row['file_ttl'])
+
+#         rt_df = {
+#             'rts': data['RT'].ravel() ,
+#             'mode': tests.repeat(1000)
+#             }
+        
+#         rt_df = pd.DataFrame(rt_df)
+    
+#         plt.figure()
+#         sns.histplot(data=rt_df, x='rts', hue='mode')
+#         plt.title(str(row['avg_fit']))
+
+
+
+# #%%
+
+
+    
+
+#%% Simulation parameters
 
 pols = [3]
 bs = [3]
@@ -609,356 +917,336 @@ for title in titles_close:
 
 with open('sim_params.txt', 'wb') as fp:
     pickle.dump(par_list, fp)
-    
+
+
 
 #%%
-pols = [3]
-bs = [3]
-As = [0.8]
-ws = [1]
-ss = [0.0034]
-# ss = [0.0012]
-ws = [1]
-selectors = ['rdm']
-
-p = [True, 'rdm', 3, 1, 0.0034, 1, [True, False, True, 'post_prior1']]
-
-par_list = []
-pars = [params_list[1]] 
-for p in itertools.product(pols, selectors, bs, ws, ss, As, pars):
-        par_list.append([p[0]]+[p[1]] + [p[2]]+ [p[3]]+ [p[4]] + [p[5]] + [p[6]])
-
-
-print(par_list)
-generate_data(pars)
-df, fucked = load_fits_from_data(par_list)
-
-
-for ind, row in df.iterrows():
-    print(row.stats)
-
-    data = load_file(path + row.file_ttl)
-    rt_df = {
-        'rts': data['RT'].ravel() ,
-        'mode': tests.repeat(1000)
-    }
-
-    rt_df = pd.DataFrame(rt_df)
-    plt.plot()
-    sns.histplot(data=rt_df, x="rts", hue="mode")
-    plt.show()
-    plt.close()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# %%
-
-        
-        
-#%% 
-
-'''
-FIGURE NPI=3 SUCCESSFULL RT SPREAD
-'''
-
-query =  "npi == 3.0 & b == 3.0 & s == 0.0004 & w == 1.0 & A == 1.0"
-succesfull = df.query(query)
-
-plot = [1,3,2,4]        
-fig,axes = plt.subplots(2,2, figsize=(10,6),sharey=True)
-
-regimes = ["'post_prior1'", "'like_prior1'"]
-selectors =["'rdm'","'ardm'"]
-
-plt.subplots_adjust(hspace=0.4)
-
-for sel in range(2):
-    for reg in range(2):
-        print(sel,reg)
-        query = "npi == 3.0 & b == 3.0 & s == 0.0004 & w == 1.0 & A == 1.0 " + \
-                '& selector == ' + selectors[sel] + ' & regime == ' + regimes[reg]
-        sns.histplot(ax = axes[reg, sel], \
-                     data=succesfull.query(query),
-                     x='rts', hue='mode', legend=False, bins=70)
-        axes[reg, sel].set_xlabel('RTs')
-axes[0,0].set_title('RDM')
-axes[0,1].set_title('ARDM')
-axes[sel,reg].legend(labels = ['habit','goal', 'agreement','conflict'], bbox_to_anchor=(-0.1, -0.4), loc='lower center', ncol=4)
-
-axes = axes.flat
-for n, ax in enumerate(axes):
-
-    ax.text(-0.1, 1.1, string.ascii_uppercase[n], transform=ax.transAxes, 
-            size=15, weight='bold')
-        
-        
-#%%
-
-''''FIGURE EXAMPLE POSTERIOR'''
-query =  "npi == 3.0 & b == 3.0 & s == 0.0004 & w == 1.0 & A == 1.0"
-succesfull = df.query(query)
-
-plot = [1,3,2,4]        
-
-
-regimes = ["'post_prior1'", "'like_prior1'"]
-selectors =["'rdm'","'ardm'"]
-labels_gray = ['posterior', '_nolegend_', '_nolegend_', '_nolegend_']
-fig,axes = plt.subplots(2,2, figsize=(10,6),sharey=True)
-plt.subplots_adjust(hspace=0.4)
-labels_emp = ['conflict', 'agreement','goal', 'habit']
-for sel in range(2):
-    for reg in range(2):
-        query = "npi == 3.0 & b == 3.0 & s == 0.0004 & w == 1.0 & A == 1.0 " + \
-                '& selector == ' + selectors[sel] + ' & regime == ' + regimes[reg]
-        d = succesfull.query(query)
-        test(d)
-        path = os.getcwd() + '/parameter_data/' 
-        ttl = np.unique(d.file_ttl)[0]
-        data = load_file(path+ttl)
-        empirical = data['empirical']
-        posts, x_positions = extract_post()
-        
-        for m in range(4):
-            post = posts[m,:]
-            x_pos = x_positions[m]
-            axes[reg, sel].bar(x_pos, post, alpha=0.5, color='k', label= labels_gray[m])
-            axes[reg, sel].bar(x_pos, empirical[m,:], alpha=0.5, color=cols[m], label = labels_emp[m])
-        axes[reg,sel].get_xaxis().set_visible(False)
-
-axes[0,0].set_title('RDM')
-axes[0,1].set_title('ARDM')
-
-axes[sel,reg].legend( bbox_to_anchor=(-0.1, -0.4), loc='lower center', ncol=5)
-
-
-axes = axes.flat
-for n, ax in enumerate(axes):
-
-    ax.text(-0.1, 1.1, string.ascii_uppercase[n], transform=ax.transAxes, 
-            size=15, weight='bold')
-
-plt.savefig('posteriors_example.png', dpi=300)
-
-# # set the spacing between subplots
-# plt.subplots_adjust(left=0.1,
-#                     bottom=0.1, 
-#                     right=0.9, 
-#                     top=0.9, 
-#                     wspace=0.4, 
-#                     hspace=0.4)
-        
-        
-
-        
-#%%
-query =  "npi == 3.0 & b == 3.0 & s == 0.0004 & w == 1.0 & A == 1.0"
-
 pols = [3]
 bs = [3]
 As = [1]
 ws = [1]
-ss = [0.0004]
-ratios =np.arange(2500, 1000, -100)
-ws = ratios*ss[0].tolist()
-selectors = ['rdm', 'ardm']  #
+ss = [0.0034]
+ws = [1]
+selectors = ['rdm', 'ardm']
+pars = [params_list[1]] + [params_list[3]]
 
 par_list = []
-pars = [params_list[1]] + [params_list[3]] 
-for p in itertools.product(pols, selectors, bs, ws, ss, As, pars):
+for p in itertools.product(pols, selectors, bs, ws, ss, As, params_list):
         par_list.append([p[0]]+[p[1]] + [p[2]]+ [p[3]]+ [p[4]] + [p[5]] + [p[6]])
+#  p = [[True, 'rdm', 3, 1, 0.0034, 1, [True, False, True, 'post_prior1']]]
+
+# show_rts(par_list)
+
+# generate_data(par_list)
+
+
+# # %%
+
         
-for p in par_list:
-    print(p)
         
-# df.query(query)
+# #%% 
 
-#%%
-'''
-GET STATISTICS OF REACTION TIME DISTRIBUTIONS AND LOOK FOR HABIT RT SHIFTS
-'''
+# '''
+# FIGURE NPI=3 SUCCESSFULL RT SPREAD
+# '''
+
+# query =  "npi == 3.0 & b == 3.0 & s == 0.0004 & w == 1.0 & A == 1.0"
+# succesfull = df.query(query)
+
+# plot = [1,3,2,4]        
+# fig,axes = plt.subplots(2,2, figsize=(10,6),sharey=True)
+
+# regimes = ["'post_prior1'", "'like_prior1'"]
+# selectors =["'rdm'","'ardm'"]
+
+# plt.subplots_adjust(hspace=0.4)
+
+# for sel in range(2):
+    # for reg in range(2):
+        # print(sel,reg)
+        # query = "npi == 3.0 & b == 3.0 & s == 0.0004 & w == 1.0 & A == 1.0 " + \
+                # '& selector == ' + selectors[sel] + ' & regime == ' + regimes[reg]
+        # sns.histplot(ax = axes[reg, sel], \
+                     # data=succesfull.query(query),
+                     # x='rts', hue='mode', legend=False, bins=70)
+        # axes[reg, sel].set_xlabel('RTs')
+# axes[0,0].set_title('RDM')
+# axes[0,1].set_title('ARDM')
+# axes[sel,reg].legend(labels = ['habit','goal', 'agreement','conflict'], bbox_to_anchor=(-0.1, -0.4), loc='lower center', ncol=4)
+
+# axes = axes.flat
+# for n, ax in enumerate(axes):
+
+    # ax.text(-0.1, 1.1, string.ascii_uppercase[n], transform=ax.transAxes, 
+            # size=15, weight='bold')
+        
+        
+# #%%
+
+# ''''FIGURE EXAMPLE POSTERIOR'''
+# query =  "npi == 3.0 & b == 3.0 & s == 0.0004 & w == 1.0 & A == 1.0"
+# succesfull = df.query(query)
+
+# plot = [1,3,2,4]        
 
 
-# grouped = df.groupby(['npi','selector', 'regime']).min('post_fit').reset_index()
+# regimes = ["'post_prior1'", "'like_prior1'"]
+# selectors =["'rdm'","'ardm'"]
+# labels_gray = ['posterior', '_nolegend_', '_nolegend_', '_nolegend_']
+# fig,axes = plt.subplots(2,2, figsize=(10,6),sharey=True)
+# plt.subplots_adjust(hspace=0.4)
+# labels_emp = ['conflict', 'agreement','goal', 'habit']
+# for sel in range(2):
+    # for reg in range(2):
+        # query = "npi == 3.0 & b == 3.0 & s == 0.0004 & w == 1.0 & A == 1.0 " + \
+                # '& selector == ' + selectors[sel] + ' & regime == ' + regimes[reg]
+        # d = succesfull.query(query)
+        # test(d)
+        # path = os.getcwd() + '/parameter_data/' 
+        # ttl = np.unique(d.file_ttl)[0]
+        # data = load_file(path+ttl)
+        # empirical = data['empirical']
+        # posts, x_positions = extract_post()
+        
+        # for m in range(4):
+            # post = posts[m,:]
+            # x_pos = x_positions[m]
+            # axes[reg, sel].bar(x_pos, post, alpha=0.5, color='k', label= labels_gray[m])
+            # axes[reg, sel].bar(x_pos, empirical[m,:], alpha=0.5, color=cols[m], label = labels_emp[m])
+        # axes[reg,sel].get_xaxis().set_visible(False)
 
-grouped = df.groupby(['npi','selector', 'regime','b', 's', 'w','A', 'mode']).agg(
-    mean = ("rts","mean"),
-    median = ("rts", "median"),
-    var = ("rts", "var"),
-    skew =("rts", "skew"),
-    post_fit = ("post_fit", 'mean'),
-)
+# axes[0,0].set_title('RDM')
+# axes[0,1].set_title('ARDM')
 
-grouped = grouped.sort_values(by=['npi','selector', 'regime','b', 's', 'w','A', 'mode']).round(2).reset_index()
-grouped['run'] = np.arange(0,grouped.shape[0]/4).repeat(4)
+# axes[sel,reg].legend( bbox_to_anchor=(-0.1, -0.4), loc='lower center', ncol=5)
 
 
-conf_diff = []
-goal_diff = []
+# axes = axes.flat
+# for n, ax in enumerate(axes):
 
-for run in np.unique(grouped['run']):
-    slice = grouped.query('run == ' + str(run))
-    means = slice['mean'].values
-    conf_diff += [means[3] - means[1]]*4
-    goal_diff += [means[3] - means[2]]*4
-    
-grouped['conf_diff'] = conf_diff
-grouped['goal_diff'] = goal_diff
+    # ax.text(-0.1, 1.1, string.ascii_uppercase[n], transform=ax.transAxes, 
+            # size=15, weight='bold')
 
+# plt.savefig('posteriors_example.png', dpi=300)
 
-grouped = grouped.query('conf_diff < -5 & goal_diff < -5')
-
-qs = []
-for ind, row in grouped.iterrows():
-    names = row.keys()[:7]
-    vals = row.values[:7]
-    vals
-    
-    for ind, val in enumerate(vals):
-        if type(val) == str:
-            vals[ind] = "'"+val+"'"          
-
-    query = ' & '.join((names + ' == ' + vals.astype('str')).to_list())
-    qs.append(query)
-
-qs = set(qs)
-print(qs)
-
-    
-#%%
-
-for query in qs:
-    # if((not query.__contains__('ardm')) and query.__contains__('npi == 81')):
-    if(query.__contains__('ardm') and query.__contains__('npi == 8.0')):
-        q = df.query(query)
-        q.to_excel('poop.xlsx')
-        print(query)
-        print(np.unique(q.post_fit))
-        if(not q.shape[0] == 4000):
-            raise ValueError('WRONG QUERY SELECTION')
-        plot_table(q)
-        plot_figure(q,query)
+# # # set the spacing between subplots
+# # plt.subplots_adjust(left=0.1,
+# #                     bottom=0.1, 
+# #                     right=0.9, 
+# #                     top=0.9, 
+# #                     wspace=0.4, 
+# #                     hspace=0.4)
+        
         
 
+        
+# #%%
+# query =  "npi == 3.0 & b == 3.0 & s == 0.0004 & w == 1.0 & A == 1.0"
+
+# pols = [3]
+# bs = [3]
+# As = [1]
+# ws = [1]
+# ss = [0.0004]
+# ratios =np.arange(2500, 1000, -100)
+# ws = ratios*ss[0].tolist()
+# selectors = ['rdm', 'ardm']  #
+
+# par_list = []
+# pars = [params_list[1]] + [params_list[3]] 
+# for p in itertools.product(pols, selectors, bs, ws, ss, As, pars):
+        # par_list.append([p[0]]+[p[1]] + [p[2]]+ [p[3]]+ [p[4]] + [p[5]] + [p[6]])
+        
+# for p in par_list:
+    # print(p)
+        
+# # df.query(query)
+
+# #%%
+# '''
+# GET STATISTICS OF REACTION TIME DISTRIBUTIONS AND LOOK FOR HABIT RT SHIFTS
+# '''
 
 
+# # grouped = df.groupby(['npi','selector', 'regime']).min('post_fit').reset_index()
+
+# grouped = df.groupby(['npi','selector', 'regime','b', 's', 'w','A', 'mode']).agg(
+    # mean = ("rts","mean"),
+    # median = ("rts", "median"),
+    # var = ("rts", "var"),
+    # skew =("rts", "skew"),
+    # post_fit = ("post_fit", 'mean'),
+# )
+
+# grouped = grouped.sort_values(by=['npi','selector', 'regime','b', 's', 'w','A', 'mode']).round(2).reset_index()
+# grouped['run'] = np.arange(0,grouped.shape[0]/4).repeat(4)
 
 
+# conf_diff = []
+# goal_diff = []
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#%%
-
-
-
-df = load_data_from_ttl(par_list)
-
-#%%
-df = load_data_from_ttl(par_list)
-names = df.keys()
-
-
-grouped = df.groupby(['npi','selector', 'regime','b', 's', 'w','A', 'mode']).agg(
-    mean = ("rts","mean"),
-    median = ("rts", "median"),
-    var = ("rts", "var"),
-    skew =("rts", "skew"),
-    post_fit = ("post_fit", 'mean'),
-)
-
-grouped = grouped.sort_values(by=['npi','selector', 'regime','b', 's', 'w','A', 'mode']).round(2).reset_index()
-grouped['run'] = np.arange(0,grouped.shape[0]/4).repeat(4)
-
-
-conf_diff = []
-goal_diff = []
-
-for run in np.unique(grouped['run']):
-    slice = grouped.query('run == ' + str(run))
-    means = slice['mean'].values
-    conf_diff += [(means[3] - means[1])/means[1]]*4
-    goal_diff += [(means[3] - means[2])/means[2]]*4
+# for run in np.unique(grouped['run']):
+    # slice = grouped.query('run == ' + str(run))
+    # means = slice['mean'].values
+    # conf_diff += [means[3] - means[1]]*4
+    # goal_diff += [means[3] - means[2]]*4
     
-grouped['conf_diff'] = conf_diff
-grouped['goal_diff'] = goal_diff
+# grouped['conf_diff'] = conf_diff
+# grouped['goal_diff'] = goal_diff
 
-
-# df = df.sort_values(by=['selector', 'regime', 'avg_fit'])
-# df = df.drop_duplicates(subset=names[:7]).round(4)
 
 # grouped = grouped.query('conf_diff < -5 & goal_diff < -5')
 
-qs = []
-for ind, row in grouped.iterrows():
-    names = row.keys()[:7]
-    vals = row.values[:7]
-    vals
+# qs = []
+# for ind, row in grouped.iterrows():
+    # names = row.keys()[:7]
+    # vals = row.values[:7]
+    # vals
     
-    for ind, val in enumerate(vals):
-        if type(val) == str:
-            vals[ind] = "'"+val+"'"          
+    # for ind, val in enumerate(vals):
+        # if type(val) == str:
+            # vals[ind] = "'"+val+"'"          
 
-    query = ' & '.join((names + ' == ' + vals.astype('str')).to_list())
-    qs.append(query)
+    # query = ' & '.join((names + ' == ' + vals.astype('str')).to_list())
+    # qs.append(query)
 
 # qs = set(qs)
+# print(qs)
 
-data = grouped.query("selector == 'rdm'")
-# sns.lineplot(data=data, x="w", y="post_fit", hue='regime')
-sns.lineplot(data=data, x="w", y="goal_diff", hue='regime')
-# sns.lineplot(data=data, x="w", y="conf_diff", hue='regime')
+    
+# #%%
 
 # for query in qs:
-#     # if((not query.__contains__('ardm')) and query.__contains__('npi == 81')):
-#     if(not query.__contains__('ardm') and query.__contains__('npi == 3.0')):
-#         q = df.query(query)
-#         q.to_excel('poop.xlsx')
-#         print(query)
-#         print(np.unique(q.post_fit))
-#         if(not q.shape[0] == 4000):
-#             raise ValueError('WRONG QUERY SELECTION')
-#         plot_table(q)
-#         plot_figure(q,query)
+    # # if((not query.__contains__('ardm')) and query.__contains__('npi == 81')):
+    # if(query.__contains__('ardm') and query.__contains__('npi == 8.0')):
+        # q = df.query(query)
+        # q.to_excel('poop.xlsx')
+        # print(query)
+        # print(np.unique(q.post_fit))
+        # if(not q.shape[0] == 4000):
+            # raise ValueError('WRONG QUERY SELECTION')
+        # plot_table(q)
+        # plot_figure(q,query)
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# #%%
+
+
+
+# df = load_data_from_ttl(par_list)
+
+# #%%
+# df = load_data_from_ttl(par_list)
+# names = df.keys()
+
+
+# grouped = df.groupby(['npi','selector', 'regime','b', 's', 'w','A', 'mode']).agg(
+    # mean = ("rts","mean"),
+    # median = ("rts", "median"),
+    # var = ("rts", "var"),
+    # skew =("rts", "skew"),
+    # post_fit = ("post_fit", 'mean'),
+# )
+
+# grouped = grouped.sort_values(by=['npi','selector', 'regime','b', 's', 'w','A', 'mode']).round(2).reset_index()
+# grouped['run'] = np.arange(0,grouped.shape[0]/4).repeat(4)
+
+
+# conf_diff = []
+# goal_diff = []
+
+# for run in np.unique(grouped['run']):
+    # slice = grouped.query('run == ' + str(run))
+    # means = slice['mean'].values
+    # conf_diff += [(means[3] - means[1])/means[1]]*4
+    # goal_diff += [(means[3] - means[2])/means[2]]*4
+    
+# grouped['conf_diff'] = conf_diff
+# grouped['goal_diff'] = goal_diff
+
+
+# # df = df.sort_values(by=['selector', 'regime', 'avg_fit'])
+# # df = df.drop_duplicates(subset=names[:7]).round(4)
+
+# # grouped = grouped.query('conf_diff < -5 & goal_diff < -5')
+
+# qs = []
+# for ind, row in grouped.iterrows():
+    # names = row.keys()[:7]
+    # vals = row.values[:7]
+    # vals
+    
+    # for ind, val in enumerate(vals):
+        # if type(val) == str:
+            # vals[ind] = "'"+val+"'"          
+
+    # query = ' & '.join((names + ' == ' + vals.astype('str')).to_list())
+    # qs.append(query)
+
+# # qs = set(qs)
+
+# data = grouped.query("selector == 'rdm'")
+# # sns.lineplot(data=data, x="w", y="post_fit", hue='regime')
+# sns.lineplot(data=data, x="w", y="goal_diff", hue='regime')
+# # 
+# 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# (data=data, x="w", y="conf_diff", hue='regime')
+
+# # for query in qs:
+# #     # if((not query.__contains__('ardm')) and query.__contains__('npi == 81')):
+# #     if(not query.__contains__('ardm') and query.__contains__('npi == 3.0')):
+# #         q = df.query(query)
+# #         q.to_excel('poop.xlsx')
+# #         print(query)
+# #         print(np.unique(q.post_fit))
+# #         if(not q.shape[0] == 4000):
+# #             raise ValueError('WRONG QUERY SELECTION')
+# #         plot_table(q)
+# #         plot_figure(q,query)
 
 
 
