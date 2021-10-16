@@ -79,6 +79,7 @@ class BayesianPlanner(object):
         self.log_probability = 0
         if hasattr(self.perception, 'generative_model_context'):
             self.context_obs = np.zeros(trials, dtype=int)
+        self.prior_actions = np.zeros([trials, T-1, np.unique(self.policies).size])
 
 
     def reset(self, params, fixed):
@@ -95,11 +96,11 @@ class BayesianPlanner(object):
         self.posterior_actions[:] = 0
         self.posterior_rewards[:] = 0
         self.log_probability = 0
-
         self.perception.reset(params, fixed)
 
 
     def update_beliefs(self, tau, t, observation, reward, response, context=None):
+        
         self.observations[tau,t] = observation
         self.rewards[tau,t] = reward
         if context is not None:
@@ -189,6 +190,7 @@ class BayesianPlanner(object):
         avg_likelihood /= avg_likelihood.sum()
         prior = np.einsum('pc,c->p', self.prior_policies[tau-1], self.posterior_context[tau, 0])
         prior /= prior.sum()
+        self.prior_actions = self.estimate_action_probability(tau,t,prior)
         #print(self.posterior_context[tau, t])
         non_zero = posterior_policies > 0
         controls = self.policies[:, t]#[non_zero]

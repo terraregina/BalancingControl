@@ -435,25 +435,26 @@ class RacingDiffusionSelector(object):
         crossed = bound_reached.nonzero()[0]                      # non-zero returns tuple by default
         
         
-        if (crossed.size > 1):
-            vals = decision_log[i,crossed]
-            selected = np.argmax(vals)
-            decision = crossed[selected]
+        # if (crossed.size > 1):
+        #     vals = decision_log[i,crossed]
+        #     selected = np.argmax(vals)
+        #     decision = crossed[selected]
 
-            # raise ValueError('Two integrators crossed decision boundary at the same time')
-            # print('Two integrators crossed boundary at the same time, choosing one at random')
-            decision = np.random.choice(crossed, p=np.ones(crossed.size)/crossed.size)
-        elif not broken:
-            decision = crossed[0]
+        #     # raise ValueError('Two integrators crossed decision boundary at the same time')
+        #     # print('Two integrators crossed boundary at the same time, choosing one at random')
+        #     decision = np.random.choice(crossed, p=np.ones(crossed.size)/crossed.size)
+        # elif not broken:
+        #     decision = crossed[0]
 
-        if self.over_actions:
-            action = decision
-        elif not broken:
-            action = controls[decision]
-        else:
-            action = -1
-            broken = False
+        # if self.over_actions:
+        #     action = decision
+        # elif not broken:
+        #     action = controls[decision]
+        # else:
+        #     action = -1
+        #     broken = False
         self.RT[tau,t] = i
+        action = np.random.choice(np.arange(self.na), p=posterior)
 
 
 

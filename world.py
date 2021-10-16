@@ -28,7 +28,7 @@ class World(object):
         #container for rewards
         self.rewards = np.zeros((self.trials, self.T), dtype = int)
 
-    def simulate_experiment(self, curr_trials=None):
+    def simulate_experiment(self, curr_trials=None, print_thoughts=False):
         """This methods evolves all the states of the world by iterating
         through all the trials and time steps of each trial.
         """
@@ -38,7 +38,9 @@ class World(object):
             trials = range(self.trials)
         for tau in trials:
             for t in range(self.T):
-                self.__update_world(tau, t)
+                if print_thoughts:
+                    print("tau", tau, ", t", t)
+                self.__update_world(tau, t, print_thoughts=print_thoughts)
 
 
     def estimate_par_evidence(self, params, method='MLE'):
@@ -114,7 +116,7 @@ class World(object):
                 self.agent.estimate_response_probability(tau, t)
 
     #this is a private method do not call it outside of the class
-    def __update_world(self, tau, t):
+    def __update_world(self, tau, t, print_thoughts = False):
         """This private method performs a signel time step update of the
         whole world. Here we update the hidden state(s) of the environment,
         the perceptual and planning states of the agent, and in parallel we
@@ -135,6 +137,7 @@ class World(object):
             self.environment.update_hidden_states(tau, t, response)
             context = None
 
+
         self.observations[tau, t] = \
             self.environment.generate_observations(tau, t)
 
@@ -152,7 +155,21 @@ class World(object):
             self.actions[tau, t] = self.agent.generate_response(tau, t)
         else:
             self.actions[tau, t] = -1
-            
+        
+        if print_thoughts:
+            print("response", response)
+            if t>0:
+                print("rewards", self.rewards[tau, t])
+            # print("posterior policies: ", self.agent.posterior_policies[tau,t])
+            # print("posterior context: ", self.agent.posterior_context[tau,t])
+            if t<self.T-1:
+                print("prior actions: ", self.agent.prior_actions)
+                print("posterior actions: ", self.agent.posterior_actions[tau,t])
+            print("\n")
+
+        if t == self.T-1:
+            print(tau, self.environment.hidden_states[tau,-1])
+
 class World_old(object):
 
     def __init__(self, environment, agent, trials = 1, T = 10):

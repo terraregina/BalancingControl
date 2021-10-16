@@ -13,7 +13,7 @@ import environment as env
 import agent as agt
 import perception as prc
 import action_selection as asl
-import itertools
+import itertoolsa
 import matplotlib.pylab as plt
 from multiprocessing import Pool
 from matplotlib.colors import LinearSegmentedColormap
@@ -27,22 +27,19 @@ import gc
 import pickle
 np.set_printoptions(threshold = 100000, precision = 5)
 plt.style.use('seaborn-whitegrid')
-
+import pickle as pickle
 import itertools as itertools
 import numpy as np
-
-
-
-
-
-
-
+from scipy.stats import entropy
+sns.set_style("whitegrid")
+from misc_sia import load_fits, plot_rts_and_entropy
+#%%
 save = True
 data_folder = os.path.join('C:\\Users\\admin\\Desktop\\project\\BalancingControl','data')
 
 const = 0#1e-10
 
-trials = 200 #number of trials
+trials = 200   #number of trials
 T = 5 #number of time steps in each trial
 Lx = 4 #grid length
 Ly = 5
@@ -58,26 +55,94 @@ g2 = 10
 start = 2
 
 
-print("start", start)
-print("g2", g2)
-print("g1", g1)
-print("nc", nc)
-print("nr", nr)
-print("npi", npi)
-print("na", na)
-print("ns", ns)
-print("no", no)
-print("trials", trials)
-print("data_folder", data_folder)
-print("save", save)
-print('\n\nrunning simulations\n\n')
-print('-------------------------')
+def extract_params(ttl):
+    names = ['standard', 'post_prior1', 'post_prior0', 'like_prior1', 'like_prior0']
 
-# def run_agent(par_list, trials=trials, T=T, Lx = Lx, Ly = Ly, ns=ns, na=na,var=0.1,run=0,\
-#               sample_post = False, sample_other = False, prior_start = True):
+    params_dict = {
+        'standard_b': [False, False, True],
+        'post_prior1': [True, False, True], 
+        'post_prior0': [True, False, False],
+        'like_prior1': [False, True, True], 
+        'like_prior0': [False, True, False]
+    }
+    pars = ttl.split('_')
+    a_present = False
+    for indx, par in enumerate(pars):
+        if par == 'b':
+            if not len(pars[indx+1]) == 1: 
+                b = float(pars[indx+1])
+            else:
+                b = int(pars[indx+1])
+        if par == 's':
+            s = float(pars[indx+1])
+        if par == 'wd':
+            if not len(pars[indx+1]) == 1: 
+                wd = float(pars[indx+1])
+            else:
+                wd = int(pars[indx+1])
+        if par == 'a':
+            a_present = True
+            if not len(pars[indx+1]) == 1: 
+                a = float(pars[indx+1])
+            else:
+                a = int(pars[indx+1])
+            # a = float(pars[indx+1])
+    # print(pars)            
+    npi = int(pars[1])
+    selector = pars[2]
+    regime = '_'.join(pars[3:5])
+    pars = params_dict[regime]
+    
+    if regime == 'standard_b':
+        regime = 'standard'
+    if a_present:
+        return [npi, selector, b, wd,s, a, pars + [regime]]
+    else:
+        return [npi, selector, b, wd,s, 1, pars + [regime]]
 
+#%%
+def make_ttl_from_params(p):
+    context = True
+    over_actions, selector, b, wd, s, A,  = p[:-1]
+    sample_post, sample_other, prior_as_start, regime = p[-1]
 
-def run_agent(par_list, trials=trials, T=T, Lx = Lx, Ly = Ly, ns=ns, na=na,var=0.1,run=0):
+    # if over_actions == 3:
+    #     over_actions = True
+    # else: 
+    #     over_actions = False
+        
+    dirname = selector + '_grid'
+    if over_actions:
+        dirname += '_actions'
+    else:
+        dirname += '_policies' 
+
+    if context:
+        dirname += '_cont-1'
+    else:
+        dirname += '_cont-0'
+
+    if prior_as_start:
+        dirname += '_prior-1'
+    else:
+        dirname += '_prior-0'
+    
+    if sample_post:
+        dirname += '_post'
+    elif sample_other:
+        dirname += '_like'
+    else:
+        dirname += '_stand'
+    
+    low = dirname + '_h'+str(1) + '_s' + str(s)+ '_wd' + str(wd) + '_b' + str(b) + '_a' + str(A)
+    high = dirname + '_h'+str(1000) + '_s' + str(s)+ '_wd' + str(wd) + '_b' + str(b) + '_a' + str(A)
+    return [low, high]
+
+    # high = dirname + '_h'+str(1000) + '_s' + str(s)+ '_wd' + str(wd) + '_b' + str(b) + '_a' + str(A)
+    # return [high]
+
+def run_agent(par_list, trials=trials, T=T, Lx = Lx, Ly = Ly, ns=ns, na=na,run=0,\
+              path=None, print_thoughts = False, print_walks=False):
     #set parameters:
     #obs_unc: observation uncertainty condition
     #state_unc: state transition uncertainty condition
@@ -92,12 +157,11 @@ def run_agent(par_list, trials=trials, T=T, Lx = Lx, Ly = Ly, ns=ns, na=na,var=0
 
     print("q", q)
     print("h", h)
-    path = os.getcwd() + '/agent_sims/'    
     """
     set action selection method
     """
 
-    if selector == 'dir':
+    if selector == 'avg':
         ac_sel = asl.DirichletSelector(trials = trials, T = T, factor=0.5,
                                       number_of_actions = na, calc_entropy=False, calc_dkl=False, draw_true_post=True)
     elif selector == 'ddm':
@@ -121,6 +185,8 @@ def run_agent(par_list, trials=trials, T=T, Lx = Lx, Ly = Ly, ns=ns, na=na,var=0
     ac_sel.b = b
     ac_sel.wd = wd
     ac_sel.s = np.sqrt(s)
+    if print_walks:
+        ac_sel.print_walks = True
     # name_str = selector + '_s'+ str(var)+'_context_' + str(context) + '_over-actions_'+ str(over_actions)+'_h'+str(h) + '_'+str(run)
     """
     create matrices
@@ -299,10 +365,10 @@ def run_agent(par_list, trials=trials, T=T, Lx = Lx, Ly = Ly, ns=ns, na=na,var=0
     """
 
     if not context:
-        w.simulate_experiment()
+        w.simulate_experiment(print_thoughts=print_thoughts)
         print("Rho", Rho)
     else:
-        w.simulate_experiment(curr_trials=range(0, trials//2))
+        w.simulate_experiment(curr_trials=range(0, trials//2),print_thoughts=print_thoughts)
         Rho_new = np.zeros((nr,ns)) + const
         Rho_new[0,:] = 1 - (nr-1)*const
         Rho_new[:,g2] = [0+const, 1-(nr-1)*const]
@@ -353,18 +419,18 @@ def run_agent(par_list, trials=trials, T=T, Lx = Lx, Ly = Ly, ns=ns, na=na,var=0
                         'cmap': palette}#sns.diverging_palette(120, 45, as_cmap=True)} #"RdBu_r",
 
     # plot grid
-    fig = plt.figure(figsize=[factor*5,factor*4])
+    # fig = plt.figure(figsize=[factor*5,factor*4])
 
-    ax = fig.gca()
+    # ax = fig.gca()
 
-    annot = np.zeros((Lx,Ly))
-    for i in range(Lx):
-        for j in range(Ly):
-            annot[i,j] = i*Ly+j
+    # annot = np.zeros((Lx,Ly))
+    # for i in range(Lx):
+    #     for j in range(Ly):
+    #         annot[i,j] = i*Ly+j
 
-    u = sns.heatmap(start_goal, ax = ax, **grid_plot_kwargs, annot=annot, annot_kws={"fontsize": 40})
-    ax.invert_yaxis()
-    plt.savefig(path + 'grid.svg', dpi=600)
+    # u = sns.heatmap(start_goal, ax = ax, **grid_plot_kwargs, annot=annot, annot_kws={"fontsize": 40})
+    # ax.invert_yaxis()
+    # plt.savefig(path + 'grid.svg', dpi=600)
     #plt.show()
 
     # set up paths figure
@@ -507,7 +573,7 @@ def run_agent(par_list, trials=trials, T=T, Lx = Lx, Ly = Ly, ns=ns, na=na,var=0
 
 
     #print("percent won", total/trials, "state prior", np.amax(utility))
-    
+    over_actions, selector, b, wd, s, A,  = par_list[1:-3]
     name = 'chosen_path'
     
     if over_actions:
@@ -532,18 +598,17 @@ def run_agent(par_list, trials=trials, T=T, Lx = Lx, Ly = Ly, ns=ns, na=na,var=0
     else:
         name += '_stand'
 
-    b = w.agent.action_selection.b
-    name += '_h'+str(h) + '_s' + str(var) + '_b' + str(b) + '_' + str(run) + '.png'
+    name += '_h'+str(h) + '_s' + str(s) + '_b' + str(b)+ '_wd' + str(wd) + '_a' + str(A) + '_' + str(run) + '.png'
 
     plt.savefig(path + name)
 
 
     max_RT = np.amax(w.agent.action_selection.RT[:,0])
-    plt.figure()
-    plt.plot(w.agent.action_selection.RT[:,0], '.')
-    plt.ylim([0,1.05*max_RT])
-    plt.xlim([0,trials])
-    plt.savefig(path + "Gridworld_Dir_h"+str(h)+".svg")
+    # plt.figure()
+    # plt.plot(w.agent.action_selection.RT[:,0], '.')
+    # plt.ylim([0,1.05*max_RT])
+    # plt.xlim([0,trials])
+    # plt.savefig(path + "Gridworld_Dir_h"+str(h)+".svg")
     # plt.show()
 
 
@@ -553,7 +618,7 @@ def run_agent(par_list, trials=trials, T=T, Lx = Lx, Ly = Ly, ns=ns, na=na,var=0
 set condition dependent up parameters
 """
 
-def run_gridworld_simulations(repetitions):
+def run_gridworld_simulations(repetitions, print_walks=False, print_thoughts=False, my_par=None, file_name=None):
     # prior over outcomes: encodes utility
     utility = []
 
@@ -566,7 +631,7 @@ def run_gridworld_simulations(repetitions):
     
 
     # action selection: avergaed or max selection
-    tendencies = [1,100]
+    tendencies = [1,1000]
     avg = True
     context = True
     if context:
@@ -576,13 +641,23 @@ def run_gridworld_simulations(repetitions):
     
     l = []                           # parameter list
     l.append([False, False, False, avg, context, utility])
+    print(my_par)
+    if my_par==None:
+        
+        my_par_list  = load_file(file_name)
+        # uncertainty observation, state,
+    else:
+        my_par_list = my_par
     
-    my_par_list  = load_file('sim_params.txt')
+    print(my_par_list)
     for indx, p in enumerate(my_par_list):
         if my_par_list[indx][0] == 3:
             my_par_list[indx][0] = True
-        my_par_list[indx] = l + my_par_list[indx] 
-    # uncertainty observation, state,
+        else:
+            my_par_list[indx][0] = False
+
+        my_par_list[indx] = l + my_par_list[indx]
+    
     
     par_list = []
     
@@ -596,17 +671,42 @@ def run_gridworld_simulations(repetitions):
         h = pars[-1]
         q = qs[n]
         worlds = []
-
+        print(pars)
         over_actions, selector, b, wd, s, A,  = pars[1:-2]
         sample_post, sample_other, prior_as_start, regime = pars[-2]
-        for i in range(repetitions):
-            print("i", i)
+        print(pars)
+        dirname = selector + '_grid'
+        if over_actions:
+            dirname += '_actions'
+        else:
+            dirname += '_policies' 
 
-            # w = run_agent(pars+[q],var=s,run=i, sample_post=sample_post,\
-            #                                   sample_other=sample_other,\
-            #                                   prior_start=prior_start)
-            w = run_agent(pars+[q], run=i)
-            # plot agent posterior over context
+        if context:
+            dirname += '_cont-1'
+        else:
+            dirname += '_cont-0'
+
+        if prior_as_start:
+            dirname += '_prior-1'
+        else:
+            dirname += '_prior-0'
+        
+        if sample_post:
+            dirname += '_post'
+        elif sample_other:
+            dirname += '_like'
+        else:
+            dirname += '_stand'
+        
+        dirname += '_h'+str(h) + '_s' + str(s)+ '_wd' + str(wd) + '_b' + str(b) + '_a' + str(A)
+        path = os.getcwd() + '\\agent_sims\\good_aprox\\'
+
+        for i in range(repetitions):
+            fname = path + dirname + '_' + str(i)
+            print(dirname + '_' + str(i))
+            print("i", i)
+            w = run_agent(pars+[q], run=i, print_thoughts = print_thoughts, print_walks = print_walks, path=path)
+            
 
             if False:
             # if context:
@@ -621,7 +721,7 @@ def run_gridworld_simulations(repetitions):
                 plt.figure()
                 rew_prob = np.einsum('tsc,tc->ts', w.agent.posterior_dirichlet_rew[:,0,1,:,:],w.agent.posterior_context[:,0])
                 rew_prob /= rew_prob.sum(axis=1)[:,None]
-                plt.title('rew_prob = np.einsum("tsc,tc->ts", w.agent.posterior_dirichlet_rew[:,0,1,:,:],w.agent.posterior_context[:,0]')
+                plt.title('rew_prob avg= np.einsum("tsc,tc->ts", w.agent.posterior_dirichlet_rew[:,0,1,:,:],w.agent.posterior_context[:,0]')
                 plt.plot(rew_prob)
                 plt.show()
 
@@ -634,62 +734,76 @@ def run_gridworld_simulations(repetitions):
 
             over_actions, selector, b, wd, s, A,  = pars[1:-2]
             sample_post, sample_other, prior_as_start, regime = pars[-2]
-            fname = os.getcwd() + '/agent_sims/'  + selector + '_grid'
-
-            if over_actions:
-                fname += '_actions'
-            else:
-                fname += '_policies' 
-    
-            if context:
-                fname += '_cont-1'
-            else:
-                fname += '_cont-0'
-
-            if prior_as_start:
-                fname += '_prior-1'
-            else:
-                fname += '_prior-0'
-            
-            if sample_post:
-                fname += '_post'
-            elif sample_other:
-                fname += '_like'
-            else:
-                fname += '_stand'
-            
-            fname += '_h'+str(h) + '_s' + str(s)+ '_wd' + str(wd) + '_b' + str(b) + '_' + str(i)
            
             save_data(fname, w)
-
+        
 
 
 """
 set parameters
 """
 
-# np.random.seed(12425)
 agent = 'bethe'
-repetitions = 5
+repetitions = 3
 
-run_gridworld_simulations(repetitions)
+#%%  = 
 
+# from a paparameter list
+selectors = ['rdm']
+npi = [3,81]
+ss = np.asarray([0.01, 0.03, 0.05, 0.07, 0.1])**2
+# ss = np.asarray([0.07])**2
 
+ws = [1, 1.5, 2, 2.3]
+bs = [1, 1.5, 2.0, 2.5]
 
+par_list = []
+params_list2 = params_list[1:]
+selectors = ['rdm']
+npi = [3]
+ss = np.arange(0.011, 0.02, 0.001)**2
+ss=[0.0001]
+ws = [2]
+bs = [1]
+a = [1]
 
+# params_list2 = [params_list[0]]
+# for p in itertools.product(selectors, npi, params_list2, bs, ws, ss, [1]):
+#         par_list.append([p[1]]+ [p[0]] + [p[3]]+ [p[4]]+ [p[5]] + [p[6]] + [p[2]])
 
+[3, 'rdm', 1, 2.0368092803778026, 0.005, 0.85, [False, False, True, 'standard']]
+[3, 'rdm', 1, 1.241687356873713, 0.005, 0.5, [True, False, True, 'post_prior1']]
+[3, 'rdm', 1.8, 2.059582685494318, 0.01, 0.35, [False, True, True, 'like_prior1']]
+[3, 'rdm', 1, 1.7303636466497805, 0.0036, 1, [False, True, False, 'like_prior0']]
+optimal_parameters_new = [[3, 'rdm', 1.1, 5.914959918032103, 0.014000000000000001, 0, [True, False, False, 'post_prior0']]]
+optimal_parameters_new = [[3, 'rdm', 1.1, 5.914959918032103, 0.0064000000000000001, 0, [True, False, False, 'post_prior0']]]
 
+par_list = optimal_parameters_new
 
+for index, p in enumerate(par_list):
+    print('currently running: ', index)
+    parameters = [p]
+    run_gridworld_simulations(repetitions=repetitions, my_par=[p])
 
+    sim_modes = []
 
+    for ind, p in enumerate(parameters):
+        sim_modes.append(make_ttl_from_params(p))
 
+    #%%
 
+    for sim_mode in sim_modes:
+        worlds = []
 
+        for hsim in sim_mode:
+            for r in range(repetitions):
+                worlds.append(load_file(os.getcwd() + '\\agent_sims\\good_aprox\\'  + hsim + '_' + str(r)))
 
+        path = os.getcwd() + '\\agent_sims\\good_aprox\\'
 
-
-
-
+        plot_rts_and_entropy(worlds,hsim,trials=200)
+        # os.remove(os.getcwd() + '\\agent_sims\\' + hsim + '_0')
+        agent = "bethe"
 
 
 

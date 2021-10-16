@@ -907,6 +907,8 @@ drift_var = np.column_stack((wds.ravel(), ss.repeat(size-1))).round(6)
 pols = np.array([3]) #,8,81]
 polss =  np.array([3,8,81])
 path = os.getcwd() + '\\parameter_data\\'
+
+
 par_list = []
 methods = ['rdm', 'ardm']
 parameter_names = ['npi', 'methods', 'b', 'wd', 's', 'params_list']
