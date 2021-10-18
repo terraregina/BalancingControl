@@ -252,12 +252,12 @@ from misc_sia import show_rts, generate_data
     # generate_data([p])
     # show_rts([p])
 
-optimal_parameters_old = [
-[3, 'rdm', 1, 2.0368092803778026, 0.005, 1, [False, False, True, 'standard']],
-[3, 'rdm', 1, 1.241687356873713, 0.004977473268097638, 1, [True, False, True, 'post_prior1']],
-[3, 'rdm', 1, 5.914959918032103, 0.013000000000000001, 1, [True, False, False, 'post_prior0']],
-[3, 'rdm', 1.9, 1.8059582685494318, 0.01, 1, [False, True, True, 'like_prior1']],
-[3, 'rdm', 1, 1.7303636466497805, 0.003673934170060218, 1, [False, True, False, 'like_prior0']]]
+# optimal_parameters_old = [
+# [3, 'rdm', 1, 2.0368092803778026, 0.005, 1, [False, False, True, 'standard']],
+# [3, 'rdm', 1, 1.241687356873713, 0.004977473268097638, 1, [True, False, True, 'post_prior1']],
+# [3, 'rdm', 1, 5.914959918032103, 0.013000000000000001, 1, [True, False, False, 'post_prior0']],
+# [3, 'rdm', 1.9, 1.8059582685494318, 0.01, 1, [False, True, True, 'like_prior1']],
+# [3, 'rdm', 1, 1.7303636466497805, 0.003673934170060218, 1, [False, True, False, 'like_prior0']]]
 
 # compare old and new 
 
@@ -268,13 +268,28 @@ optimal_parameters_new = [
 [3, 'rdm', 1.8, 2.059582685494318, 0.01, 0.35, [False, True, True, 'like_prior1']],
 [3, 'rdm', 1, 1.7303636466497805, 0.0036, 1, [False, True, False, 'like_prior0']]]
 
-optimal_parameters_new = [[3, 'rdm', 1.1, 5.914959918032103, 0.0064000000000000001, 0, [True, False, False, 'post_prior0']]]
 
-trials=1000
-for ind in range(5):
-    generate_data([optimal_parameters_new[ind]],trials=trials)
-    show_rts([optimal_parameters_new[ind]],trials=trials)
+ttls_for_fig = ['npi_81_rdm_standard_b_1.0_wd_0.1280639999999999_s_6.399999999999994e-05_a_3.5_.txt']
+                
+ttls_for_fig = ['npi_81_rdm_standard_b_1.0_wd_0.1280639999999999_s_6.399999999999994e-06_a_3.5_.txt']
 
+pars = []
+
+for ttl in ttls_for_fig:
+    pars.append(extract_params(ttl))
+
+# optimal_parameters_new = [[3, 'rdm', 1.1, 5.914959918032103, 0.0064000000000000001, 0, [True, False, False, 'post_prior0']]]
+optimal_parameters_new = [
+[3, 'rdm', 1, 2.0368092803778026, 0.005, 0.85, [False, False, True, 'standard']],
+[3, 'rdm', 1, 1.241687356873713, 0.005, 0.5, [True, False, True, 'post_prior1']],
+[3, 'rdm', 1.1, 5.914959918032103, 0.014000000000000001, 0, [True, False, False, 'post_prior0']],
+[3, 'rdm', 1.8, 2.059582685494318, 0.01, 0.35, [False, True, True, 'like_prior1']],
+[3, 'rdm', 1, 1.7303636466497805, 0.0036, 1, [False, True, False, 'like_prior0']]]
+
+trials=4000
+for par in optimal_parameters_new:
+    # generate_data([par],trials=trials)
+    show_rts([par],trials=trials)
 # extract optimal
 
 # for i in range(2):

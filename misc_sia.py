@@ -657,6 +657,7 @@ def test(df,size=4000):
 
 def load_file(ttl):
     with open (ttl, 'rb') as fp:
+        
         data = pickle.load(fp)
     
     return data
@@ -870,9 +871,16 @@ def load_fits_from_data(pars, trials=1000):
             post, other, prior, regime = p[6]
             regime = regime
             ttl =  make_title(p, extra_param = ['a',str(A)], format='.txt')
+
             # print(ind)
-            with open(path + ttl, 'rb')as fp:
-                data = pickle.load(fp)
+            try:
+                with open(path + ttl, 'rb')as fp:
+                    data = pickle.load(fp)
+            except:
+                ttl =  make_title(p, format='.txt')
+                with open(path + ttl, 'rb')as fp:
+                    data = pickle.load(fp)
+            
             
             RT = data['RT']
             
@@ -894,7 +902,7 @@ def load_fits_from_data(pars, trials=1000):
             empirical = data['empirical']
             
             if np.isnan(np.unique(data['empirical'])[-1]):
-                fucked.append(f)
+                fucked.append(ttl)
                 fits = np.nan
                 post_fit[ind] =  np.nan
                 post_fit_avg[ind] =  np.nan
@@ -1150,6 +1158,7 @@ def show_rts(pars,trials=1000):
 
         x_positions = []
         npi=int(row['npi'])
+        ind = np.where(np.array([3,8,81,21]) == npi)[0][0]
         for i in range(4):
             x_positions.append([x for x in range(i*npi + i, i*npi + i + npi)])
 
@@ -1167,8 +1176,8 @@ def show_rts(pars,trials=1000):
 
         fig, ax = plt.subplots(2,1)
 
-        posts = np.zeros([4, 3])    # translate the posteriors
-        post = np.asarray(test_vals)[0,:,0]    # into a numpy array
+        posts = np.zeros([4, npi])    # translate the posteriors
+        post = np.asarray(test_vals)[ind,:,0]    # into a numpy array
 
         for indx, p in enumerate(post):
             posts[indx,:] = np.asarray(p)
@@ -1183,6 +1192,7 @@ def show_rts(pars,trials=1000):
             ax[1].bar(x_pos, data['empirical'][m,:], alpha=0.5, color=cols[m])
 
         ax[0].set_title(row['regime'])
+        print(row['avg_fit'])
         plt.show()
         plt.savefig('posterior_approx_' + row['regime'] + '.png', dpi=300)
 
@@ -1304,17 +1314,25 @@ def plot_rts_and_entropy(worlds, hsim, trials=5, na=4, g1=14,g2=10):
 
     f = plt.figure(figsize=(16,3))
     ax1 = f.add_subplot(1,4,1)
-    sns.lineplot(data=df, x="trials",y="a1", hue="h", palette="Dark2", linewidth = 1, marker='o')
+    sns.lineplot(data=df, x="trials",y="a1", hue="h", palette="tab10", linewidth = 1)
     ax1 = f.add_subplot(1,4,2)
-    sns.lineplot(data=df, x="trials",y="accuracy", hue="h", palette="Dark2")
+    sns.lineplot(data=df, x="trials",y="accuracy", hue="h", palette="tab10")
     ax1 = f.add_subplot(1,4,3)
-    sns.lineplot(data=df, x="trials",y="Q_entropy", hue="h", palette="Dark2")
+    sns.lineplot(data=df, x="trials",y="Q_entropy", hue="h", palette="tab10")
     ax1 = f.add_subplot(1,4,4)
-    sns.lineplot(data=df, x="trials",y="prior_entropy", hue="h", palette="Dark2")
+    sns.lineplot(data=df, x="trials",y="prior_entropy", hue="h", palette="tab10")
 
+    f = plt.figure(figsize=(16,3))
+    ax1 = f.add_subplot(1,4,1)
+    sns.lineplot(data=df, x="trials",y="a1", hue="h", palette="tab10", linewidth = 1)
+    ax1 = f.add_subplot(1,4,2)
+    sns.lineplot(data=df, x="trials",y="accuracy", hue="h", palette="tab10")
+    ax1 = f.add_subplot(1,4,3)
+    sns.lineplot(data=df, x="trials",y="Q_entropy", hue="h", palette="tab10")
+    ax1 = f.add_subplot(1,4,4)
+    sns.lineplot(data=df, x="trials",y="prior_entropy", hue="h", palette="tab10")
 
-
-    plt.savefig(os.getcwd() + '\\agent_sims\\good_aprox\\' + hsim + '.png', dpi=300)
+    plt.savefig(os.getcwd() + '\\agent_sims\\desired_rt_1\\' + hsim + '.png', dpi=300)
     # plt.show()
     plt.close()
 
@@ -1368,3 +1386,298 @@ def plot_rts_and_entropy(worlds, hsim, trials=5, na=4, g1=14,g2=10):
 
 # # anim.save('basic_animation.mp4', writer=FFwriter)
 # # HTML(anim.to_html5_video())
+
+
+
+
+def extract_paths(environment):
+
+    trials = 200   #number of trials
+    T = 5 #number of time steps in each trial
+    Lx = 4 #grid length
+    Ly = 5
+    no = Lx*Ly #number of observations
+    ns = Lx*Ly #number of states
+    na = 3 #number of actions
+    npi = na**(T-1)
+    nr = 2
+    nc = ns
+    actions = np.array([[0,-1], [1,0], [0,1]])
+    g1 = 14
+    g2 = 10
+    start = 2
+    const = 0#1e-10
+
+
+    obs_unc = False
+    state_unc = False
+    vals = np.array([1., 2/3., 1/2., 1./2.])
+    A = np.eye(ns) + const
+    np.fill_diagonal(A, 1-(ns-1)*const)
+
+    #state transition generative probability (matrix)
+    B = np.zeros((ns, ns, na)) + const
+
+    cert_arr = np.zeros(ns)
+    for s in range(ns):
+        x = s//Ly
+        y = s%Ly
+
+        #state uncertainty condition
+        if state_unc:
+            if (x==0) or (y==3):
+                c = vals[0]
+            elif (x==1) or (y==2):
+                c = vals[1]
+            elif (x==2) or (y==1):
+                c = vals[2]
+            else:
+                c = vals[3]
+
+            condition = 'state'
+
+        else:
+            c = 1.
+
+        cert_arr[s] = c
+        for u in range(na):
+            x = s//Ly+actions[u][0]
+            y = s%Ly+actions[u][1]
+
+            #check if state goes over boundary
+            if x < 0:
+                x = 0
+            elif x == Lx:
+                x = Lx-1
+
+            if y < 0:
+                y = 0
+            elif y == Ly:
+                y = Ly-1
+
+            s_new = Ly*x + y
+            if s_new == s:
+                B[s, s, u] = 1 - (ns-1)*const
+            else:
+                B[s, s, u] = 1-c + const
+                B[s_new, s, u] = c - (ns-1)*const
+                
+    B_c = np.broadcast_to(B[:,:,:,np.newaxis], (ns, ns, na, nc))
+
+    context=True
+    successfull_g1 = np.where(environment.hidden_states[:,-1]==g1)[0]
+    if context:
+        successfull_g2 = np.where(environment.hidden_states[:,-1]==g2)[0]
+        unsuccessfull1 = np.where(environment.hidden_states[:,-1]!=g1)[0]
+        unsuccessfull2 = np.where(environment.hidden_states[:,-1]!=g2)[0]
+        unsuccessfull = np.intersect1d(unsuccessfull1, unsuccessfull2)
+    else:
+        unsuccessfull = np.where(environment.hidden_states[:,-1]!=g1)[0]
+
+    #total  = len(successfull)
+
+    #plot start and goal state
+    start_goal = np.zeros((Lx,Ly))
+
+    x_y_start = (start//Ly, start%Ly)
+    start_goal[x_y_start] = 1.
+    x_y_g1 = (g1//Ly, g1%Ly)
+    start_goal[x_y_g1] = -1.
+    x_y_g2 = (g2//Ly, g2%Ly)
+    start_goal[x_y_g2] = -2.
+
+    palette = [(159/255, 188/255, 147/255),
+               (135/255, 170/255, 222/255),
+               (242/255, 241/255, 241/255),
+               (242/255, 241/255, 241/255),
+               (199/255, 174/255, 147/255),
+               (199/255, 174/255, 147/255)]
+
+    #set up figure params
+    factor = 3
+    grid_plot_kwargs = {'vmin': -2, 'vmax': 2, 'center': 0, 'linecolor': '#D3D3D3',
+                        'linewidths': 7, 'alpha': 1, 'xticklabels': False,
+                        'yticklabels': False, 'cbar': False,
+                        'cmap': palette}#sns.diverging_palette(120, 45, as_cmap=True)} #"RdBu_r",
+
+    fig = plt.figure(figsize=[factor*5,factor*4])
+
+    ax = fig.gca()
+
+    u = sns.heatmap(start_goal, zorder=2, ax = ax, **grid_plot_kwargs)
+    ax.invert_yaxis()
+
+    #find paths and count them
+    n1 = np.zeros((ns, na))
+
+    for i in successfull_g1:
+
+        for j in range(T-1):
+            d = environment.hidden_states[i, j+1] - environment.hidden_states[i, j]
+            if d not in [1,-1,Ly,-Ly,0]:
+                print("ERROR: beaming")
+            if d == 1:
+                n1[environment.hidden_states[i, j],0] +=1
+            if d == -1:
+                n1[environment.hidden_states[i, j]-1,0] +=1
+            if d == Ly:
+                n1[environment.hidden_states[i, j],1] +=1
+            if d == -Ly:
+                n1[environment.hidden_states[i, j]-Ly,1] +=1
+
+    n2 = np.zeros((ns, na))
+
+    if context:
+        for i in successfull_g2:
+
+            for j in range(T-1):
+                d = environment.hidden_states[i, j+1] - environment.hidden_states[i, j]
+                if d not in [1,-1,Ly,-Ly,0]:
+                    print("ERROR: beaming")
+                if d == 1:
+                    n2[environment.hidden_states[i, j],0] +=1
+                if d == -1:
+                    n2[environment.hidden_states[i, j]-1,0] +=1
+                if d == Ly:
+                    n2[environment.hidden_states[i, j],1] +=1
+                if d == -Ly:
+                    n2[environment.hidden_states[i, j]-Ly,1] +=1
+
+    un = np.zeros((ns, na))
+
+    for i in unsuccessfull:
+
+        for j in range(T-1):
+            d = environment.hidden_states[i, j+1] - environment.hidden_states[i, j]
+            if d not in [1,-1,Ly,-Ly,0]:
+                print("ERROR: beaming")
+            if d == 1:
+                un[environment.hidden_states[i, j],0] +=1
+            if d == -1:
+                un[environment.hidden_states[i, j]-1,0] +=1
+            if d == Ly:
+                un[environment.hidden_states[i, j],1] +=1
+            if d == -Ly:
+                un[environment.hidden_states[i, j]-4,1] +=1
+
+    total_num = n1.sum() + n2.sum() + un.sum()
+
+    if np.any(n1 > 0):
+        n1 /= total_num
+
+    if np.any(n2 > 0):
+        n2 /= total_num
+
+    if np.any(un > 0):
+        un /= total_num
+
+    #plotting
+
+    for i in range(ns):
+
+        x = [i%Ly + .5]
+        y = [i//Ly + .5]
+
+        #plot uncertainties
+        if obs_unc:
+            plt.plot(x,y, 'o', color=(219/256,122/256,147/256), markersize=factor*12/(A[i,i])**2, alpha=1.)
+        if state_unc:
+            plt.plot(x,y, 'o', color=(100/256,149/256,237/256), markersize=factor*12/(cert_arr[i])**2, alpha=1.)
+
+        #plot unsuccessful paths
+        for j in range(2):
+
+            if un[i,j]>0.0:
+                if j == 0:
+                    xp = x + [x[0] + 1]
+                    yp = y + [y[0] + 0]
+                if j == 1:
+                    xp = x + [x[0] + 0]
+                    yp = y + [y[0] + 1]
+
+                plt.plot(xp,yp, '-', color='#D5647C', linewidth=factor*75*un[i,j],
+                         zorder = 9, alpha=1)
+
+    #set plot title
+    #plt.title("Planning: successful "+str(round(100*total/trials))+"%", fontsize=factor*9)
+
+    #plot successful paths on top
+    for i in range(ns):
+
+        x = [i%Ly + .5]
+        y = [i//Ly + .5]
+
+        for j in range(2):
+
+            if n1[i,j]>0.0:
+                if j == 0:
+                    xp = x + [x[0] + 1]
+                    yp = y + [y[0]]
+                if j == 1:
+                    xp = x + [x[0] + 0]
+                    yp = y + [y[0] + 1]
+                plt.plot(xp,yp, '-', color='#4682B4', linewidth=factor*75*n1[i,j],
+                         zorder = 10, alpha=1)
+
+    #plot successful paths on top
+    if context:
+        for i in range(ns):
+
+            x = [i%Ly + .5]
+            y = [i//Ly + .5]
+
+            for j in range(2):
+
+                if n2[i,j]>0.0:
+                    if j == 0:
+                        xp = x + [x[0] + 1]
+                        yp = y + [y[0]]
+                    if j == 1:
+                        xp = x + [x[0] + 0]
+                        yp = y + [y[0] + 1]
+                    plt.plot(xp,yp, '-', color='#55ab75', linewidth=factor*75*n2[i,j],
+                             zorder = 10, alpha=1)
+
+    return fig
+
+
+def make_ttl_from_params(p):
+    context = True
+    over_actions, selector, b, wd, s, A,  = p[:-1]
+    sample_post, sample_other, prior_as_start, regime = p[-1]
+
+    if not isinstance(over_actions, bool):
+        if over_actions == 3:
+            over_actions = True
+        else: 
+            over_actions = False
+        
+    dirname = selector + '_grid'
+    if over_actions:
+        dirname += '_actions'
+    else:
+        dirname += '_policies' 
+
+    if context:
+        dirname += '_cont-1'
+    else:
+        dirname += '_cont-0'
+
+    if prior_as_start:
+        dirname += '_prior-1'
+    else:
+        dirname += '_prior-0'
+    
+    if sample_post:
+        dirname += '_post'
+    elif sample_other:
+        dirname += '_like'
+    else:
+        dirname += '_stand'
+    
+    low = dirname + '_h'+str(1) + '_s' + str(s)+ '_wd' + str(wd) + '_b' + str(b) + '_a' + str(A)
+    high = dirname + '_h'+str(1000) + '_s' + str(s)+ '_wd' + str(wd) + '_b' + str(b) + '_a' + str(A)
+    return [low, high]
+
+    # high = dirname + '_h'+str(1000) + '_s' + str(s)+ '_wd' + str(wd) + '_b' + str(b) + '_a' + str(A)
+    # return [high]

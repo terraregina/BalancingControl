@@ -13,7 +13,7 @@ import environment as env
 import agent as agt
 import perception as prc
 import action_selection as asl
-import itertoolsa
+import itertools
 import matplotlib.pylab as plt
 from multiprocessing import Pool
 from matplotlib.colors import LinearSegmentedColormap
@@ -32,7 +32,7 @@ import itertools as itertools
 import numpy as np
 from scipy.stats import entropy
 sns.set_style("whitegrid")
-from misc_sia import load_fits, plot_rts_and_entropy
+from misc_sia import extract_paths, load_fits, plot_rts_and_entropy
 #%%
 save = True
 data_folder = os.path.join('C:\\Users\\admin\\Desktop\\project\\BalancingControl','data')
@@ -106,10 +106,11 @@ def make_ttl_from_params(p):
     over_actions, selector, b, wd, s, A,  = p[:-1]
     sample_post, sample_other, prior_as_start, regime = p[-1]
 
-    # if over_actions == 3:
-    #     over_actions = True
-    # else: 
-    #     over_actions = False
+    if not isinstance(over_actions, bool):
+        if over_actions == 3:
+            over_actions = True
+        else: 
+            over_actions = False
         
     dirname = selector + '_grid'
     if over_actions:
@@ -699,7 +700,7 @@ def run_gridworld_simulations(repetitions, print_walks=False, print_thoughts=Fal
             dirname += '_stand'
         
         dirname += '_h'+str(h) + '_s' + str(s)+ '_wd' + str(wd) + '_b' + str(b) + '_a' + str(A)
-        path = os.getcwd() + '\\agent_sims\\good_aprox\\'
+        path = os.getcwd() + '\\agent_sims\\desired_rt_1\\'
 
         for i in range(repetitions):
             fname = path + dirname + '_' + str(i)
@@ -743,68 +744,195 @@ def run_gridworld_simulations(repetitions, print_walks=False, print_thoughts=Fal
 set parameters
 """
 
-agent = 'bethe'
-repetitions = 3
-
-#%%  = 
-
 # from a paparameter list
-selectors = ['rdm']
-npi = [3,81]
-ss = np.asarray([0.01, 0.03, 0.05, 0.07, 0.1])**2
-# ss = np.asarray([0.07])**2
+# selectors = ['rdm']
+# npi = [3,81]
+# ss = np.asarray([0.01, 0.03, 0.05, 0.07, 0.1])**2
+# # ss = np.asarray([0.07])**2
 
-ws = [1, 1.5, 2, 2.3]
-bs = [1, 1.5, 2.0, 2.5]
+# ws = [1, 1.5, 2, 2.3]
+# bs = [1, 1.5, 2.0, 2.5]
 
-par_list = []
-params_list2 = params_list[1:]
-selectors = ['rdm']
-npi = [3]
-ss = np.arange(0.011, 0.02, 0.001)**2
-ss=[0.0001]
-ws = [2]
-bs = [1]
-a = [1]
+# par_list = []
+# params_list2 = params_list[1:]
+# selectors = ['rdm']
+# npi = [3]
+# ss = np.arange(0.011, 0.02, 0.001)**2
+# ss=[0.0001]
+# ws = [2]
+# bs = [1]
+# a = [1]
 
 # params_list2 = [params_list[0]]
 # for p in itertools.product(selectors, npi, params_list2, bs, ws, ss, [1]):
-#         par_list.append([p[1]]+ [p[0]] + [p[3]]+ [p[4]]+ [p[5]] + [p[6]] + [p[2]])
+#         par_list.append([p[1]]+ [p[0]] +  [p[3]]+ [p[4]]+ [p[5]] + [p[6]] + [p[2]])
 
-[3, 'rdm', 1, 2.0368092803778026, 0.005, 0.85, [False, False, True, 'standard']]
-[3, 'rdm', 1, 1.241687356873713, 0.005, 0.5, [True, False, True, 'post_prior1']]
-[3, 'rdm', 1.8, 2.059582685494318, 0.01, 0.35, [False, True, True, 'like_prior1']]
-[3, 'rdm', 1, 1.7303636466497805, 0.0036, 1, [False, True, False, 'like_prior0']]
+
+
+agent = 'bethe'
+repetitions = 10
+reps = [10,15]
+plot_path = False
+#%%  = 
+
+
 optimal_parameters_new = [[3, 'rdm', 1.1, 5.914959918032103, 0.014000000000000001, 0, [True, False, False, 'post_prior0']]]
-optimal_parameters_new = [[3, 'rdm', 1.1, 5.914959918032103, 0.0064000000000000001, 0, [True, False, False, 'post_prior0']]]
+
+
+post_sampling_params = [[3, 'rdm', 1, 2, 0.0001, 1, params_list[0]]]
+
+
+pars = []
+ttls_for_fig = ['npi_3_rdm_standard_b_1_wd_0.1280639999999999_s_6.399999999999994e-05_.txt',
+                'npi_81_rdm_standard_b_1.0_wd_0.1280639999999999_s_6.399999999999994e-05_a_3.5_.txt',
+                'npi_3_rdm_post_prior1_b_3_wd_1_s_0.0034_a_1_.txt',
+                'npi_81_rdm_post_prior1_b_3_wd_1_s_0.001_a_4_.txt',
+                'npi_3_rdm_like_prior1_b_7_wd_1_s_0.0034_a_2_.txt',
+                'npi_81_rdm_like_prior1_b_4_wd_1_s_0.001_a_4_.txt']
+
+optimal_parameters_new = [[3, 'rdm', 1, 2.0368092803778026, 0.005, 0.85, [False, False, True, 'standard']],
+                          [3, 'rdm', 1, 1.241687356873713, 0.005, 0.5, [True, False, True, 'post_prior1']],
+                          [3, 'rdm', 1.1, 5.914959918032103, 0.0064000000000000001, 0, [True, False, False, 'post_prior0']],
+                          [3, 'rdm', 1.8, 2.059582685494318, 0.01, 0.35, [False, True, True, 'like_prior1']],
+                          [3, 'rdm', 1, 1.7303636466497805, 0.0036, 1, [False, True, False, 'like_prior0']]]
+
+ttls_for_fig = [
+                # 'npi_3_rdm_standard_b_1_wd_0.1280639999999999_s_6.399999999999994e-05_.txt',
+                # 'npi_81_rdm_standard_b_1.0_wd_0.1280639999999999_s_6.399999999999994e-05_a_3.5_.txt',
+                # 'npi_3_rdm_post_prior1_b_3_wd_1_s_0.0034_a_1_.txt',
+                # 'npi_81_rdm_post_prior1_b_3_wd_1_s_0.001_a_4_.txt',
+                # 'npi_3_rdm_like_prior1_b_7_wd_1_s_0.0034_a_2_.txt',
+                'npi_81_rdm_like_prior1_b_4_wd_1_s_0.001_a_4_.txt'
+                ]
+                
+for ttl in ttls_for_fig:
+    pars.append(extract_params(ttl))
 
 par_list = optimal_parameters_new
+# par_list = post_sampling_params
+# par_list = pars     
 
 for index, p in enumerate(par_list):
     print('currently running: ', index)
     parameters = [p]
-    run_gridworld_simulations(repetitions=repetitions, my_par=[p])
+    # run_gridworld_simulations(repetitions=repetitions, my_par=[p])
 
     sim_modes = []
 
     for ind, p in enumerate(parameters):
         sim_modes.append(make_ttl_from_params(p))
-
-    #%%
+    
 
     for sim_mode in sim_modes:
         worlds = []
 
         for hsim in sim_mode:
-            for r in range(repetitions):
-                worlds.append(load_file(os.getcwd() + '\\agent_sims\\good_aprox\\'  + hsim + '_' + str(r)))
+            # if hsim.__contains__('_actions'):
+            #     repetitions = 15
+            # else:
+            #     repetitions = 10
 
-        path = os.getcwd() + '\\agent_sims\\good_aprox\\'
+            for r in range(repetitions):
+                path = os.getcwd() + '\\agent_sims\\good_aprox\\'
+                ww = load_file(path + hsim + '_' + str(r))
+                if plot_path:
+                    fig =  extract_paths(ww.environment)
+                    fig.savefig(path + 'chosen' + hsim[8:] + '_' + str(r) + '.png', dpi=300)
+                worlds.append(ww)
 
         plot_rts_and_entropy(worlds,hsim,trials=200)
-        # os.remove(os.getcwd() + '\\agent_sims\\' + hsim + '_0')
         agent = "bethe"
 
 
 
+#%%
+# def plot_rts(worlds, hsim, trials=5, na=4, g1=14,g2=10):
+#     nagents = len(worlds)
+#     rt = np.zeros([nagents*trials, na])
+#     agent = np.arange(nagents).repeat(trials)
+#     trial = np.tile(np.arange(0,trials),nagents)
+#     h = np.zeros(trials*nagents)
+#     prior_entropy = np.zeros(trials*nagents) 
+#     Q_entropy = np.zeros(trials*nagents) 
+#     accuracy = np.zeros(trials*nagents)
+#     acc = np.zeros(trials)
+#     goal_reached = np.zeros(trials)
+#     for ind, ww in enumerate(worlds):
+#         agent = ww.agent
+#         posterior_policies = np.einsum('tpc,tc->tp', agent.posterior_policies[:, 0], agent.posterior_context[:, 0])
+#         posterior_policies /= posterior_policies.sum()
+#         est_prob = ww.agent.action_selection.estimate_action_probability
+#         qs = np.zeros(trials)
+#         for pp, prob in enumerate(posterior_policies):
+#             normalized = est_prob(0, prob, agent.policies[:,0])/est_prob(0, prob, agent.policies[:,0]).sum()
+#             qs[pp] = entropy(est_prob(0, prob, agent.policies[:,0]),base=2)
 
+#         print(np.min(ww.agent.perception.dirichlet_pol_params))
+#         h[ind*trials:(ind+1)*trials] = \
+#                 np.min(ww.agent.perception.dirichlet_pol_params).repeat(trials)
+#         trial_index = np.arange(0,na*trials,4)
+#         prior = np.asarray(ww.agent.action_selection.priors)[trial_index]
+#         rt[ind*trials:(ind+1)*trials,:] = ww.agent.action_selection.RT
+#         # print(ww.agent.action_selection.RT.shape)
+#         Q_entropy[ind*trials:(ind+1)*trials] = qs
+#         prior_entropy[ind*trials:(ind+1)*trials] = entropy(prior, base=2, axis=1)
+#         goal_reached[:trials//2] = ww.environment.hidden_states[:trials//2,-1]==g1
+#         goal_reached[trials//2:] = ww.environment.hidden_states[trials//2:,-1]==g2
+#         print(ww.environment.hidden_states[:,-1])
+#         acc[:trials//2] = np.cumsum(goal_reached[:trials//2])
+#         acc[trials//2:] = np.cumsum(goal_reached[trials//2:])
+#         acc = acc / np.append(np.arange(2,102),np.arange(2,102))
+#         accuracy[ind*trials:(ind+1)*trials] = acc
+
+#     df = pd.DataFrame(rt, columns =['a1','a2','a3','a4'])
+#     df['trials'] = trial
+#     df['agent'] = agent
+#     df['h'] = h
+#     df['Q_entropy'] = Q_entropy
+#     df['prior_entropy'] = prior_entropy
+#     df['accuracy'] = accuracy
+
+#     f = plt.figure(figsize=(16,3))
+#     ax1 = f.add_subplot(1,4,1)
+#     sns.lineplot(data=df, x="trials",y="a1", hue="h", palette="Dark2", linewidth = 1, marker='o')
+#     ax1 = f.add_subplot(1,4,2)
+#     sns.lineplot(data=df, x="trials",y="accuracy", hue="h", palette="Dark2")
+#     ax1 = f.add_subplot(1,4,3)
+#     sns.lineplot(data=df, x="trials",y="Q_entropy", hue="h", palette="Dark2")
+#     ax1 = f.add_subplot(1,4,4)
+#     sns.lineplot(data=df, x="trials",y="prior_entropy", hue="h", palette="Dark2")
+
+
+
+#     # plt.savefig(os.getcwd() + '\\agent_sims\\good_aprox\\' + hsim + '.png', dpi=300)
+#     plt.show()
+#     plt.close()
+
+
+# # plot posterior for agent
+
+# post_sampling_params = [[3, 'rdm', 1, 2, 0.0001, 1, params_list[0]]]
+# par_list = optimal_parameters_new
+# par_list = post_sampling_params
+
+# for index, p in enumerate(par_list):
+#     parameters = [p]
+#     sim_modes = []
+
+#     for ind, p in enumerate(parameters):
+#         sim_modes.append(make_ttl_from_params(p))
+
+#     #%%
+
+#     for sim_mode in sim_modes:
+#         worlds = []
+
+#         for hsim in sim_mode:
+#             for r in range(repetitions):
+#                 worlds.append(load_file(os.getcwd() + '\\agent_sims\\test_'  + hsim + '_' + str(r)))
+
+#         path = os.getcwd() + '\\agent_sims\\'
+
+#         plot_rts(worlds,hsim,trials=200)
+#         # os.remove(os.getcwd() + '\\agent_sims\\' + hsim + '_0')
+#         agent = "bethe"

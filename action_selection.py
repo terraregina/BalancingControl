@@ -379,12 +379,11 @@ class RacingDiffusionSelector(object):
 
     #    normalize?
 
-        # print(control_prob)
-        # print(control_prob /control_prob.sum())
+        # print(control_prob.sum())
         return  control_prob 
 
     def select_desired_action(self,tau, t, posterior, controls, *args): #avg_likelihood, prior, dt = 0.01, plot=False):
-   
+        # print(tau,t)
         likelihood = args[0]
         prior = args[1]
 
@@ -400,7 +399,7 @@ class RacingDiffusionSelector(object):
             posterior = self.estimate_action_probability(tau, posterior, controls)
 
         ni = prior.size                                            # number of integrators, = either na or npi
-        decision_log = np.zeros([10005,ni])                        # log for propagated decision variable
+        decision_log = np.zeros([20000,ni])                        # log for propagated decision variable
 
         if self.prior_as_starting_point:
             decision_log[0,:] = self.A*prior                        # initial conditions for v_ij
@@ -427,7 +426,7 @@ class RacingDiffusionSelector(object):
             bound_reached = decision_log[i+1,:] >= self.b
             i+=1
 
-            if i > 10000:
+            if i > 19999:
                 action = -1
                 broken = True
                 break
@@ -540,7 +539,7 @@ class MCMCSelector(object):
             i += 1
 
         self.RT[tau,t] = i-1
-        print(tau, t, i-1)
+        # print(tau, t, i-1)
 
         u = actions[accepted_pis[i-1]]
 

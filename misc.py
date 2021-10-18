@@ -1203,7 +1203,7 @@ def simulate(selector, b, s, wd, A, sample_post, sample_other, prior_as_start, p
 
     
 
-def make_title(params,add_text=None, extra_param = None, format='.png'):
+def make_title(params,add_text=None, extra_param = None, format=''):
     npi = params[0]
     selector = params[1]
     b = params[2]
@@ -1220,7 +1220,7 @@ def make_title(params,add_text=None, extra_param = None, format='.png'):
                     str(wd), 's', str(s), format])
         else: 
             ttl = '_'.join(['npi', str(npi), selector, reg, 'b' ,str(b), 'wd',\
-                    str(wd), 's', str(s), extra_param[0], extra_param[1], format])
+                    str(wd), 's', str(s), extra_param[0], str(extra_param[1]), format])
     else:
         if extra_param == None:
             ttl = '_'.join([add_text, 'npi', str(npi), selector, reg, 'b' ,str(b), 'wd',\
@@ -1228,7 +1228,7 @@ def make_title(params,add_text=None, extra_param = None, format='.png'):
         else: 
 
             ttl = '_'.join([add_text, 'npi', str(npi), selector, reg, 'b' ,str(b), 'wd',\
-                    str(wd), 's', str(s), extra_param[0], extra_param[1], format])
+                    str(wd), 's', str(s), extra_param[0], str(extra_param[1]), format])
    
     return ttl
 

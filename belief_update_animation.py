@@ -1,123 +1,127 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Fri Jun 18 13:47:10 2021
-
-@author: sarah
-"""
-
-
+#%%
+ 
+from misc_sia import load_file
+import os as os
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+import matplotlib.animation
 import numpy as np
-from matplotlib import pyplot as plt
-from matplotlib import animation
-from scipy.special import gamma
 
-def Beta_func(alpha):
-    B = gamma(alpha[0])*gamma(alpha[1])/gamma(alpha[0]+alpha[1])
-    return B
 
-def beta(x,alpha=[1,1]):
-    y = x**(alpha[0]-1)*(1-x)**(alpha[1]-1) / Beta_func(alpha)
-    return y
+ttls = ['npi_81_rdm_like_prior1_b_4_wd_1_s_0.001_a_4_1.txt',
+        'npi_81_rdm_standard_b_1.0_wd_0.1280639999999999_s_6.399999999999994e-05_a_3.5_1.txt']
 
-nb = 4
-epsilon = 0.1
-rew_probs = np.ones(nb) / 2
-rew_probs[0] += epsilon
-lamb = 0.2
+ttls = ['rdm_grid_policies_cont-1_prior-1_like_h1000_s0.001_wd1_b4_a4_1',
+        'rdm_grid_policies_cont-1_prior-1_stand_h1000_s6.399999999999994e-05_wd0.1280639999999999_b1.0_a3.5_1']
 
-choices = [1,1,3,2,3,0,2,1,3,0]
-# First set up the figure, the axis, and the plot element we want to animate
-fig, axes = plt.subplots(1, nb, figsize=(15,3), sharey=True)
 
-line1, = axes[0].plot([], [], lw=3)
-line2, = axes[1].plot([], [], lw=3)
-line3, = axes[2].plot([], [], lw=3)
-line4, = axes[3].plot([], [], lw=3)
-lines = [line1, line2, line3, line4]
+for ttl in ttls:
+    ww = load_file(os.getcwd() + '\\agent_sims\\desired_rt_1\\' + ttl)
+    Q_policies = np.asarray(ww.agent.action_selection.drifts)[np.arange(0,800,4),:]
+    priors = np.asarray(ww.agent.action_selection.priors)[np.arange(0,800,4),:]/3.5
+    print(Q_policies[99:105,:].round(4))
+    print(priors[99:105,:].round(4))
+#%%
+ttls = ['npi_81_rdm_like_prior1_b_4_wd_1_s_0.001_a_4_1.txt',
+        'npi_81_rdm_standard_b_1.0_wd_0.1280639999999999_s_6.399999999999994e-05_a_3.5_1.txt']
 
-axes[0].set_ylabel("Beta distribution", fontsize=14, color="white")
+ttls = ['rdm_grid_policies_cont-1_prior-1_like_h1000_s0.001_wd1_b4_a4_1',
+        'rdm_grid_policies_cont-1_prior-1_stand_h1000_s6.399999999999994e-05_wd0.1280639999999999_b1.0_a3.5_1']
 
-fig.patch.set_alpha(0.0)
 
-alpha = np.ones((nb,2))
+for ttl in ttls:
 
-#lines = []
-
-for j,ax in enumerate(axes):
-    #lines.append(ax.plot([], [], lw=2))
+    ww = load_file(os.getcwd() + '\\agent_sims\\desired_rt_1\\' + ttl)
+    Q_policies = np.asarray(ww.agent.action_selection.drifts)[np.arange(0,800,4),:]
+    Q_policies = Q_policies[95:120]
     
-    ax.patch.set_alpha(0.0)
+    def init_animation():
+        global line
+        line, = ax.plot(x, np.zeros_like(x))
+        ax.set_xlim(0, 81)
+        ax.set_ylim(0,1)
 
-    ax.spines['bottom'].set_color('white')
-    ax.spines['top'].set_color('white') 
-    ax.spines['right'].set_color('white')
-    ax.spines['left'].set_color('white')
-    
-    ax.tick_params(axis='x', colors='white')
-    ax.tick_params(axis='y', colors='white')
-    
-    ax.set_xlim(0,1)
-    ax.set_ylim(0,2.5)
-    
-    ax.set_xlabel("$p_r$ arm "+str(j+1), fontsize=14, color="white")
-    ax.set_title("Give ME Space")
-    
-    plt.setp(ax.get_xticklabels(), Fontsize=12)
-    plt.setp(ax.get_yticklabels(), Fontsize=12)
-    plt.setp(ax.spines.values(), linewidth=2)
-    
 
-plt.tight_layout()
+    def animate(i):
+        line.set_ydata(Q_policies[i,:])
+        fig.suptitle(str(i+95))
+        return line,
 
-# initialization function: plot the background of each frame
-def init():
-    for line in lines:
-        line.set_data([], [])
-    #lines[1].set_data([], [])
-    return lines,
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    x = np.arange(0,81)
 
-# animation function.  This is called sequentially
-def animate(i):
-    if i>0 and i%2==1:
-        choice = np.random.choice(nb)
-        c = np.random.rand()
-        if c<= rew_probs[choice]:
-            r = 0
-        else:
-            r = 1
-        string = "choice: arm "+str(choice+1)+", reward: "+str(int(not r))
-    else:
-        string = ""
-        choice = None
-    
-    if choice is not None:
-        axes[choice].set_title(string, fontsize=14, color="white")
-    x = np.linspace(0, 1, 1000)
-    for j,line in enumerate(lines):
-        y = beta(x,alpha=alpha[j])
-        line.set_data(x, y)
-        if choice is None:
-            axes[j].set_title(" ")
-    #lines[1].set_data(x, y)
-    if i>0 and i%2==1:            
-        alpha[:,:] = (1-lamb)*alpha[:,:] + 1 - (1-lamb)
-        alpha[choice,r] += 1
+
+    ani = matplotlib.animation.FuncAnimation(fig, animate, init_func=init_animation, frames=25)
+    ani.save(r'C:/Users/admin/Desktop/project/BalancingControl/' + ttl + '.gif', writer='imagemagick', fps=5)
+
+#%%
+
+
+# ttls = ['rdm_grid_policies_cont-1_prior-1_stand_h1000_s6.399999999999994e-05_wd0.1280639999999999_b1.0_a3.5_1','rdm_grid_policies_cont-1_prior-1_post_h1000_s0.001_wd1_b3_a4_1']
+# ttls = ['rdm_grid_policies_cont-1_prior-1_stand_h1000_s6.399999999999994e-05_wd0.1280639999999999_b1.0_a3.5_0',
+#         'rdm_grid_policies_cont-1_prior-1_stand_h1000_s6.399999999999994e-06_wd0.1280639999999999_b1.0_a3.5_0']
+# for ttl in ttls:   
+#     ww = load_file(os.getcwd() + '\\agent_sims\\desired_rt_1\\' + ttl)
+#     # ww = load_file(os.getcwd() + '\\agent_sims\\rdm_grid_policies_cont-1_prior-1_post_h1000_s0.001_wd1_b3_a1')
+#     ac_sel = ww.agent.action_selection
+#     ac_sel.print_walks = True
+
+#     Q_log = np.asarray(ww.agent.action_selection.drifts)[np.arange(0,800,4),:]
+
+#     if ac_sel.prior_as_starting_point:
+#         starts = np.asarray(ww.agent.action_selection.priors)[np.arange(0,800,4),:]
+
+
+#     if ac_sel.over_actions:
+#         ni=3
+#     else:
+#         ni=81
+
+
+#     RT = []
+#     for ind, tau in enumerate(range(99,130)):
+#         Q = Q_log[tau,:]
+#         decision_log = np.zeros([10000, ni])
+
+#         if ac_sel.prior_as_starting_point:
+#             decision_log[0,:] = starts[tau,:]
+#         broken = False
+#         i=0
         
+#         bound_reached = np.zeros(ni, dtype = bool)
+#         while(not np.any(bound_reached)):                        # if still no decision made
+#             dW = np.random.normal(scale = ac_sel.s, size = ni)
+#             decision_log[i+1,:] = decision_log[i,:] + (ac_sel.wd*Q)*0.01 + (Q>0)*dW
+#             bound_reached = decision_log[i+1,:] >= ac_sel.b
+#             i+=1
 
-    return lines,
+#             if i > 10000:
+#                 action = -1
+#                 broken = True
+#                 break
 
-# call the animator.  blit=True means only re-draw the parts that have changed.
-anim = animation.FuncAnimation(fig, animate, init_func=init,
-                               frames=21, interval=1500)#, blit=True)
+#         crossed = bound_reached.nonzero()[0]                      # non-zero returns tuple by default
+        
+        
+#         if (crossed.size > 1):
+#             vals = decision_log[i,crossed]
+#             selected = np.argmax(vals)
+#             decision = crossed[selected]
 
-# save the animation as an mp4.  This requires ffmpeg or mencoder to be
-# installed.  The extra_args ensure that the x264 codec is used, so that
-# the video can be embedded in html5.  You may need to adjust this for
-# your system: for more information, see
-# http://matplotlib.sourceforge.net/api/animation_api.html
-if lamb > 0:
-    anim.save('forgetting_bandit.gif', fps=0.75, dpi=200)#, extra_args=['-vcodec', 'libx264'])
-else:
-    anim.save('stationary_bandit.gif', fps=0.75, dpi=200)#, extra_args=['-vcodec', 'libx264'])
-#plt.show()
+#             # raise ValueError('Two integrators crossed decision boundary at the same time')
+#             # print('Two integrators crossed boundary at the same time, choosing one at random')
+#             decision = np.random.choice(crossed, p=np.ones(crossed.size)/crossed.size)
+#         elif not broken:
+#             decision = crossed[0]
+
+#         RT.append(i)
+
+#         plt.plot(np.arange(0, i+1), decision_log[:i+1,:])
+#         plt.title('tau: ' +  str(tau) + ' RT:' + str(RT[ind]))
+#         plt.savefig(ttl + '_' + str(tau) + '.png')
+#         plt.close()
+#     plt.close()
+#     plt.plot(np.arange(99,130), RT,marker='o')
+#     plt.savefig('RT_' + ttl + '.png')
