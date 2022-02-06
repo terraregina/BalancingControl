@@ -16,14 +16,18 @@ class HierarchicalPerception(object):
                  dirichlet_pol_params = None,
                  dirichlet_rew_params = None,
                  generative_model_context = None,
-                 T=5, pol_lambda=0, r_lambda=0, non_decaying=0, dec_temp=1.):
+                 T=5, pol_lambda=0, r_lambda=0,
+                 possible_rewards = [-1,0,1],
+                 non_decaying=0, dec_temp=1.):
 
         self.generative_model_observations = generative_model_observations.copy()
+
         if len(generative_model_states.shape) <= 3:
             self.generative_model_states = generative_model_states.copy()[:,:,:,None]
         else:
             self.generative_model_states = generative_model_states.copy()
-        self.generative_model_rewards = generative_model_rewards.copy()
+
+        self.generative_model_rewards_unique = generative_model_rewards.copy()
         self.transition_matrix_context = transition_matrix_context.copy()
         self.prior_rewards = prior_rewards.copy()
         self.prior_states = prior_states.copy()
@@ -31,6 +35,9 @@ class HierarchicalPerception(object):
         self.npi = prior_policies.shape[0]
         self.T = T
         self.nh = prior_states.shape[0]
+        self.npl = generative_model_rewards.shape[1]
+        self.possible_rewards = possible_rewards
+
         self.pol_lambda = pol_lambda
         self.r_lambda = r_lambda
         self.non_decaying = non_decaying
@@ -42,17 +49,21 @@ class HierarchicalPerception(object):
         else:
             self.nc = 1
             self.generative_model_rewards = self.generative_model_rewards[:,:,np.newaxis]
+
         if dirichlet_pol_params is not None:
             self.dirichlet_pol_params = dirichlet_pol_params.copy()
+
         if dirichlet_rew_params is not None:
             self.dirichlet_rew_params = dirichlet_rew_params.copy()
+
         if generative_model_context is not None:
             self.generative_model_context = generative_model_context.copy()
 
 
             for c in range(self.nc):
-                for state in range(self.nh):
-                    self.generative_model_rewards[:,state,c] = self.dirichlet_rew_params[:,state,c] / self.dirichlet_rew_params[:,state,c].sum()
+                for planet_type in range(self.npl):
+                    self.generative_model_rewards_unique[:,planet_type,c] = \
+                        self.dirichlet_rew_params[:,planet_type,c] / self.dirichlet_rew_params[:,planet_type,c].sum()
                     # self.generative_model_rewards[:,state,c] =\
                     # np.exp(scs.digamma(self.dirichlet_rew_params[:,state,c])\
                     #        -scs.digamma(self.dirichlet_rew_params[:,state,c].sum()))
@@ -69,25 +80,35 @@ class HierarchicalPerception(object):
 
 
     def instantiate_messages(self, policies):
-
+        # m^{k+1}_{pi}(h_k) 
         self.bwd_messages = np.zeros((self.nh, self.T, self.npi, self.nc))
         self.bwd_messages[:,-1,:, :] = 1./self.nh
+
+        # m^{k-1}_{pi}(h_k) 
         self.fwd_messages = np.zeros((self.nh, self.T, self.npi, self.nc))
         self.fwd_messages[:, 0, :, :] = self.prior_states[:, np.newaxis, np.newaxis]
+
+        # Z
         self.fwd_norms = np.zeros((self.T+1, self.npi, self.nc))
         self.fwd_norms[0,:,:] = 1.
 
+        # m^{k}_{pi}(h_k)
         self.obs_messages = np.zeros((self.nh, self.T, self.nc)) + 1/self.nh#self.prior_observations.dot(self.generative_model_observations)
         #self.obs_messages = np.tile(self.obs_messages,(self.T,1)).T
 
+
+        # utility messages?
         self.rew_messages = np.zeros((self.nh, self.T, self.nc))
         #self.rew_messages[:] = np.tile(self.prior_rewards.dot(self.generative_model_rewards),(self.T,1)).T
 
         for c in range(self.nc):
+            # sum(r)[p(r|s)p'(r)]
             self.rew_messages[:,:,c] = self.prior_rewards.dot(self.generative_model_rewards[:,:,c])[:,np.newaxis]
             for pi, cstates in enumerate(policies):
                 for t, u in enumerate(np.flip(cstates, axis = 0)):
-                    tp = self.T - 2 - t
+                    tp = self.T - 2 - t        # T - 2 corresponds to the time point before last
+               
+                     # m^{k+1}(h_k) = p(h_k+1|h_k,pi) * m^{k+1}(h_{k+1}) * m^{k+2}(h_{k+1})
                     self.bwd_messages[:,tp,pi,c] = self.bwd_messages[:,tp+1,pi,c]*\
                                                 self.obs_messages[:, tp+1,c]*\
                                                 self.rew_messages[:, tp+1,c]
@@ -98,6 +119,7 @@ class HierarchicalPerception(object):
     def update_messages(self, t, pi, cs, c=0):
         if t > 0:
             for i, u in enumerate(np.flip(cs[:t], axis = 0)):
+                #!#print('pi ', pi,', cs ',cs)
                 self.bwd_messages[:,t-1-i,pi,c] = self.bwd_messages[:,t-i,pi,c]*\
                                                 self.obs_messages[:,t-i,c]*\
                                                 self.rew_messages[:, t-i,c]
@@ -137,7 +159,7 @@ class HierarchicalPerception(object):
                         .dot(self.generative_model_states[:,:,u,c])
                     self.bwd_messages[:,tp, pi,c] /= self.bwd_messages[:,tp,pi,c].sum()
 
-    def update_beliefs_states(self, tau, t, observation, reward, policies, possible_policies):
+    def update_beliefs_states(self, tau, t, observation, reward, gen_model_rewards, policies, possible_policies):
         #estimate expected state distribution
         if t == 0:
             self.instantiate_messages(policies)

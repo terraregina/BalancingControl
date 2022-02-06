@@ -3,6 +3,55 @@ human behavior."""
 import numpy as np
 
 
+
+class PlanetWorld(object):
+
+    def __init__(self, O, S, R, planet_configurations, starts, contexts, mb = 10, T = 4, ns=6, npl=2, nr=2, na=2):
+
+        self.A = O.copy()                                       # prob dist for generating observations
+        self.B = S.copy()                                       # prob dist for state transitions
+        self.R = R.copy()                                       # prob dist for reward generation
+        self.trials = mb                                        # mb corresponds to number of miniblocks
+        self.T = T                                              # miniblock length of 3 actions + initial state = 4
+        self.ns = ns                                            # number of unique locations
+        self.nr = nr                                            # number of rewards
+        self.npl = npl                                          # number of unique planet types
+        self.na = na                                            # number of actions
+        self.context_cues = np.array(contexts,dtype="int32")    # background colors, look at run_agent_simulation, load vars for coding
+        self.planet_conf = planet_configurations                # planet identities for each trial
+        self.starting_position = starts                         # initial rocket position for each trial
+        # hidden states tracks location and not planet identity
+        self.hidden_states = np.zeros([mb, T],
+         dtype="int32") 
+
+
+    def set_initial_states(self, tau):
+        self.hidden_states[tau, 0] = self.starting_position[tau]
+
+    def generate_context_obs(self,tau):
+        return self.context_cues[tau]
+
+    def generate_observations(self,tau,t):
+        
+        return self.hidden_states[tau,t]
+        
+
+    # this function is specifically tailored to deterministic location transitions
+    def update_hidden_states(self,tau, t, action):
+
+        curr_loc =  self.hidden_states[tau,t-1]
+        self.hidden_states[tau,t] = np.argmax(self.B[:,curr_loc,action])
+        #!#print( "curr_loc ", curr_loc, ", action ",action,", target ", self.hidden_states[tau,t])
+
+
+    def generate_rewards(self,tau,t):
+        
+        curr_loc = self.hidden_states[tau,t]           # t+1 because we are still at t but have already moved the rocket
+        rp = self.R[tau,0,curr_loc]                      # reward probability at current planet
+        reward = np.random.binomial(n=1, p=rp)
+
+        return reward
+
 class GridWorld(object):
 
     def __init__(self, Omega, Theta, Rho,
