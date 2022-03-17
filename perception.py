@@ -5,6 +5,7 @@ from misc import D_KL_nd_dirichlet, D_KL_dirichlet_categorical
 
 
 class HierarchicalPerception(object):
+    
     def __init__(self,
                  generative_model_observations,
                  generative_model_states,
@@ -16,7 +17,7 @@ class HierarchicalPerception(object):
                  dirichlet_pol_params = None,
                  dirichlet_rew_params = None,
                  generative_model_context = None,
-                 T=5, pol_lambda=0, r_lambda=0,
+                 T=4, pol_lambda=0, r_lambda=0,
                  possible_rewards = [-1,0,1],
                  non_decaying=0, dec_temp=1.):
 
@@ -27,7 +28,7 @@ class HierarchicalPerception(object):
         else:
             self.generative_model_states = generative_model_states.copy()
 
-        self.generative_model_rewards_unique = generative_model_rewards.copy()
+        self.generative_model_rewards = generative_model_rewards.copy()
         self.transition_matrix_context = transition_matrix_context.copy()
         self.prior_rewards = prior_rewards.copy()
         self.prior_states = prior_states.copy()
@@ -59,16 +60,24 @@ class HierarchicalPerception(object):
         if generative_model_context is not None:
             self.generative_model_context = generative_model_context.copy()
 
-
+            # need to see how this works again
             for c in range(self.nc):
                 for planet_type in range(self.npl):
-                    self.generative_model_rewards_unique[:,planet_type,c] = \
+                    self.generative_model_rewards[:,planet_type,c] = \
                         self.dirichlet_rew_params[:,planet_type,c] / self.dirichlet_rew_params[:,planet_type,c].sum()
+                    # this is what is in sarah's original code
                     # self.generative_model_rewards[:,state,c] =\
                     # np.exp(scs.digamma(self.dirichlet_rew_params[:,state,c])\
                     #        -scs.digamma(self.dirichlet_rew_params[:,state,c].sum()))
                     # self.generative_model_rewards[:,state,c] /= self.generative_model_rewards[:,state,c].sum()
+                    
+                    # this is what is in my old version
+                    # for planet_type in range(self.npl):
 
+                    #     self.gen_model_rewards_unique[:,planet_type,0] = \
+                    #     self.dirichlet_rew_params[:,planet_type] / self.dirichlet_rew_params[:,planet_type].sum()
+
+                # # look at exercise 5, Eq (42-50) 
 
     def reset(self, params, fixed):
 
@@ -79,7 +88,7 @@ class HierarchicalPerception(object):
         self.dirichlet_pol_params = alphas
 
 
-    def instantiate_messages(self, policies):
+    def instantiate_messages(self, policies):#, gen_model_rewards):
         # m^{k+1}_{pi}(h_k) 
         self.bwd_messages = np.zeros((self.nh, self.T, self.npi, self.nc))
         self.bwd_messages[:,-1,:, :] = 1./self.nh
@@ -103,7 +112,7 @@ class HierarchicalPerception(object):
 
         for c in range(self.nc):
             # sum(r)[p(r|s)p'(r)]
-            self.rew_messages[:,:,c] = self.prior_rewards.dot(self.generative_model_rewards[:,:,c])[:,np.newaxis]
+            self.rew_messages[:,:,c] = self.prior_rewards.dot(self.current_gen_model_rewards[:,:,c])[:,np.newaxis]
             for pi, cstates in enumerate(policies):
                 for t, u in enumerate(np.flip(cstates, axis = 0)):
                     tp = self.T - 2 - t        # T - 2 corresponds to the time point before last
@@ -159,7 +168,7 @@ class HierarchicalPerception(object):
                         .dot(self.generative_model_states[:,:,u,c])
                     self.bwd_messages[:,tp, pi,c] /= self.bwd_messages[:,tp,pi,c].sum()
 
-    def update_beliefs_states(self, tau, t, observation, reward, gen_model_rewards, policies, possible_policies):
+    def update_beliefs_states(self, tau, t, observation, reward, policies, possible_policies):
         #estimate expected state distribution
         if t == 0:
             self.instantiate_messages(policies)

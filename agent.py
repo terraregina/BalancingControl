@@ -14,19 +14,23 @@ class BayesianPlanner(object):
                  prior_context = None,
                  learn_habit = False,
                  learn_rew = False,
-                 trials = 1, T = 10, number_of_states = 6,
-                 number_of_rewards = 2,
-                 number_of_policies = 10):
+                 trials = 1, T = 4, number_of_states = 6,
+                 number_of_rewards = 3,
+                 number_of_policies = 8, number_of_planets = 3):
 
         #set the modules of the agent
         self.perception = perception
         self.action_selection = action_selection
 
         #set parameters of the agent
+        self.npl = number_of_planets
         self.nh = number_of_states #number of states
         self.npi = number_of_policies #number of policies
         self.nr = number_of_rewards
-
+        
+        if prior_context is not None:
+            self.nc = prior_context.size
+        
         self.T = T
 
         if policies is not None:
@@ -81,7 +85,6 @@ class BayesianPlanner(object):
             self.context_obs = np.zeros(trials, dtype=int)
         self.prior_actions = np.zeros([trials, T-1, np.unique(self.policies).size])
 
-
     def reset(self, params, fixed):
 
         self.actions[:] = 0
@@ -98,6 +101,21 @@ class BayesianPlanner(object):
         self.log_probability = 0
         self.perception.reset(params, fixed)
 
+    def extract_rewards(self):
+        gen_mod_rewards = np.zeros([self.nr, self.nh, self.nc])
+        unique = self.perception.generative_model_rewards_unique
+        for p in range(self.nh):
+            gen_mod_rewards[:,p,:] = unique[:,self.planets[p],:]
+        
+        return gen_mod_rewards
+
+    def initiate_planet_rewards(self):
+        
+        gen_model_rewards = np.zeros([self.nr,self.npl])
+        gen_model_rewards = \
+            self.perception.gen_model_rewards_unique[[[self.planets]]].squeeze().T
+
+        return gen_model_rewards
 
     def update_beliefs(self, tau, t, observation, reward, response, context=None):
         
@@ -113,15 +131,26 @@ class BayesianPlanner(object):
             self.possible_polcies = np.intersect1d(self.possible_polcies, possible_policies)
             self.log_probability += ln(self.posterior_actions[tau,t-1,response])
 
+        gen_model_rewards = self.initiate_planet_rewards()
         self.posterior_states[tau, t] = self.perception.update_beliefs_states(
                                          tau, t,
                                          observation,
                                          reward,
+                                         gen_model_rewards,
                                          self.policies,
                                          self.possible_polcies)
 
+        #!#print("start", self.world.environment.starting_position[tau],"\n")
+        #!#print("posterior over states for two contexts")
+        #!#print(self.posterior_states[tau,t,:,t,:,0].T)
+        #!#print("\n")
+        #!#print(self.posterior_states[tau,t,:,t,:,1].T)
         #update beliefs about policies
         self.posterior_policies[tau, t], self.likelihood[tau,t] = self.perception.update_beliefs_policies(tau, t)
+        #!#print("\nself.posterior_policies[tau, t]\n", self.posterior_policies[tau, t])
+        #!#print("planet conf", self.world.environment.planet_conf[tau])
+        #!#print("c1: ", self.policies[np.argmax(self.posterior_policies[tau, t][:,0])])
+        #!#print("c2: ", self.policies[np.argmax(self.posterior_policies[tau, t][:,1])])
 
         if tau == 0:
             prior_context = self.prior_context
@@ -409,3 +438,54 @@ class BayesianPlanner_old(object):
 
 
         return control_prob
+
+# ..................................''.......                 ................................   .....
+# .................................''.................     ............'''.........,:;'..       ......
+# ....................................';;:;,,'''.''''.........';cc:,...','.........;c:,.        ......
+# .............................''..':oxkkkxdooollclccc::;,,,,;:lodddoc;'...........;c:,.              
+# ............................;;',lkKKKKKKK00OOkkxxxdddoolllcllodddddxdl;'...  ....:c:,.              
+# ...........................,;,:kKXXXXXXKKK000OOkkxxxxdddooooooodddddodoc,'..   ..:c:'.              
+# ..........................,;;lOXXXXXXXKKK00OOOkkxxddddddooooooooooolllllc,'..  .':c;'.              
+# .........................,;;oOKXXXKKKK000OOkkkxxddddddooooooollllllcccccc:'..  .':c;..              
+# .........................;:cx0KKKKKK000Okkxxxddddddoooloooolllccc:::ccc::;,..  .'::;..       ..     
+# ........................,:cokO0KK0000OOkxxddoooooooollllllllccc::;;;:::;;;'..   .;:,...      ..     
+# ........................,:coxOOOOOOOOOkxddooooolllllllllooollc::;;;;;;;,,,'.    .;;'..  ..          
+# ........................':clxkkkOOOOOOkxxxdddoooooooooooddoolc::;;;,,,,,,,..    .;:'.               
+#                  ........,:cdkkkkkOOOkkxxxxxddooooooodddddollc:;;;,,''''''..    .::'.               
+#                       ....':dkkkkkkOkkxxxxdddoooooddddddoolc::;;;;,,'''''...    .;:'.               
+#                          .'cdkOOOOOOkxxxdoolllllloooooolcc::;;,,,;;,,;;,'...    .;:'.               
+#                          .'lxkO00Okddooollc::::cccccccc:;,,,,'''''',;;;;,...    .;;..               
+#                       .. .'lkkdc:;'............',,,,,,,...            ......    .;;..               
+#                        ....co:....             ........                  ...    .:;..               
+#   ... ...           .;;'..'lo;...               .:cc;'.                  ...   .';,....             
+#        ..        ...cdddo:,lkl...  .           .cddoo:.                  ...  .......               
+#        ..       .',:c:coo;'lkd;......         .:ddoooc,.                ..'......''..               
+#        .        .,:clcoxo;,okkd:,'......  ...,coxxxdl:,'.             ...''...'''''.                
+#        .        ..;loodol:;okkkkxdolc:;,'',;:odxxxxxoc;,'..............'''....',,,..                
+#       .......    .';cddll:,lxxxxxxdolc:::cloddxkkkxdoc;,'....................',,,,..                
+#  ..........'..  .....cxxdl,:dxddooolllloddddxxxxxdooc;,,''''''''.............,;,,,..      .         
+#  ........';;,........'oOkdlcodooollloodxxddool;;;,'''....'''',''''''........',,'''..   ....         
+#    ...................'oxollddoolllloodxddolc;..''.........,,,,,,'''........'',,,'.. ......     .. .
+#       .    .........   .:looddoollloddxxxdodddlc:,........,,,,,,,''........'''',,'..   ...      ....
+#       .    ..',,'..     .;doodoolloodxkkxxxxxdddl,..','''',,,,,,,''............,,...                
+#    ...''...........      'lxdddollodxkkxxxdddoooc;',:;,''''''''''''........  ..,,..                 
+#   ..,:::,..........      .:xxddollodxxxxdollc:;,''.''........'''''........   ..,,..                 
+#  ..,;::;,... ....         ,dxdoollodxxdl:;;;;;;;;,,,''...................   ..',,..                 
+#  ...''........            .okdllllodddl::llooooc:;;;,,''................     .';,...                
+#    .......                .ckxdolcloolcclolc:;'..........................    .,;,.................. 
+#    ...                    .;dxxdolllllcc::;''............................   ..,;,...................
+#   ....              ..  ...'ldxdoolllll:;;,'',;;;,,,'.........................;;;,'''''''''''''''''.
+# ............     ..........'lxxdoolcccc:::::clc:;,,,,'''...............''....';;;,,,,,,,,,,,,,,,,,''
+# .........'..........''''''',dOkxdolc:;;;:::cc:;,,'''''.................,,,,,,,;;;;,,,,,;;;;;;;;;;,,,
+# ,....',;;;;;,'...'',;;;;;;;:okOkdolcc:,,;;::;;,''''.....................,;;;;;::::;;;;;:::ccc:::::;;
+# :;;;;:::ccccc:::::ccccccc::;;d0kdollc:;;;:::;,''.....................';..,;:;:::::::::::::::::::::::
+# ccccccccccccc:cc:cc::::c:;;,,xN0xdollc:;;;;cc:;,''''''...............':'..',;;;;;;;;;;::::::::;;;;::
+# ;;;;;;::::;;,,,,,,,,,,;;;,,''dNN0xoolc:;;;;:::;,,'',;,'..............,l,....';::::::::::::::::::::::
+# ;;;::::::::;;;;;;;;;;;;;,,,'.cKNXKkdoc::;;;;:;;,,,,,;,'.............,lo;. ....,;;::;;;;;;;;;;;;;;;;;
+# :::::::::::::::c::::;,,,,,''.,xXXKKOxl:::;;;;;;;,,',,,'...........';lll:.  .....',,,;;;:::::::::::::
+# ccc::::::::::::;,,,'''',,,''..;kKK00Okdlc:;;;,,;,,'''''..........':loll:.  ...........',,,,;;;::::::
+# ccccccccc::;;;,'..'..''',,''...:k000OOOkxoc:,,,;,,,''''.........,coolllc.  ..................''',,;;
+# ccccc::;;,,,,'.......'''''''....:xOOkkkkxxxdlc:;,''''''....'..,cooooollc'. .........................
+# cc::;;,,'''''........''''''......:oxkkkkxxxxxddol::;,'..''.';lddddooollc,.  ........................
+# :;;,,''''.............'''''......';cdxkkxxxxxxddddddolc;;;;cxkxddddollcc;.. ........................
+# ,,''''................'','''......,;coxkkkxxxxxxddxxkkko;,..:xxxddoollll:'.  .......................

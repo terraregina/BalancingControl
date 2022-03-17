@@ -128,7 +128,7 @@ class World(object):
         if t==0:
             self.environment.set_initial_states(tau)
             response = None
-            if hasattr(self.environment, 'Chi'):
+            if hasattr(self.environment, 'Chi') or self.agent.perception.generative_model_context is not None:
                 context = self.environment.generate_context_obs(tau)
             else:
                 context = None
@@ -147,7 +147,7 @@ class World(object):
         observation = self.observations[tau, t]
 
         reward = self.rewards[tau, t]
-
+        self.agent.planets = self.environment.planet_conf[tau,:]
         self.agent.update_beliefs(tau, t, observation, reward, response, context)
 
 
@@ -296,7 +296,6 @@ class World_old(object):
         observation = self.observations[tau, t]
 
         reward = self.rewards[tau, t]
-
         self.agent.update_beliefs(tau, t, observation, reward, response)
 
 
