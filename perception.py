@@ -17,9 +17,8 @@ class HierarchicalPerception(object):
                  dirichlet_pol_params = None,
                  dirichlet_rew_params = None,
                  generative_model_context = None,
-                 T=4, pol_lambda=0, r_lambda=0,
-                 possible_rewards = [-1,0,1],
-                 non_decaying=0, dec_temp=1.):
+                 T=4,
+                 possible_rewards = [-1,0,1]):
 
         self.generative_model_observations = generative_model_observations.copy()
 
@@ -38,11 +37,6 @@ class HierarchicalPerception(object):
         self.nh = prior_states.shape[0]
         self.npl = generative_model_rewards.shape[1]
         self.possible_rewards = possible_rewards
-
-        self.pol_lambda = pol_lambda
-        self.r_lambda = r_lambda
-        self.non_decaying = non_decaying
-        self.dec_temp = dec_temp
 
         if len(generative_model_rewards.shape) > 2:
             self.infer_context = True
@@ -77,7 +71,12 @@ class HierarchicalPerception(object):
                     #     self.gen_model_rewards_unique[:,planet_type,0] = \
                     #     self.dirichlet_rew_params[:,planet_type] / self.dirichlet_rew_params[:,planet_type].sum()
 
-                # # look at exercise 5, Eq (42-50) 
+                   # # look at exercise 5, Eq (42-50)
+
+        # this is what I have from some other branch
+        #    for c in range(self.nc):
+        #         for state in range(self.nh):
+        #             self.generative_model_rewards[:,state,c] = self.dirichlet_rew_params[:,state,c] / self.dirichlet_rew_params[:,state,c].sum()
 
     def reset(self, params, fixed):
 
@@ -200,8 +199,8 @@ class HierarchicalPerception(object):
 
         #print((prior_policies>1e-4).sum())
         likelihood = self.fwd_norms.prod(axis=0)
-        posterior = np.power(likelihood, self.dec_temp) * self.prior_policies
         likelihood /= likelihood.sum(axis=0)[np.newaxis,:]
+        posterior = likelihood * self.prior_policies
         posterior/= posterior.sum(axis=0)[np.newaxis,:]
         posterior = np.nan_to_num(posterior)
 
@@ -288,7 +287,7 @@ class HierarchicalPerception(object):
         assert(t == self.T-1)
         chosen_pol = np.argmax(posterior_policies, axis=0)
 #        self.dirichlet_pol_params[chosen_pol,:] += posterior_context.sum(axis=0)/posterior_context.sum()
-        self.dirichlet_pol_params = (1-self.pol_lambda) * self.dirichlet_pol_params + 1 - (1-self.pol_lambda)
+        # self.dirichlet_pol_params = (1-self.pol_lambda) * self.dirichlet_pol_params + 1 - (1-self.pol_lambda)
         self.dirichlet_pol_params[chosen_pol,:] += posterior_context
         self.prior_policies[:] = self.dirichlet_pol_params.copy() #np.exp(scs.digamma(self.dirichlet_pol_params) - scs.digamma(self.dirichlet_pol_params.sum(axis=0))[np.newaxis,:])
         self.prior_policies /= self.prior_policies.sum(axis=0)[np.newaxis,:]
@@ -300,7 +299,7 @@ class HierarchicalPerception(object):
         old = self.dirichlet_rew_params.copy()
         # c = np.argmax(posterior_context)
         # self.dirichlet_rew_params[reward,:,c] += states[:,c]
-        self.dirichlet_rew_params[:,self.non_decaying:,:] = (1-self.r_lambda) * self.dirichlet_rew_params[:,self.non_decaying:,:] +1 - (1-self.r_lambda)
+        # self.dirichlet_rew_params[:,self.non_decaying:,:] = (1-self.r_lambda) * self.dirichlet_rew_params[:,self.non_decaying:,:] +1 - (1-self.r_lambda)
         self.dirichlet_rew_params[reward,:,:] += states * posterior_context[np.newaxis,:]
         for c in range(self.nc):
             for state in range(self.nh):
