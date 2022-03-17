@@ -131,12 +131,11 @@ class BayesianPlanner(object):
             self.possible_polcies = np.intersect1d(self.possible_polcies, possible_policies)
             self.log_probability += ln(self.posterior_actions[tau,t-1,response])
 
-        gen_model_rewards = self.initiate_planet_rewards()
+        self.perception.current_gen_model_rewards = self.initiate_planet_rewards()
         self.posterior_states[tau, t] = self.perception.update_beliefs_states(
                                          tau, t,
                                          observation,
                                          reward,
-                                         gen_model_rewards,
                                          self.policies,
                                          self.possible_polcies)
 

@@ -141,16 +141,20 @@ class HierarchicalPerception(object):
 
         if len(cs[t:]) > 0:
            for i, u in enumerate(cs[t:]):
-               self.fwd_messages[:, t+1+i, pi,c] = self.fwd_messages[:,t+i, pi,c]*\
+                self.fwd_messages.shape
+            #    #!#print("fwd: ", self.fwd_messages[:,t+i, pi,c])
+            #    #!#print("obs: ", self.obs_messages[:, t+i,c])
+            #    #!#print("rew: ", self.rew_messages[:, t+i,c])
+                self.fwd_messages[:, t+1+i, pi,c] = self.fwd_messages[:,t+i, pi,c]*\
                                                 self.obs_messages[:, t+i,c]*\
                                                 self.rew_messages[:, t+i,c]
 
-               self.fwd_messages[:, t+1+i, pi,c] = \
+                self.fwd_messages[:, t+1+i, pi,c] = \
                                                 self.generative_model_states[:,:,u,c].\
                                                 dot(self.fwd_messages[:, t+1+i, pi,c])
-               self.fwd_norms[t+1+i,pi,c] = self.fwd_messages[:,t+1+i,pi,c].sum()
-               if self.fwd_norms[t+1+i, pi,c] > 0: #???? Shouldn't this not happen?
-                   self.fwd_messages[:,t+1+i, pi,c] /= self.fwd_norms[t+1+i,pi,c]
+                self.fwd_norms[t+1+i,pi,c] = self.fwd_messages[:,t+1+i,pi,c].sum()
+                if self.fwd_norms[t+1+i, pi,c] > 0: #???? Shouldn't this not happen?
+                    self.fwd_messages[:,t+1+i, pi,c] /= self.fwd_norms[t+1+i,pi,c]
 
     def reset_preferences(self, t, new_preference, policies):
 
@@ -175,7 +179,7 @@ class HierarchicalPerception(object):
 
         self.obs_messages[:,t,:] = self.generative_model_observations[observation][:,np.newaxis]
 
-        self.rew_messages[:,t,:] = self.generative_model_rewards[reward]
+        self.rew_messages[:,t,:] = self.current_gen_model_rewards[reward]
 
         for c in range(self.nc):
             for pi, cs in enumerate(policies):
@@ -207,7 +211,12 @@ class HierarchicalPerception(object):
 
         return posterior, likelihood
 
-
+    '''
+    As most of the posteriors described here are interdependent on each other, one has to iterate over their updates
+    until convergence. Practically, we only used one iteration step: We used the priors over θ, φ and c_t to calculate
+    the posterior over policies. Then we calculated the posteriors over theta and phi, which were then used to calculate
+    the posterior over contexts.
+    '''
     def update_beliefs_context(self, tau, t, reward, posterior_states, posterior_policies, prior_context, policies, context=None):
 
         post_policies = (prior_context[np.newaxis,:] * posterior_policies).sum(axis=1)
@@ -558,4 +567,59 @@ class TwoStepPerception(object):
 #                    self.fwd_messages[:,:,pi,c] = 1./self.nh #0
 
         return self.dirichlet_rew_params
+
+# MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMWNXK0Okxxdddddddddxkk0KXWMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
+# MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMNX0kdoc:;,'''''''''''''''''',;coxOXWMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
+# MMMMMMMMMMMMMMMMMMMMMMMMMMWX0xoc;,''''''''''''''''''''''''''''''';lx0WMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
+# MMMMMMMMMMMMMMMMMMMMMMMWKxl:,''''''''''''''''''''''''''''''''''''''',cxXWMMMMMMMMMMMMMMMMMMMMMMMMMMM
+# MMMMMMMMMMMMMMMMMMMMW0xc,'''''''''''''''''''',:l:'''''cdc,''''''''''''';dKWMMMMMMMMMMMMMMMMMMMMMMMMM
+# MMMMMMMMMMMMMMMMMMXkl,''''''''''''''''''''''';kWKdooodKMO;''''''''''''''';dKMMMMMMMMMMMMMMMMMMMMMMMM
+# MMMMMMMMMMMMMMMMXx:''''''''''''''''''''''''''c0NXOkkkk0XKd;';;''''''''''''':kNMMMMMMMMMMMMMMMMMMMMMM
+# MMMMMMMMMMMMMMNk:''''''''''''''''''''''',okxkX0l;''''',:dKK0XO:''''''''''''',lKMMMMMMMMMMMMMMMMMMMMM
+# MMMMMMMMMMMMMKl,'''''''''''''''''''''''',oONWk;''''''''''cKNkc;''''''''''''''':0WMMMMMMMMMMMMMMMMMMM
+# MMMMMMMMMMMWO:'''''''''''''''''''''''''''',ONo''''''''''',kNl'''''''''''''''''';kWMMMMMMMMMMMMMMMMMM
+# MMMMMMMMMMWO;'''''''''''''''''''''''''''',c0Wx,'''''''''':0WOo:''''''''''''''''';kWMMMMMMMMMMMMMMMMM
+# MMMMMMMMMM0:''''''''''''''''''',d00d,''''oXNXXx:''''''',l0X000l'''''''''''''''''';OWMMMMMMMMMMMMMMMM
+# MMMMMMMMMXl'''''''''''',::''''':0MMO;'''';ol:o0KOddoodx0XOc,,,,''''''''''''''''''':0MMMMMMMMMMMMMMMM
+# MMMMMMMMMk,''''''''''':kNXxloxOKWMMNKOdc:dK0d,lXMKkkkxOWNo'''''''''''''''''''''''''lXMMMMMMMMMMMMMMM
+# MMMMMMMMNo'''''''''''';dKWMWNKkdooodx0NNNWWXx;:xkc'',coxdccdc'''''''''''''''''''''',xWMMMMMMMMMMMMMM
+# MMMMMMMMK:''''''''''''';kWWOl;''''''',:dXMNd'''''''',kN0kOXWk;'''''''''''''''''''''';OMMMMMMMMMMMMMM
+# MMMMMMMMO;'''''''''''',xWNd,''''''''''''c0WKc''';lllxXN0xxkKNKkOo,'''''''''''''''''''dWMMMMMMMMMMMMM
+# MMMMMMMMO,'''''''',lxdkNMk,''''''''''''''lXW0ooloOKXMXo,''';xNWk:,'''''''''''''''''';OMMMMMMMMMMMMMM
+# MMMMMMMMO;'''''''';OMMMMWd''''''''''''''':0MMMMNo,cOMO;'''''cXWk;,'''''''''''''''''';0MMMMMMMMMMMMMM
+# MMMMMMMM0;'''''''',:lldXMk;''''''''''''''lXW0dddcdOKWNkc;,;l0WX0x;'''''''''''''''''':0MMMMMMMMMMMMMM
+# MMMMMMMMKc'''''''''''',dWNx,''''''''''''c0MKc''',ldookNNXKXWNk:,,'''''''''''''''''''oNMMMMMMMMMMMMMM
+# MMMMMMMMNd''''''''''''':0MW0l;''''''',:xXMXl''''''''';OXkook0l''''''''''''''''''''',xWMMMMMMMMMMMMMM
+# MMMMMMMMMO;'''''''''''c0WMWNNKOxdoodx0NWWMNOl,''''''',::,'',;,'''''''''''''''''''''';kNMMMMMMMMMMMMM
+# MMMMMMMMMXl'''''''''''ckXOl:oxOXWMMN0kdllONKl,''''''''''''''''''''''''''''''''''''''',oKMMMMMMMMMMMM
+# MMMMMMMMMWk,''''''''''',;,'''''oNMWd,'''',:;''''''''''''''''''''''''''''''''''''''''''':kNMMMMMMMMMM
+# MMMMMMMMMMXl'''''''''''''''''''ck0kc'''''''''''''''''''''''''''''''''''''''''''''''''''',oKMMMMMMMMM
+# MMMMMMMMMMMO;''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''':kNMMMMMMM
+# MMMMMMMMMMMWd,''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''',lKWMMMMM
+# MMMMMMMMMMMMXl''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''';kWMMMM
+# MMMMMMMMMMMMMKc'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''oNMMMM
+# MMMMMMMMMMMMMM0c'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''',:lox0NMMMMM
+# MMMMMMMMMMMMMMMKl''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''',dKNWMMMMMMMMM
+# MMMMMMMMMMMMMMMMXo,''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''',xWMMMMMMMMMMM
+# MMMMMMMMMMMMMMMMMNd,'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''cKMMMMMMMMMMM
+# MMMMMMMMMMMMMMMMMMWk;'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''';OMMMMMMMMMMM
+# MMMMMMMMMMMMMMMMMMMWk;''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''l0NMMMMMMMMMMM
+# MMMMMMMMMMMMMMMMMMMMWx,'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''dNMMMMMMMMMMMM
+# MMMMMMMMMMMMMMMMMMMMMXl''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''';xNMMMMMMMMMMMMM
+# MMMMMMMMMMMMMMMMMMMMMNo''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''':0MMMMMMMMMMMMMM
+# MMMMMMMMMMMMMMMMMMMMMNo''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''',kWMMMMMMMMMMMMM
+# MMMMMMMMMMMMMMMMMMMMMXl''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''oNMMMMMMMMMMMMM
+# MMMMMMMMMMMMMMMMMMMMM0:''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''';kWMMMMMMMMMMMMM
+# MMMMMMMMMMMMMMMMMMMMWx,'''''''''''''''''''''''''''''''''''''''''''''''''''''''''',;o0WMMMMMMMMMMMMMM
+# MMMMMMMMMMMMMMMMMMMMKc'''''''''''''''''''''''''''''''''''''''''',:oxkkkxxddoooddk0XWMMMMMMMMMMMMMMMM
+# MMMMMMMMMMMMMMMMMMMWx,''''''''''''''''''''''''''''''''''''''''';xNMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
+# MMMMMMMMMMMMMMMMMMM0:''''''''''''''''''''''''''''''''''''''''',xWMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
+# MMMMMMMMMMMMMMMMMMNo'''''''''''''''''''''''''''''''''''''''''':KMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
+# MMMMMMMMMMMMMMMMMWx,''''''''''''''''''''''''''''''''''''''''''lNMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
+# MMMMMMMMMMMMMMMMWx;'''''''''''''''''''''''''''''''''''''''''''oNMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
+# MMMMMMMMMMMMMMMWx,''''''''''''''''''''''''''''''''''''''''''''dWMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
+# MMMMMMMMMMMMMMNx,'''''''''''''''''''''''''''''''''''''''''''''dWMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
+# MMMMMMMMMMMMMNd,''''''''''''''''''''''''''''''''''''''''''''''xWMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
+# MMMMMMMMMMMMNd,'''''''''''''''''''''''''''''''''''''''''''''',kMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
+# MMMMMMMMMMMWk,''''''''''''''''''''''''''''''''''''''''''''''';OMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
 
