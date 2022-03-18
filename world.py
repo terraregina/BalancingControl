@@ -129,7 +129,6 @@ class World(object):
         """
         # if tau%5 == 0:
         #     print(tau)
-        print('tau: ', tau, ', t: ',t)
         if t==0:
             self.environment.set_initial_states(tau)
             response = None
@@ -156,7 +155,8 @@ class World(object):
         reward = self.rewards[tau, t]
 
         self.agent.planets = self.environment.planet_conf[tau,:]
-        print(self.agent.planets)
+        # print('planets: ', self.agent.planets)
+        # print('start: ', self.environment.starting_position[tau])
         self.agent.update_beliefs(tau, t, observation, reward, response, context)
 
 

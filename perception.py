@@ -106,8 +106,8 @@ class HierarchicalPerception(object):
         for c in range(self.nc):
             # sum(r)[p(r|s)p'(r)]
             self.rew_messages[:,:,c] = self.prior_rewards.dot(self.current_gen_model_rewards[:,:,c])[:,np.newaxis]
-            if c == 0:
-                print(self.rew_messages[:,:,c])
+            # if c == 0:
+                # print(self.rew_messages[:,:,c])
             for pi, cstates in enumerate(policies):
                 for t, u in enumerate(np.flip(cstates, axis = 0)):
                     tp = self.T - 2 - t        # T - 2 corresponds to the time point before last
