@@ -40,16 +40,14 @@ class PlanetWorld(object):
     def update_hidden_states(self,tau, t, action):
 
         curr_loc =  self.hidden_states[tau,t-1]
-        self.hidden_states[tau,t] = np.argmax(self.B[:,curr_loc,action])
+        self.hidden_states[tau,t] = np.argmax(self.B[:,curr_loc,action,0])
         #!#print( "curr_loc ", curr_loc, ", action ",action,", target ", self.hidden_states[tau,t])
-
 
     def generate_rewards(self,tau,t):
         
         curr_loc = self.hidden_states[tau,t]           # t+1 because we are still at t but have already moved the rocket
-        rp = self.R[tau,0,curr_loc]                      # reward probability at current planet
-        reward = np.random.binomial(n=1, p=rp)
-
+        rp = self.R[tau,:,curr_loc]                    # reward probability at current planet
+        reward = np.random.choice(self.possible_rewards, p=rp)
         return reward
 
 class GridWorld(object):
@@ -95,8 +93,11 @@ class GridWorld(object):
 
     def generate_rewards(self, tau, t):
         #generate one sample from multinomial distribution
-        r = np.random.choice(self.Rho.shape[0], p = self.Rho[:, self.hidden_states[tau, t]])
-        return r
+        curr_loc = self.hidden_states[tau,t]           # t+1 because we are still at t but have already moved the rocket
+        rp = self.R[tau,0,curr_loc]                      # reward probability at current planet
+        reward = np.random.binomial(n=1, p=rp)
+
+        return reward
 
 """
 test: please ignore

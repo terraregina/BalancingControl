@@ -16,7 +16,7 @@ class BayesianPlanner(object):
                  learn_rew = False,
                  trials = 1, T = 4, number_of_states = 6,
                  number_of_rewards = 3,
-                 number_of_policies = 8, number_of_planets = 3):
+                 number_of_policies = 8, number_of_planets = None):
 
         #set the modules of the agent
         self.perception = perception
@@ -70,7 +70,11 @@ class BayesianPlanner(object):
         self.posterior_states = np.zeros((trials, T, self.nh, T, self.npi, self.nc))
         self.posterior_policies = np.zeros((trials, T, self.npi, self.nc))
         self.posterior_dirichlet_pol = np.zeros((trials, self.npi, self.nc))
-        self.posterior_dirichlet_rew = np.zeros((trials, T, self.nr, self.nh, self.nc))
+        if not number_of_planets is None:
+            self.posterior_dirichlet_rew = np.zeros((trials, T, self.nr, self.npl, self.nc))
+        else:
+            self.posterior_dirichlet_rew = np.zeros((trials, T, self.nr, self.nh, self.nc))
+
         self.observations = np.zeros((trials, T), dtype = int)
         self.rewards = np.zeros((trials, T), dtype = int)
         self.posterior_context = np.ones((trials, T, self.nc))
@@ -101,26 +105,22 @@ class BayesianPlanner(object):
         self.log_probability = 0
         self.perception.reset(params, fixed)
 
-    def extract_rewards(self):
-        gen_mod_rewards = np.zeros([self.nr, self.nh, self.nc])
-        unique = self.perception.generative_model_rewards_unique
-        for p in range(self.nh):
-            gen_mod_rewards[:,p,:] = unique[:,self.planets[p],:]
-        
-        return gen_mod_rewards
-
+    # code set up to look at unique planet types
+    #this function creates a reward matrix for the given planet constelation
     def initiate_planet_rewards(self):
         
-        gen_model_rewards = np.zeros([self.nr,self.npl])
-        gen_model_rewards = \
-            self.perception.gen_model_rewards_unique[[[self.planets]]].squeeze().T
-
-        return gen_model_rewards
+        gen_mod_rewards = np.zeros([self.nr, self.nh, self.nc])
+        for p in range(self.nh):
+            gen_mod_rewards[:,p,:] =\
+            self.perception.generative_model_rewards[:,self.planets[p],:]
+        
+        return gen_mod_rewards
 
     def update_beliefs(self, tau, t, observation, reward, response, context=None):
         
         self.observations[tau,t] = observation
         self.rewards[tau,t] = reward
+        self.perception.planets = self.planets
         if context is not None:
             self.context_obs[tau] = context
 
@@ -146,6 +146,8 @@ class BayesianPlanner(object):
         #!#print(self.posterior_states[tau,t,:,t,:,1].T)
         #update beliefs about policies
         self.posterior_policies[tau, t], self.likelihood[tau,t] = self.perception.update_beliefs_policies(tau, t)
+        
+
         #!#print("\nself.posterior_policies[tau, t]\n", self.posterior_policies[tau, t])
         #!#print("planet conf", self.world.environment.planet_conf[tau])
         #!#print("c1: ", self.policies[np.argmax(self.posterior_policies[tau, t][:,0])])
@@ -161,7 +163,7 @@ class BayesianPlanner(object):
         # check here what to do with the greater and equal sign
         if self.nc>1 and t>=0:
             
-            if hasattr(self, 'context_obs'):
+            if hasattr(self, 'context_obs'): 
                 c_obs = self.context_obs[tau]
             else:
                 c_obs = None

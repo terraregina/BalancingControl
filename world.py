@@ -27,6 +27,7 @@ class World(object):
 
         #container for rewards
         self.rewards = np.zeros((self.trials, self.T), dtype = int)
+        self.environment.possible_rewards = self.agent.perception.possible_rewards
 
     def simulate_experiment(self, curr_trials=None, print_thoughts=False):
         """This methods evolves all the states of the world by iterating
@@ -55,6 +56,7 @@ class World(object):
 
         return val
 
+
     def fit_model(self, bounds, n_pars, method='MLE'):
         """This method uses the existing observation and response data to
         determine the set of parameter values that are most likely to cause
@@ -82,6 +84,7 @@ class World(object):
 
         return ln(self.agent.asl.control_probability[p1, p2, p3]).sum()
 
+
     def __get_log_jointprobability(self, params):
         self.agent.set_free_parameters(params)
         self.agent.reset_beliefs(self.actions)
@@ -94,6 +97,7 @@ class World(object):
         ll = ln(self.agent.asl.control_probability[p1, p2, p3]).sum()
 
         return  ll + self.agent.log_prior()
+
 
     #this is a private method do not call it outside of the class
     def __update_model(self):
@@ -115,6 +119,7 @@ class World(object):
                 self.agent.plan_behavior(tau, t)
                 self.agent.estimate_response_probability(tau, t)
 
+
     #this is a private method do not call it outside of the class
     def __update_world(self, tau, t, print_thoughts = False):
         """This private method performs a signel time step update of the
@@ -124,11 +129,13 @@ class World(object):
         """
         # if tau%5 == 0:
         #     print(tau)
-            
+        print('tau: ', tau, ', t: ',t)
         if t==0:
             self.environment.set_initial_states(tau)
             response = None
-            if hasattr(self.environment, 'Chi') or self.agent.perception.generative_model_context is not None:
+            if hasattr(self.environment, 'Chi') or \
+               self.agent.perception.generative_model_context is not None:
+
                 context = self.environment.generate_context_obs(tau)
             else:
                 context = None
@@ -147,7 +154,9 @@ class World(object):
         observation = self.observations[tau, t]
 
         reward = self.rewards[tau, t]
+
         self.agent.planets = self.environment.planet_conf[tau,:]
+        print(self.agent.planets)
         self.agent.update_beliefs(tau, t, observation, reward, response, context)
 
 
@@ -166,6 +175,7 @@ class World(object):
                 print("prior actions: ", self.agent.prior_actions)
                 print("posterior actions: ", self.agent.posterior_actions[tau,t])
             print("\n")
+
 
 class World_old(object):
 

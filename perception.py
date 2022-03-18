@@ -18,7 +18,8 @@ class HierarchicalPerception(object):
                  dirichlet_rew_params = None,
                  generative_model_context = None,
                  T=4,
-                 possible_rewards = [-1,0,1]):
+                 possible_rewards = [-1,0,1],
+                 reward_index_mapping = {}):
 
         self.generative_model_observations = generative_model_observations.copy()
 
@@ -37,6 +38,10 @@ class HierarchicalPerception(object):
         self.nh = prior_states.shape[0]
         self.npl = generative_model_rewards.shape[1]
         self.possible_rewards = possible_rewards
+        self.reward_ind  = {}
+
+        for r, reward in enumerate(possible_rewards):
+            self.reward_ind[reward] = r  
 
         if len(generative_model_rewards.shape) > 2:
             self.infer_context = True
@@ -59,25 +64,14 @@ class HierarchicalPerception(object):
                 for planet_type in range(self.npl):
                     self.generative_model_rewards[:,planet_type,c] = \
                         self.dirichlet_rew_params[:,planet_type,c] / self.dirichlet_rew_params[:,planet_type,c].sum()
-                    # this is what is in sarah's original code
-                    # self.generative_model_rewards[:,state,c] =\
-                    # np.exp(scs.digamma(self.dirichlet_rew_params[:,state,c])\
-                    #        -scs.digamma(self.dirichlet_rew_params[:,state,c].sum()))
-                    # self.generative_model_rewards[:,state,c] /= self.generative_model_rewards[:,state,c].sum()
-                    
-                    # this is what is in my old version
-                    # for planet_type in range(self.npl):
 
-                    #     self.gen_model_rewards_unique[:,planet_type,0] = \
-                    #     self.dirichlet_rew_params[:,planet_type] / self.dirichlet_rew_params[:,planet_type].sum()
-
+                    # this gives siilar but not the same results
+                    # self.test[:,planet_type,c] =\
+                    # np.exp(scs.digamma(self.dirichlet_rew_params[:,planet_type,c])\
+                    #        -scs.digamma(self.dirichlet_rew_params[:,planet_type,c].sum()))
+                    # self.test[:,planet_type,c] /= self.test[:,planet_type,c].sum()
+                
                    # # look at exercise 5, Eq (42-50)
-
-        # this is what I have from some other branch
-        #    for c in range(self.nc):
-        #         for state in range(self.nh):
-        #             self.generative_model_rewards[:,state,c] = self.dirichlet_rew_params[:,state,c] / self.dirichlet_rew_params[:,state,c].sum()
-
     def reset(self, params, fixed):
 
         alphas = np.zeros((self.npi, self.nc)) + params
@@ -112,6 +106,8 @@ class HierarchicalPerception(object):
         for c in range(self.nc):
             # sum(r)[p(r|s)p'(r)]
             self.rew_messages[:,:,c] = self.prior_rewards.dot(self.current_gen_model_rewards[:,:,c])[:,np.newaxis]
+            if c == 0:
+                print(self.rew_messages[:,:,c])
             for pi, cstates in enumerate(policies):
                 for t, u in enumerate(np.flip(cstates, axis = 0)):
                     tp = self.T - 2 - t        # T - 2 corresponds to the time point before last
@@ -141,9 +137,6 @@ class HierarchicalPerception(object):
         if len(cs[t:]) > 0:
            for i, u in enumerate(cs[t:]):
                 self.fwd_messages.shape
-            #    #!#print("fwd: ", self.fwd_messages[:,t+i, pi,c])
-            #    #!#print("obs: ", self.obs_messages[:, t+i,c])
-            #    #!#print("rew: ", self.rew_messages[:, t+i,c])
                 self.fwd_messages[:, t+1+i, pi,c] = self.fwd_messages[:,t+i, pi,c]*\
                                                 self.obs_messages[:, t+i,c]*\
                                                 self.rew_messages[:, t+i,c]
@@ -154,6 +147,8 @@ class HierarchicalPerception(object):
                 self.fwd_norms[t+1+i,pi,c] = self.fwd_messages[:,t+1+i,pi,c].sum()
                 if self.fwd_norms[t+1+i, pi,c] > 0: #???? Shouldn't this not happen?
                     self.fwd_messages[:,t+1+i, pi,c] /= self.fwd_norms[t+1+i,pi,c]
+
+
 
     def reset_preferences(self, t, new_preference, policies):
 
@@ -177,9 +172,8 @@ class HierarchicalPerception(object):
             self.instantiate_messages(policies)
 
         self.obs_messages[:,t,:] = self.generative_model_observations[observation][:,np.newaxis]
-
-        self.rew_messages[:,t,:] = self.current_gen_model_rewards[reward]
-
+        ind = self.reward_ind[reward]
+        self.rew_messages[:,t,:] = self.current_gen_model_rewards[ind]
         for c in range(self.nc):
             for pi, cs in enumerate(policies):
                 if self.prior_policies[pi,c] > 1e-15 and pi in possible_policies:
@@ -218,11 +212,17 @@ class HierarchicalPerception(object):
     '''
     def update_beliefs_context(self, tau, t, reward, posterior_states, posterior_policies, prior_context, policies, context=None):
 
+
         post_policies = (prior_context[np.newaxis,:] * posterior_policies).sum(axis=1)
         beta = self.dirichlet_rew_params.copy()
         states = (posterior_states[:,t,:] * post_policies[np.newaxis,:,np.newaxis]).sum(axis=1)
+        st = np.argmax(states, axis=0)
+        planets = np.zeros([self.npl, self.nc])
+        planets[self.planets[st], np.arange(self.nc)] = 1
+        if not np.all(states[:,0] == states[:,1]):
+            raise Exception("inferred states are different for the two contexts") 
         beta_prime = self.dirichlet_rew_params.copy()
-        beta_prime[reward] = beta[reward] + states
+        beta_prime[self.reward_ind[reward]] = beta[self.reward_ind[reward]] + planets
 
 #        for c in range(self.nc):
 #            for state in range(self.nh):
@@ -296,19 +296,29 @@ class HierarchicalPerception(object):
 
     def update_beliefs_dirichlet_rew_params(self, tau, t, reward, posterior_states, posterior_policies, posterior_context = [1]):
         states = (posterior_states[:,t,:,:] * posterior_policies[np.newaxis,:,:]).sum(axis=1)
+        st = np.argmax(states, axis=0)
+        planets = np.zeros([self.npl, self.nc])
+        planets[self.planets[st], np.arange(self.nc)] = 1
         old = self.dirichlet_rew_params.copy()
         # c = np.argmax(posterior_context)
         # self.dirichlet_rew_params[reward,:,c] += states[:,c]
         # self.dirichlet_rew_params[:,self.non_decaying:,:] = (1-self.r_lambda) * self.dirichlet_rew_params[:,self.non_decaying:,:] +1 - (1-self.r_lambda)
-        self.dirichlet_rew_params[reward,:,:] += states * posterior_context[np.newaxis,:]
+        self.dirichlet_rew_params[self.reward_ind[reward],:,:] += planets * posterior_context[np.newaxis,:]
         for c in range(self.nc):
-            for state in range(self.nh):
+            for pl in range(self.npl):
                 #self.generative_model_rewards[:,state,c] = self.dirichlet_rew_params[:,state,c] / self.dirichlet_rew_params[:,state,c].sum()
-                self.generative_model_rewards[:,state,c] =\
-                np.exp(scs.digamma(self.dirichlet_rew_params[:,state,c])\
-                        -scs.digamma(self.dirichlet_rew_params[:,state,c].sum()))
-                self.generative_model_rewards[:,state,c] /= self.generative_model_rewards[:,state,c].sum()
-            self.rew_messages[:,t+1:,c] = self.prior_rewards.dot(self.generative_model_rewards[:,:,c])[:,np.newaxis]
+                self.generative_model_rewards[:,pl,c] =\
+                np.exp(scs.digamma(self.dirichlet_rew_params[:,pl,c])\
+                        -scs.digamma(self.dirichlet_rew_params[:,pl,c].sum()))
+                self.generative_model_rewards[:,pl,c] /= self.generative_model_rewards[:,pl,c].sum()
+            # self.rew_messages[:,t+1:,c] = self.prior_rewards.dot(self.generative_model_rewards[:,:,c])[:,np.newaxis]
+#             for state in range(self.nh):
+            #     #self.generative_model_rewards[:,state,c] = self.dirichlet_rew_params[:,state,c] / self.dirichlet_rew_params[:,state,c].sum()
+            #     self.generative_model_rewards[:,state,c] =\
+            #     np.exp(scs.digamma(self.dirichlet_rew_params[:,state,c])\
+            #             -scs.digamma(self.dirichlet_rew_params[:,state,c].sum()))
+            #     self.generative_model_rewards[:,state,c] /= self.generative_model_rewards[:,state,c].sum()
+            # self.rew_messages[:,t+1:,c] = self.prior_rewards.dot(self.generative_model_rewards[:,:,c])[:,np.newaxis]
 #        for c in range(self.nc):
 #            for pi, cs in enumerate(policies):
 #                if self.prior_policies[pi,c] > 1e-15:
