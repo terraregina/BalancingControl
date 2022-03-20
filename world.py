@@ -127,8 +127,8 @@ class World(object):
         the perceptual and planning states of the agent, and in parallel we
         generate observations and actions.
         """
-        # if tau%5 == 0:
-        #     print(tau)
+        if tau == 380:
+            print(tau)
         if t==0:
             self.environment.set_initial_states(tau)
             response = None
