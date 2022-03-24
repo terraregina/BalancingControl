@@ -4,6 +4,8 @@ import pickle
 import seaborn as sns
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 #%%
 
@@ -16,13 +18,22 @@ file.close()
 trials = run.trials
 agent = run.agent
 perception = agent.perception
+environment= run.environment
+
 observations = run.observations
-true_optimal = run.environment.true_optimal
-context_cues = run.environment.context_cues
+true_optimal = environment.true_optimal
+context_cues = environment.context_cues
+trial_type = environment.trial_type
 policies = run.agent.policies
 actions = run.actions[:,:3] 
 executed_policy = np.zeros(trials)
 
+# 
+
+agent.posterior_context
+agent.posterior_rewards
+agent.posterior_policies
+agent.likelihood
 for pi, p in enumerate(policies):
     inds = np.where( (actions[:,0] == p[0]) & (actions[:,1] == p[1]) & (actions[:,2] == p[2]) )[0]
     executed_policy[inds] = pi
@@ -81,3 +92,4 @@ for i, row in ranges.iterrows():
 
 posterior_rewards = agent.posterior_dirichlet_rew
 print(posterior_rewards.shape)
+
