@@ -470,7 +470,7 @@ def main():
 
 
     constant_arguments = [ns, na, npl, nc, nr, T, state_transition_matrix, planet_reward_probs, planet_reward_probs_switched,repetitions]
-    h =  [1,100]
+    h =  [1,10,20,30,40,100]
     cue_ambiguity = [0.8]
     context_trans_prob = [nc]
     degradation = [True]
@@ -491,11 +491,17 @@ def main():
 
     with concurrent.futures.ThreadPoolExecutor() as executor:
         results = executor.map(run_single_sim_multiprocess, lst, ca[0],ca[1],ca[2],ca[3],ca[4],ca[5],ca[6],ca[7],ca[8],ca[9])
-        for result in results:
-            print(result)
+        # for result in results:
+        #     print(result)
     finish = time.perf_counter()
-    print(list(executor.map(...)))
-    print(f'Finished in {round(finish-start, 2)} second(s)')
+    print(f'Finished in {round(finish-start, 2)} second(s) for multithreader')
+
+    start = time.perf_counter()
+
+    for l in lst:
+        run_single_sim_multiprocess(l, ns, na, npl, nc, nr, T, state_transition_matrix, planet_reward_probs, planet_reward_probs_switched,repetitions)
+    finish = time.perf_counter()
+    print(f'Finished in {round(finish-start, 2)} second(s) for individual ones')
 
 
 # ################################################
