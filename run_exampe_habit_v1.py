@@ -6,7 +6,7 @@
  #  #     # #       #     # #    #     #    #     # 
 ### #     # #       ####### #     #    #     #####  
                                                     
-#%%                                             
+#%%                                          
 import json  as js
 from venv import create
 from matplotlib.style import context
@@ -22,6 +22,8 @@ import matplotlib.pyplot as plt
 import jsonpickle as pickle
 import jsonpickle.ext.numpy as jsonpickle_numpy
 import json
+import concurrent.futures
+import time
 
 import perception as prc
 import agent as agt
@@ -67,11 +69,7 @@ def run_agent(par_list, trials, T, ns=6, na=2, nr=3, nc=2, npl=2):
 
 
     # agent's initial estimate of reward generation probability
-    C_beta = np.zeros((nr, npl, nc))
-
- 
-    for c in range(nc):
-        C_beta[:,:,c] = rc.copy()
+    C_beta = rc.copy()
  
     C_agent = np.zeros(C_beta.shape)        # nr x npl; default order is r=(1, 0, 1) and s=(0,1,2) 
 
@@ -214,8 +212,21 @@ def run_agent(par_list, trials, T, ns=6, na=2, nr=3, nc=2, npl=2):
     return w
 
 
+# degradation = [True, False]
+# cue_switch = [True, False]
+# arrays = [cue_switch, degradation]
+# lst = []
+# for i in product(*arrays):
+#     lst.append(list(i))
+
+# for l in lst:
+#     print(l)
+#     create_trials(contingency_degradation=l[0],switch_cues=l[1])
+
+
 def create_trials(export=True, contingency_degradation = False, switch_cues = True):
     np.random.seed(1)
+    ns=6
     all_rewards = [[-1,1,1], [1,1,-1]]
     trials = []
 
@@ -309,10 +320,9 @@ def run_single_sim_multiprocess(lst,
                                 state_transition_matrix,
                                 planet_reward_probs,
                                 planet_reward_probs_switched,
-                                repetitions=1):
+                                repetitions):
 
     folder = os.getcwd()
-    
     switch_cues, contingency_degradation, learn_rew, context_trans_prob, cue_ambiguity, h  = lst
 
     if contingency_degradation and not switch_cues:
@@ -323,12 +333,16 @@ def run_single_sim_multiprocess(lst,
         fname = 'config_degradation_0_switch_0.json'
     elif not contingency_degradation and switch_cues:
         fname = 'config_degradation_0_switch_1.json'
+    print(fname)
 
-    try:
-        file = open('/home/terra/Documents/thesis/BalancingControl/' + fname)
-    except:
-        create_trials(contingency_degradation=contingency_degradation, switch_cues=switch_cues)
-        file = open('/home/terra/Documents/thesis/BalancingControl/' + fname)
+
+    file = open('/home/terra/Documents/thesis/BalancingControl/' + fname)
+
+    # try:
+    #     file = open('/home/terra/Documents/thesis/BalancingControl/' + fname)
+    # except:
+    #     create_trials(contingency_degradation=contingency_degradation, switch_cues=switch_cues)
+    #     file = open('/home/terra/Documents/thesis/BalancingControl/' + fname)
 
 
     task_params = js.load(file)                                                                                 
@@ -371,7 +385,6 @@ def run_single_sim_multiprocess(lst,
             # print(i)
             # print(pl)
             Rho[i,:,:] = planet_reward_probs_switched[[pl]].T
-            print(Rho[i,::])
         else:
             Rho[i,:,:] = planet_reward_probs[[pl]].T
 
@@ -416,8 +429,91 @@ def run_single_sim_multiprocess(lst,
     pickled = pickle.encode(worlds)
     with open(fname, 'w') as outfile:
         json.dump(pickled, outfile)
-    print(fname)
+    return fname
     
+
+
+def main():
+    na = 2                                           # number of unique possible actions
+    nc = 4                                           # number of contexts, planning and habit
+    nr = 3                                           # number of rewards
+    ns = 6                                           # number of unique travel locations
+    npl = 3
+    steps = 3                                        # numbe of decisions made in an episode
+    T = steps + 1                                    # episode length
+
+    # reward probabiltiy vector
+    repetitions = 1
+    planet_reward_probs = np.array([[0.95, 0   , 0   ],
+                                    [0.05, 0.95, 0.05],
+                                    [0,    0.05, 0.95]]).T    # npl x nr
+
+    planet_reward_probs_switched = np.array([[0   , 0    , 0.95],
+                                            [0.05, 0.95 , 0.05],
+                                            [0.95, 0.05 , 0.0]]).T 
+
+
+    nplanets = 6
+    state_transition_matrix = np.zeros([ns,ns,na])
+
+
+    m = [1,2,3,4,5,0]
+    for r, row in enumerate(state_transition_matrix[:,:,0]):
+        row[m[r]] = 1
+
+    j = np.array([5,4,5,6,2,2])-1
+    for r, row in enumerate(state_transition_matrix[:,:,1]):
+        row[j[r]] = 1
+
+    state_transition_matrix = np.transpose(state_transition_matrix, axes= (1,0,2))
+    state_transition_matrix = np.repeat(state_transition_matrix[:,:,:,np.newaxis], repeats=nc, axis=3)
+
+
+    constant_arguments = [ns, na, npl, nc, nr, T, state_transition_matrix, planet_reward_probs, planet_reward_probs_switched,repetitions]
+    h =  [1,100]
+    cue_ambiguity = [0.8]
+    context_trans_prob = [nc]
+    degradation = [True]
+    cue_switch = [True]
+    learn_rew = [True]
+    arrays = [cue_switch, degradation, learn_rew, context_trans_prob, cue_ambiguity,h]
+    lst = []
+    for i in product(*arrays):
+        lst.append(list(i))
+
+    n = len(lst)
+    ca = [None]*len(constant_arguments)
+    for i,arg in enumerate(constant_arguments):
+        ca[i] = [arg]*n
+
+
+    start = time.perf_counter()
+
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        results = executor.map(run_single_sim_multiprocess, lst, ca[0],ca[1],ca[2],ca[3],ca[4],ca[5],ca[6],ca[7],ca[8],ca[9])
+        for result in results:
+            print(result)
+    finish = time.perf_counter()
+    print(list(executor.map(...)))
+    print(f'Finished in {round(finish-start, 2)} second(s)')
+
+
+# ################################################
+
+if __name__ == '__main__':
+    main()
+
+
+
+
+
+
+
+
+
+
+
+
 
 # def run_single_sim(lst,repetitions=1,return_name=False):
 
@@ -593,6 +689,7 @@ def run_single_sim_multiprocess(lst,
 
 
 #         reward_counts = np.ones([nr, npl, nc])
+
 #         par_list = [h,                        \
 #                     context_trans_prob,       \
 #                     cue_ambiguity,            \
@@ -627,57 +724,6 @@ def run_single_sim_multiprocess(lst,
 #             pickled = pickle.encode(run)
 #             with open(fname, 'w') as outfile:
 #                 json.dump(pickled, outfile)
-
-
-
-
-
-def main():
-    na = 2                                           # number of unique possible actions
-    nc = 4                                           # number of contexts, planning and habit
-    nr = 3                                           # number of rewards
-    ns = 6                                           # number of unique travel locations
-    npl = 3
-    steps = 3                                        # numbe of decisions made in an episode
-    T = steps + 1                                    # episode length
-
-    # reward probabiltiy vector
-
-    planet_reward_probs = np.array([[0.95, 0   , 0   ],
-                                    [0.05, 0.95, 0.05],
-                                    [0,    0.05, 0.95]]).T    # npl x nr
-
-    planet_reward_probs_switched = np.array([[0   , 0    , 0.95],
-                                            [0.05, 0.95 , 0.05],
-                                            [0.95, 0.05 , 0.0]]).T 
-
-
-    nplanets = 6
-    state_transition_matrix = np.zeros([ns,ns,na])
-
-
-    m = [1,2,3,4,5,0]
-    for r, row in enumerate(state_transition_matrix[:,:,0]):
-        row[m[r]] = 1
-
-    j = np.array([5,4,5,6,2,2])-1
-    for r, row in enumerate(state_transition_matrix[:,:,1]):
-        row[j[r]] = 1
-
-    state_transition_matrix = np.transpose(state_transition_matrix, axes= (1,0,2))
-    state_transition_matrix = np.repeat(state_transition_matrix[:,:,:,np.newaxis], repeats=nc, axis=3)
-
-    run_single_sim_multiprocess(lst, ns, na, npl, nc, nr, T,
-                                state_transition_matrix, planet_reward_probs, planet_reward_probs_switched)
-
-
-# ################################################
-
-if __name__ == '__main__':
-    main()
-
-
-
 
 
 
