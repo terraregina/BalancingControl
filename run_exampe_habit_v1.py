@@ -472,7 +472,7 @@ def run_single_sim(lst,
 
     worlds.append(meta)
     fname = prefix +'p' + str(cue_ambiguity) + '_q' + str(context_trans_prob) + '_h' + str(h) + '.json'
-    fname = os.path.join(folder, fname)
+    fname = os.path.join(os.path.join(folder,'data'), fname)
     jsonpickle_numpy.register_handlers()
     pickled = pickle.encode(worlds)
     with open(fname, 'w') as outfile:
@@ -480,22 +480,9 @@ def run_single_sim(lst,
 
     return fname
 
-# def create_title(switch_cues, contingency_degradation, cue_ambiguity, context_trans_prob, h):
-#     prefix = ''
-#     if switch_cues == True:
-#         prefix += 'switch1_'
-#     else:
-#         prefix +='switch0_'
 
-#     if contingency_degradation == True:
-#         prefix += 'degr1_'
-#     else:
-#         prefix += 'degr0_'
-#     fname = prefix +'p' + str(cue_ambiguity) + '_q' + str(context_trans_prob) + '_h' + str(h) + '.json'
-#     folder = os.path.join(os.getcwd(),'data')
-#     fname = os.path.join(folder, fname)
-#     return fname
 
+""""""
 def main():
 
     na = 2                                           # number of unique possible actions
@@ -532,12 +519,11 @@ def main():
     state_transition_matrix = np.transpose(state_transition_matrix, axes= (1,0,2))
     state_transition_matrix = np.repeat(state_transition_matrix[:,:,:,np.newaxis], repeats=nc, axis=3)
 
-
-    constant_arguments = [ns, na, npl, nc, nr, T, state_transition_matrix, planet_reward_probs, planet_reward_probs_switched,repetitions]
+    # setup simulation parameters here
     h =  [1,100]
-    cue_ambiguity = [0.8]
-    context_trans_prob = [nc]
-    degradation = [True]
+    cue_ambiguity = [0.8]                      # cue ambiguity reffers to how certain agent is a given observation refers to a given context
+    context_trans_prob = [nc]                  # the higher the value the more peaked the distribution is
+    degradation = [True]                       # bit counter intuitive, should change the name :D
     cue_switch = [True]
     learn_rew = [True]
     arrays = [cue_switch, degradation, learn_rew, context_trans_prob, cue_ambiguity,h]
@@ -545,15 +531,18 @@ def main():
     degradation_blocks=[2]
     trials_per_block=[60]
 
-    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    # needs to be run only the first you use main
-    # create_config_files(training_blocks, degradation_blocks, trials_per_block)
+    data_path = os.path.join(os.getcwd(),'data')
+    if not os.path.isdir(data_path): 
+        os.mkdir(data_path)
+    # needs to be run only the first time you use main
+    create_config_files(training_blocks, degradation_blocks, trials_per_block)
 
     lst = []
     for i in product(*arrays):
         lst.append(list(i))
 
     # failed efforts at parallel running of sims
+    # constant_arguments = [ns, na, npl, nc, nr, T, state_transition_matrix, planet_reward_probs, planet_reward_probs_switched,repetitions]
     # n = len(lst)
     # ca = [None]*len(constant_arguments)
     # for i,arg in enumerate(constant_arguments):
@@ -573,6 +562,7 @@ def main():
     db = degradation_blocks[0]
     tb = training_blocks[0]
     tpb = trials_per_block[0]
+
     for l in lst:
         # name of experiment config file
         config = 'config_'+'degradation_'+ str(int(l[1]))+ '_switch_' + str(int(l[0]))\
@@ -940,4 +930,7 @@ if __name__ == '__main__':
 # MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMN0dccccclkNMMMMMMMMMMMMMMMMMMMMMMMM
 # MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMNOdoollo0WMMMMMMMMMMMMMMMMMMMMMMM
 # MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMWXkdodONMMMMMMMMMMMMMMMMMMMMMMMM
+
+
+# %%
 
