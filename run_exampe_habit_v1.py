@@ -224,7 +224,7 @@ def run_agent(par_list, trials, T, ns=6, na=2, nr=3, nc=2, npl=2):
 #     create_trials(contingency_degradation=l[0],switch_cues=l[1])
 
 
-def create_trials(export=True, contingency_degradation = False, switch_cues = True):
+def create_trials_two_seqs(export=True, contingency_degradation = False, switch_cues = True,nblocks=7, trials_per_block=50, ):
     np.random.seed(1)
     ns=6
     all_rewards = [[-1,1,1], [1,1,-1]]
@@ -232,6 +232,7 @@ def create_trials(export=True, contingency_degradation = False, switch_cues = Tr
 
     fname = 'config_'+'degradation_'+ str(int(contingency_degradation))+ '_switch_' + str(int(switch_cues))\
              + '.json'
+
     for rewards in all_rewards:
         s1 = 3       # optimal sequence 1
         s2 = 6       # optimal sequence 2
@@ -310,7 +311,7 @@ def create_trials(export=True, contingency_degradation = False, switch_cues = Tr
             js.dump(config, file)
 
 
-def run_single_sim_multiprocess(lst,
+def run_single_sim(lst,
                                 ns,
                                 na,
                                 npl,
@@ -372,7 +373,7 @@ def run_single_sim_multiprocess(lst,
         'blocks' : blocks,
         'trials' : trials,
         'nblocks' : nblocks,
-        'trials_per_block': block
+        'trials_per_block': block,
     }
 
     all_optimal_seqs = np.unique(sequence)                                                                            
@@ -429,9 +430,24 @@ def run_single_sim_multiprocess(lst,
     pickled = pickle.encode(worlds)
     with open(fname, 'w') as outfile:
         json.dump(pickled, outfile)
-    return fname
-    
 
+
+
+def create_title(switch_cues, contingency_degradation, cue_ambiguity, context_trans_prob, h):
+    prefix = ''
+    if switch_cues == True:
+        prefix += 'switch1_'
+    else:
+        prefix +='switch0_'
+
+    if contingency_degradation == True:
+        prefix += 'degr1_'
+    else:
+        prefix += 'degr0_'
+    fname = prefix +'p' + str(cue_ambiguity) + '_q' + str(context_trans_prob) + '_h' + str(h) + '.json'
+    folder = os.path.join(os.getcwd(),'data')
+    fname = os.path.join(folder, fname)
+    return fname
 
 def main():
     na = 2                                           # number of unique possible actions
@@ -490,7 +506,7 @@ def main():
     start = time.perf_counter()
 
     with concurrent.futures.ThreadPoolExecutor() as executor:
-        results = executor.map(run_single_sim_multiprocess, lst, ca[0],ca[1],ca[2],ca[3],ca[4],ca[5],ca[6],ca[7],ca[8],ca[9])
+        results = executor.map(run_single_sim, lst, ca[0],ca[1],ca[2],ca[3],ca[4],ca[5],ca[6],ca[7],ca[8],ca[9])
         # for result in results:
         #     print(result)
     finish = time.perf_counter()
@@ -499,7 +515,7 @@ def main():
     start = time.perf_counter()
 
     for l in lst:
-        run_single_sim_multiprocess(l, ns, na, npl, nc, nr, T, state_transition_matrix, planet_reward_probs, planet_reward_probs_switched,repetitions)
+        run_single_sim(l, ns, na, npl, nc, nr, T, state_transition_matrix, planet_reward_probs, planet_reward_probs_switched,repetitions)
     finish = time.perf_counter()
     print(f'Finished in {round(finish-start, 2)} second(s) for individual ones')
 
