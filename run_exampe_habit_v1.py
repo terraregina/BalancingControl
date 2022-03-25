@@ -224,14 +224,24 @@ def run_agent(par_list, trials, T, ns=6, na=2, nr=3, nc=2, npl=2):
 #     create_trials(contingency_degradation=l[0],switch_cues=l[1])
 
 
-def create_trials_two_seqs(export=True, contingency_degradation = False, switch_cues = True,nblocks=7, trials_per_block=50, ):
+def create_trials_two_seqs(export=True,
+                           contingency_degradation = False,
+                           switch_cues = True,
+                           training_blocks=4,
+                           degradation_blocks = 2,
+                           trials_per_block=4, interlace = True):
+ 
+    if trials_per_block % 2 != 0:
+        raise Exception('Give even number of trials per block!')
+
+
     np.random.seed(1)
     ns=6
     all_rewards = [[-1,1,1], [1,1,-1]]
     trials = []
 
     fname = 'config_'+'degradation_'+ str(int(contingency_degradation))+ '_switch_' + str(int(switch_cues))\
-             + '.json'
+             + '_train' + str(training_blocks) + '_degr' + str(degradation_blocks) + '_n' + str(trials_per_block)+'.json'
 
     for rewards in all_rewards:
         s1 = 3       # optimal sequence 1
@@ -240,7 +250,7 @@ def create_trials_two_seqs(export=True, contingency_degradation = False, switch_
 
         n1 = slices[0].shape[0]      # number of trials for that sequence
         n2 = slices[1].shape[0]      # number of trials for that sequence
-
+        
         dt = np.zeros([n1 + n2, 3 + ns])  # data storage array
 
         plnts = slices[0].planet_conf
@@ -262,39 +272,53 @@ def create_trials_two_seqs(export=True, contingency_degradation = False, switch_
         dt[n1:n1+n2,3:] = plnts
         trials.append(dt)
 
-    nblocks = 7
-    block = np.int(trials[0].shape[0]/nblocks)
+    nblocks = training_blocks + degradation_blocks + 1
     shift = np.int(trials[0].shape[0]/2)
-    half_block = np.int(block/2)
-    data = np.zeros(trials[0].shape)
-    trial_type = np.zeros(trials[0].shape[0])
-    blocks = np.zeros(trials[0].shape[0])
+    half_block = np.int(trials_per_block/2)
+
+    # block = np.int(trials[0].shape[0]/nblocks)
+    data = np.zeros([nblocks*trials_per_block, trials[0].shape[1]])
+    trial_type = np.zeros(nblocks*trials_per_block)
+    blocks = np.zeros(nblocks*trials_per_block)
+    tt=0
 
     # interlace trials and populate
-    for i in range(nblocks):
+
+    # populate training blocks and extinction block
+    for i in range(training_blocks+1):
+
+        if i == training_blocks:                   # if now populating extinction block
+            i = training_blocks + degradation_blocks
+            tt = 2
+
         data[(2*i)*half_block : (2*i+1)*half_block , :] = trials[0][i*half_block : (i+1)*half_block,:]
         data[(2*i+1)*half_block : (2*i+2)*half_block , :] = trials[0][shift+(i)*half_block : shift+(i+1)*half_block,:]
-        np.random.shuffle(data[(2*i)*half_block:(2*i+2)*half_block,:])
-        trial_type[(2*i)*half_block:(2*i+2)*half_block] = 0
+
+        trial_type[(2*i)*half_block:(2*i+2)*half_block] = tt
         blocks[(2*i)*half_block:(2*i+2)*half_block] = i
         
-    # populate the before last block with contingency switched trials
 
-    for i in range(nblocks-2,nblocks-1):
+    # populate the degradation blocks
+    for i in range(training_blocks, degradation_blocks + training_blocks):
+        blocks[(2*i)*half_block:(2*i+2)*half_block] = i
+        trial_type[(2*i)*half_block:(2*i+2)*half_block] = 1
 
         if contingency_degradation:
-            data[(2*i)*half_block : (2*i+1)*half_block , :] = trials[1][i*half_block : (i+1)*half_block,:]
-            data[(2*i+1)*half_block : (2*i+2)*half_block , :] = trials[1][shift+(i)*half_block : shift+(i+1)*half_block,:]
-            
-            np.random.shuffle(data[(2*i)*half_block:(2*i+2)*half_block,:])    
-            trial_type[(2*i)*half_block:(2*i+2)*half_block] = 1
-            trial_type[(2*i+2)*half_block:] = 2
-        
+            ind = 1
+        else:
+            ind = 0
+
+        data[(2*i)*half_block : (2*i+1)*half_block , :] = trials[ind][i*half_block : (i+1)*half_block,:]
+        data[(2*i+1)*half_block : (2*i+2)*half_block , :] = trials[ind][shift+(i)*half_block : shift+(i+1)*half_block,:]
+        # np.random.shuffle(data[(2*i)*half_block:(2*i+2)*half_block,:])
+
         if switch_cues:
             data[(2*i)*half_block:(2*i+2)*half_block,0] = data[(2*i)*half_block:(2*i+2)*half_block,0] == 0
-            trial_type[(2*i)*half_block:(2*i+2)*half_block] = 1
-            trial_type[(2*i+2)*half_block:] = 2
 
+    if interlace:
+        for i in range(degradation_blocks + training_blocks+1):
+            np.random.shuffle(data[(2*i)*half_block:(2*i+2)*half_block,:])
+            
     data = data.astype('int32')
     trial_type = trial_type.astype('int32')
 
@@ -450,74 +474,75 @@ def create_title(switch_cues, contingency_degradation, cue_ambiguity, context_tr
     return fname
 
 def main():
-    na = 2                                           # number of unique possible actions
-    nc = 4                                           # number of contexts, planning and habit
-    nr = 3                                           # number of rewards
-    ns = 6                                           # number of unique travel locations
-    npl = 3
-    steps = 3                                        # numbe of decisions made in an episode
-    T = steps + 1                                    # episode length
+    create_trials_two_seqs()
+    # na = 2                                           # number of unique possible actions
+    # nc = 4                                           # number of contexts, planning and habit
+    # nr = 3                                           # number of rewards
+    # ns = 6                                           # number of unique travel locations
+    # npl = 3
+    # steps = 3                                        # numbe of decisions made in an episode
+    # T = steps + 1                                    # episode length
 
-    # reward probabiltiy vector
-    repetitions = 1
-    planet_reward_probs = np.array([[0.95, 0   , 0   ],
-                                    [0.05, 0.95, 0.05],
-                                    [0,    0.05, 0.95]]).T    # npl x nr
+    # # reward probabiltiy vector
+    # repetitions = 1
+    # planet_reward_probs = np.array([[0.95, 0   , 0   ],
+    #                                 [0.05, 0.95, 0.05],
+    #                                 [0,    0.05, 0.95]]).T    # npl x nr
 
-    planet_reward_probs_switched = np.array([[0   , 0    , 0.95],
-                                            [0.05, 0.95 , 0.05],
-                                            [0.95, 0.05 , 0.0]]).T 
-
-
-    nplanets = 6
-    state_transition_matrix = np.zeros([ns,ns,na])
+    # planet_reward_probs_switched = np.array([[0   , 0    , 0.95],
+    #                                         [0.05, 0.95 , 0.05],
+    #                                         [0.95, 0.05 , 0.0]]).T 
 
 
-    m = [1,2,3,4,5,0]
-    for r, row in enumerate(state_transition_matrix[:,:,0]):
-        row[m[r]] = 1
-
-    j = np.array([5,4,5,6,2,2])-1
-    for r, row in enumerate(state_transition_matrix[:,:,1]):
-        row[j[r]] = 1
-
-    state_transition_matrix = np.transpose(state_transition_matrix, axes= (1,0,2))
-    state_transition_matrix = np.repeat(state_transition_matrix[:,:,:,np.newaxis], repeats=nc, axis=3)
+    # nplanets = 6
+    # state_transition_matrix = np.zeros([ns,ns,na])
 
 
-    constant_arguments = [ns, na, npl, nc, nr, T, state_transition_matrix, planet_reward_probs, planet_reward_probs_switched,repetitions]
-    h =  [1,10,20,30,40,100]
-    cue_ambiguity = [0.8]
-    context_trans_prob = [nc]
-    degradation = [True]
-    cue_switch = [True]
-    learn_rew = [True]
-    arrays = [cue_switch, degradation, learn_rew, context_trans_prob, cue_ambiguity,h]
-    lst = []
-    for i in product(*arrays):
-        lst.append(list(i))
+    # m = [1,2,3,4,5,0]
+    # for r, row in enumerate(state_transition_matrix[:,:,0]):
+    #     row[m[r]] = 1
 
-    n = len(lst)
-    ca = [None]*len(constant_arguments)
-    for i,arg in enumerate(constant_arguments):
-        ca[i] = [arg]*n
+    # j = np.array([5,4,5,6,2,2])-1
+    # for r, row in enumerate(state_transition_matrix[:,:,1]):
+    #     row[j[r]] = 1
+
+    # state_transition_matrix = np.transpose(state_transition_matrix, axes= (1,0,2))
+    # state_transition_matrix = np.repeat(state_transition_matrix[:,:,:,np.newaxis], repeats=nc, axis=3)
 
 
-    start = time.perf_counter()
+    # constant_arguments = [ns, na, npl, nc, nr, T, state_transition_matrix, planet_reward_probs, planet_reward_probs_switched,repetitions]
+    # h =  [1,10,20,30,40,100]
+    # cue_ambiguity = [0.8]
+    # context_trans_prob = [nc]
+    # degradation = [True]
+    # cue_switch = [True]
+    # learn_rew = [True]
+    # arrays = [cue_switch, degradation, learn_rew, context_trans_prob, cue_ambiguity,h]
+    # lst = []
+    # for i in product(*arrays):
+    #     lst.append(list(i))
 
-    with concurrent.futures.ThreadPoolExecutor() as executor:
-        results = executor.map(run_single_sim, lst, ca[0],ca[1],ca[2],ca[3],ca[4],ca[5],ca[6],ca[7],ca[8],ca[9])
-        # for result in results:
-        #     print(result)
-    finish = time.perf_counter()
-    print(f'Finished in {round(finish-start, 2)} second(s) for multithreader')
+    # n = len(lst)
+    # ca = [None]*len(constant_arguments)
+    # for i,arg in enumerate(constant_arguments):
+    #     ca[i] = [arg]*n
 
-    start = time.perf_counter()
 
-    for l in lst:
-        run_single_sim(l, ns, na, npl, nc, nr, T, state_transition_matrix, planet_reward_probs, planet_reward_probs_switched,repetitions)
-    finish = time.perf_counter()
-    print(f'Finished in {round(finish-start, 2)} second(s) for individual ones')
+    # start = time.perf_counter()
+
+    # with concurrent.futures.ThreadPoolExecutor() as executor:
+    #     results = executor.map(run_single_sim, lst, ca[0],ca[1],ca[2],ca[3],ca[4],ca[5],ca[6],ca[7],ca[8],ca[9])
+    #     # for result in results:
+    #     #     print(result)
+    # finish = time.perf_counter()
+    # print(f'Finished in {round(finish-start, 2)} second(s) for multithreader')
+
+    # start = time.perf_counter()
+
+    # for l in lst:
+    #     run_single_sim(l, ns, na, npl, nc, nr, T, state_transition_matrix, planet_reward_probs, planet_reward_probs_switched,repetitions)
+    # finish = time.perf_counter()
+    # print(f'Finished in {round(finish-start, 2)} second(s) for individual ones')
 
 
 # ################################################
