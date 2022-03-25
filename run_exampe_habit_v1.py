@@ -221,27 +221,14 @@ def run_agent(par_list, trials, T, ns=6, na=2, nr=3, nc=2, npl=2):
 
 # for l in lst:
 #     print(l)
-#     create_trials(contingency_degradation=l[0],switch_cues=l[1])
+#     create_trials_two_seqs(contingency_degradation=l[0],switch_cues=l[1])
 
 
-def create_trials_two_seqs(export=True,
-                           contingency_degradation = False,
-                           switch_cues = True,
-                           training_blocks=4,
-                           degradation_blocks = 2,
-                           trials_per_block=4, interlace = True):
- 
-    if trials_per_block % 2 != 0:
-        raise Exception('Give even number of trials per block!')
-
-
+def all_possible_trials():
     np.random.seed(1)
     ns=6
     all_rewards = [[-1,1,1], [1,1,-1]]
     trials = []
-
-    fname = 'config_'+'degradation_'+ str(int(contingency_degradation))+ '_switch_' + str(int(switch_cues))\
-             + '_train' + str(training_blocks) + '_degr' + str(degradation_blocks) + '_n' + str(trials_per_block)+'.json'
 
     for rewards in all_rewards:
         s1 = 3       # optimal sequence 1
@@ -271,6 +258,36 @@ def create_trials_two_seqs(export=True,
         dt[n1:n1+n2,2] = strts
         dt[n1:n1+n2,3:] = plnts
         trials.append(dt)
+    return trials
+
+def create_config_files():
+    trials = all_possible_trials()
+    degradation = [True, False]
+    cue_switch = [True, False]
+    arrays = [cue_switch, degradation]
+    lst = []
+    for i in product(*arrays):
+        lst.append(list(i))
+
+    for l in lst:
+        print(l)
+        create_trials_two_seqs(trials, contingency_degradation=l[0],switch_cues=l[1])
+
+
+def create_trials_two_seqs(trials, export=True,
+                           contingency_degradation = False,
+                           switch_cues = True,
+                           training_blocks=4,
+                           degradation_blocks = 2,
+                           trials_per_block=60, interlace = True):
+ 
+    if trials_per_block % 2 != 0:
+        raise Exception('Give even number of trials per block!')
+
+
+    fname = 'config_'+'degradation_'+ str(int(contingency_degradation))+ '_switch_' + str(int(switch_cues))\
+             + '_train' + str(training_blocks) + '_degr' + str(degradation_blocks) + '_n' + str(trials_per_block)+'.json'
+
 
     nblocks = training_blocks + degradation_blocks + 1
     shift = np.int(trials[0].shape[0]/2)
@@ -345,30 +362,13 @@ def run_single_sim(lst,
                                 state_transition_matrix,
                                 planet_reward_probs,
                                 planet_reward_probs_switched,
-                                repetitions):
+                                repetitions,
+                                fname, reward_naive=True):
 
     folder = os.getcwd()
     switch_cues, contingency_degradation, learn_rew, context_trans_prob, cue_ambiguity, h  = lst
 
-    if contingency_degradation and not switch_cues:
-        fname = 'config_degradation_1_switch_0.json'
-    elif contingency_degradation and switch_cues:
-        fname = 'config_degradation_1_switch_1.json'
-    elif not contingency_degradation and not switch_cues:
-        fname = 'config_degradation_0_switch_0.json'
-    elif not contingency_degradation and switch_cues:
-        fname = 'config_degradation_0_switch_1.json'
-    print(fname)
-
-
     file = open('/home/terra/Documents/thesis/BalancingControl/' + fname)
-
-    # try:
-    #     file = open('/home/terra/Documents/thesis/BalancingControl/' + fname)
-    # except:
-    #     create_trials(contingency_degradation=contingency_degradation, switch_cues=switch_cues)
-    #     file = open('/home/terra/Documents/thesis/BalancingControl/' + fname)
-
 
     task_params = js.load(file)                                                                                 
 
@@ -417,10 +417,13 @@ def run_single_sim(lst,
     utility = np.array([(1-u)/2,(1-u)/2,u])
 
 
-    reward_counts = planet_reward_probs.T*100
     # reward_counts = np.zeros(planet_reward_probs.shape) + 1
 
-    reward_counts = np.ones([nr, npl, nc])
+    if reward_naive==True:
+        reward_counts = np.ones([nr, npl, nc])
+    else:
+        reward_counts = np.tile(planet_reward_probs.T[:,:,np.newaxis]*100,(1,1,nc))
+
     par_list = [h,                        
                 context_trans_prob,
                 cue_ambiguity,            
@@ -455,7 +458,7 @@ def run_single_sim(lst,
     with open(fname, 'w') as outfile:
         json.dump(pickled, outfile)
 
-
+    return fname
 
 def create_title(switch_cues, contingency_degradation, cue_ambiguity, context_trans_prob, h):
     prefix = ''
@@ -474,53 +477,58 @@ def create_title(switch_cues, contingency_degradation, cue_ambiguity, context_tr
     return fname
 
 def main():
-    create_trials_two_seqs()
-    # na = 2                                           # number of unique possible actions
-    # nc = 4                                           # number of contexts, planning and habit
-    # nr = 3                                           # number of rewards
-    # ns = 6                                           # number of unique travel locations
-    # npl = 3
-    # steps = 3                                        # numbe of decisions made in an episode
-    # T = steps + 1                                    # episode length
 
-    # # reward probabiltiy vector
-    # repetitions = 1
-    # planet_reward_probs = np.array([[0.95, 0   , 0   ],
-    #                                 [0.05, 0.95, 0.05],
-    #                                 [0,    0.05, 0.95]]).T    # npl x nr
+    na = 2                                           # number of unique possible actions
+    nc = 4                                           # number of contexts, planning and habit
+    nr = 3                                           # number of rewards
+    ns = 6                                           # number of unique travel locations
+    npl = 3
+    steps = 3                                        # numbe of decisions made in an episode
+    T = steps + 1                                    # episode length
 
-    # planet_reward_probs_switched = np.array([[0   , 0    , 0.95],
-    #                                         [0.05, 0.95 , 0.05],
-    #                                         [0.95, 0.05 , 0.0]]).T 
+    # reward probabiltiy vector
+    repetitions = 1
+    planet_reward_probs = np.array([[0.95, 0   , 0   ],
+                                    [0.05, 0.95, 0.05],
+                                    [0,    0.05, 0.95]]).T    # npl x nr
 
-
-    # nplanets = 6
-    # state_transition_matrix = np.zeros([ns,ns,na])
+    planet_reward_probs_switched = np.array([[0   , 0    , 0.95],
+                                            [0.05, 0.95 , 0.05],
+                                            [0.95, 0.05 , 0.0]]).T 
 
 
-    # m = [1,2,3,4,5,0]
-    # for r, row in enumerate(state_transition_matrix[:,:,0]):
-    #     row[m[r]] = 1
-
-    # j = np.array([5,4,5,6,2,2])-1
-    # for r, row in enumerate(state_transition_matrix[:,:,1]):
-    #     row[j[r]] = 1
-
-    # state_transition_matrix = np.transpose(state_transition_matrix, axes= (1,0,2))
-    # state_transition_matrix = np.repeat(state_transition_matrix[:,:,:,np.newaxis], repeats=nc, axis=3)
+    nplanets = 6
+    state_transition_matrix = np.zeros([ns,ns,na])
 
 
-    # constant_arguments = [ns, na, npl, nc, nr, T, state_transition_matrix, planet_reward_probs, planet_reward_probs_switched,repetitions]
-    # h =  [1,10,20,30,40,100]
-    # cue_ambiguity = [0.8]
-    # context_trans_prob = [nc]
-    # degradation = [True]
-    # cue_switch = [True]
-    # learn_rew = [True]
-    # arrays = [cue_switch, degradation, learn_rew, context_trans_prob, cue_ambiguity,h]
-    # lst = []
-    # for i in product(*arrays):
-    #     lst.append(list(i))
+    m = [1,2,3,4,5,0]
+    for r, row in enumerate(state_transition_matrix[:,:,0]):
+        row[m[r]] = 1
+
+    j = np.array([5,4,5,6,2,2])-1
+    for r, row in enumerate(state_transition_matrix[:,:,1]):
+        row[j[r]] = 1
+
+    state_transition_matrix = np.transpose(state_transition_matrix, axes= (1,0,2))
+    state_transition_matrix = np.repeat(state_transition_matrix[:,:,:,np.newaxis], repeats=nc, axis=3)
+
+
+    constant_arguments = [ns, na, npl, nc, nr, T, state_transition_matrix, planet_reward_probs, planet_reward_probs_switched,repetitions]
+    h =  [1,10,20,30,40,100]
+    cue_ambiguity = [0.8]
+    context_trans_prob = [nc]
+    degradation = [True]
+    cue_switch = [True]
+    learn_rew = [True]
+    arrays = [cue_switch, degradation, learn_rew, context_trans_prob, cue_ambiguity,h]
+    training_blocks = 4
+    trials_per_block=60
+    degradation_blocks=2
+
+
+    lst = []
+    for i in product(*arrays):
+        lst.append(list(i))
 
     # n = len(lst)
     # ca = [None]*len(constant_arguments)
@@ -537,18 +545,20 @@ def main():
     # finish = time.perf_counter()
     # print(f'Finished in {round(finish-start, 2)} second(s) for multithreader')
 
-    # start = time.perf_counter()
+    start = time.perf_counter()
 
-    # for l in lst:
-    #     run_single_sim(l, ns, na, npl, nc, nr, T, state_transition_matrix, planet_reward_probs, planet_reward_probs_switched,repetitions)
-    # finish = time.perf_counter()
-    # print(f'Finished in {round(finish-start, 2)} second(s) for individual ones')
+    for l in lst:
+        config = 'config_'+'degradation_'+ str(int(l[1]))+ '_switch_' + str(int(l[0]))\
+                + '_train' + str(training_blocks) + '_degr' + str(degradation_blocks) + '_n' + str(trials_per_block)+'.json'
+        run_single_sim(l, ns, na, npl, nc, nr, T, state_transition_matrix, planet_reward_probs, planet_reward_probs_switched,repetitions, config)
+    finish = time.perf_counter()
+    print(f'Finished in {round(finish-start, 2)} second(s) for individual ones')
 
 
 # ################################################
 
-if __name__ == '__main__':
-    main()
+# if __name__ == '__main__':
+    # main()
 
 
 
