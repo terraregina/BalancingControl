@@ -148,13 +148,13 @@ def run_agent(par_list, trials, T, ns=6, na=2, nr=3, nc=2, npl=2):
     prior_context[0] = 0.9
 
     """
-    NEED TO ALSO DEFINE A DISTRIBUTION OF p(O|C) for the color
+    define generative model for context
     """
 
 
     no =  np.unique(colors).size                    # number of observations (background color)
     C = np.zeros([no, nc])
-    p = cue_ambiguity                    
+    p = cue_ambiguity                               # how strongly agent associates context observation with a particular context       
     dp = 0.001
     p2 = 1 - p - dp
     C[0,:] = [p,dp/2,p2,dp/2]
@@ -212,20 +212,23 @@ def run_agent(par_list, trials, T, ns=6, na=2, nr=3, nc=2, npl=2):
     return w
 
 
-# degradation = [True, False]
-# cue_switch = [True, False]
-# arrays = [cue_switch, degradation]
-# lst = []
-# for i in product(*arrays):
-#     lst.append(list(i))
 
-# for l in lst:
-#     print(l)
-#     create_trials_two_seqs(contingency_degradation=l[0],switch_cues=l[1])
+'''
+function creating all possible trials and starting points
+for given optimal sequence (s1 and s2) and planet reward association (all_rewards)
 
+if you want reverse contingenvies you need to give [[1,1,-1]], this will produce
+the following p(reward|planet)
+[0,  , 0   , 0.95]
+[0.05, 0.95, 0.05]
+[0.95, 0.05, 0   ]
+where rows are possible rewards [-1,0,1] and cols possible planet types [red, gray, green] for example
 
+OUTPUT: list with all trial information for all possible trials for a given optimal sequence pair
+'''
 def all_possible_trials():
-    np.random.seed(1)
+    
+
     ns=6
     all_rewards = [[-1,1,1], [1,1,-1]]
     trials = []
@@ -233,22 +236,26 @@ def all_possible_trials():
     for rewards in all_rewards:
         s1 = 3       # optimal sequence 1
         s2 = 6       # optimal sequence 2
-        slices, planet_confs = generate_trials_df(rewards, [s1,s2])
 
-        n1 = slices[0].shape[0]      # number of trials for that sequence
-        n2 = slices[1].shape[0]      # number of trials for that sequence
+        slices, planet_confs = generate_trials_df(rewards, [s1,s2])
+        # slices == data for s1 and s2
+        # planet_conf == all possible planet configurations overall
         
+        n1 = slices[0].shape[0]      # number of trials for s1
+        n2 = slices[1].shape[0]      # number of trials for s2
+
         dt = np.zeros([n1 + n2, 3 + ns])  # data storage array
 
-        plnts = slices[0].planet_conf
-        plnts = planet_confs[[plnts.values.tolist()]].tolist()
-        strts = slices[0].start.values.tolist()
+        plnts = slices[0].planet_conf                          # configuration indeces for s1 trials
+        plnts = planet_confs[[plnts.values.tolist()]].tolist() # actual planet configurations for s1 trials
+        strts = slices[0].start.values.tolist()                # starting points for s1 trials 
 
         dt[0:n1,0] = [0]*n1      # context index
         dt[0:n1,1] = [s1]*n1     # optimal sequence index
         dt[0:n1,2] = strts       # trial starting position
-        dt[0:n1,3:] = plnts     
+        dt[0:n1,3:] = plnts      # planets 
 
+        # repeat the same thing for s2
         plnts = slices[1].planet_conf
         plnts = planet_confs[[plnts.values.tolist()]].tolist()
         strts = slices[1].start.values.tolist()
@@ -258,21 +265,38 @@ def all_possible_trials():
         dt[n1:n1+n2,2] = strts
         dt[n1:n1+n2,3:] = plnts
         trials.append(dt)
+
     return trials
 
-def create_config_files():
+
+'''
+wrapper function which creates all config files containing information about planet configuration,
+start position and context cue which are loaded 
+in by the run_single_sim function to simulate an agent
+
+'''
+def create_config_files(training_blocks, degradation_blocks, trials_per_block):
     trials = all_possible_trials()
     degradation = [True, False]
     cue_switch = [True, False]
-    arrays = [cue_switch, degradation]
+    arrays = [cue_switch, degradation, degradation_blocks, training_blocks, trials_per_block]
+    # function will bug out if training_blocks*trials_per_block > trials[0].shape[0]
+    # aka if trials are done more than once. this is about 530 trials I think
+    # I can also repeat the trials, was just a bit lazy
+
     lst = []
     for i in product(*arrays):
         lst.append(list(i))
 
     for l in lst:
         print(l)
-        create_trials_two_seqs(trials, contingency_degradation=l[0],switch_cues=l[1])
+        create_trials_two_seqs(trials, contingency_degradation=l[0],switch_cues=l[1],degradation_blocks=l[2],
+                               training_blocks=l[3], trials_per_block=l[4])
 
+
+'''
+function that actually creates the trials for a given experimental version
+'''
 
 def create_trials_two_seqs(trials, export=True,
                            contingency_degradation = False,
@@ -281,6 +305,7 @@ def create_trials_two_seqs(trials, export=True,
                            degradation_blocks = 2,
                            trials_per_block=60, interlace = True):
  
+    np.random.seed(1)
     if trials_per_block % 2 != 0:
         raise Exception('Give even number of trials per block!')
 
@@ -298,8 +323,6 @@ def create_trials_two_seqs(trials, export=True,
     trial_type = np.zeros(nblocks*trials_per_block)
     blocks = np.zeros(nblocks*trials_per_block)
     tt=0
-
-    # interlace trials and populate
 
     # populate training blocks and extinction block
     for i in range(training_blocks+1):
@@ -368,7 +391,7 @@ def run_single_sim(lst,
     folder = os.getcwd()
     switch_cues, contingency_degradation, learn_rew, context_trans_prob, cue_ambiguity, h  = lst
 
-    file = open('/home/terra/Documents/thesis/BalancingControl/' + fname)
+    file = open(os.path.join(folder,fname))
 
     task_params = js.load(file)                                                                                 
 
@@ -380,9 +403,9 @@ def run_single_sim(lst,
     blocks = np.asarray(task_params['block'])
 
 
-    nblocks = int(blocks.max()+1)
-    trials = blocks.size
-    block = int(trials/nblocks)
+    nblocks = int(blocks.max()+1)         # number of blocks
+    trials = blocks.size                  # number of trials
+    block = int(trials/nblocks)           # trials per block
  
     meta = {
         'trial_file' : fname, 
@@ -402,7 +425,7 @@ def run_single_sim(lst,
 
     all_optimal_seqs = np.unique(sequence)                                                                            
 
-    # define reward probabilities dependent on time and position for reward generation process 
+    # reward probabilities schedule dependent on trial and planet constelation
     Rho = np.zeros([trials, nr, ns])
 
     for i, pl in enumerate(planets):
@@ -415,9 +438,6 @@ def run_single_sim(lst,
 
     u = 0.99
     utility = np.array([(1-u)/2,(1-u)/2,u])
-
-
-    # reward_counts = np.zeros(planet_reward_probs.shape) + 1
 
     if reward_naive==True:
         reward_counts = np.ones([nr, npl, nc])
@@ -460,21 +480,21 @@ def run_single_sim(lst,
 
     return fname
 
-def create_title(switch_cues, contingency_degradation, cue_ambiguity, context_trans_prob, h):
-    prefix = ''
-    if switch_cues == True:
-        prefix += 'switch1_'
-    else:
-        prefix +='switch0_'
+# def create_title(switch_cues, contingency_degradation, cue_ambiguity, context_trans_prob, h):
+#     prefix = ''
+#     if switch_cues == True:
+#         prefix += 'switch1_'
+#     else:
+#         prefix +='switch0_'
 
-    if contingency_degradation == True:
-        prefix += 'degr1_'
-    else:
-        prefix += 'degr0_'
-    fname = prefix +'p' + str(cue_ambiguity) + '_q' + str(context_trans_prob) + '_h' + str(h) + '.json'
-    folder = os.path.join(os.getcwd(),'data')
-    fname = os.path.join(folder, fname)
-    return fname
+#     if contingency_degradation == True:
+#         prefix += 'degr1_'
+#     else:
+#         prefix += 'degr0_'
+#     fname = prefix +'p' + str(cue_ambiguity) + '_q' + str(context_trans_prob) + '_h' + str(h) + '.json'
+#     folder = os.path.join(os.getcwd(),'data')
+#     fname = os.path.join(folder, fname)
+#     return fname
 
 def main():
 
@@ -514,22 +534,26 @@ def main():
 
 
     constant_arguments = [ns, na, npl, nc, nr, T, state_transition_matrix, planet_reward_probs, planet_reward_probs_switched,repetitions]
-    h =  [1,10,20,30,40,100]
+    h =  [1,100]
     cue_ambiguity = [0.8]
     context_trans_prob = [nc]
     degradation = [True]
     cue_switch = [True]
     learn_rew = [True]
     arrays = [cue_switch, degradation, learn_rew, context_trans_prob, cue_ambiguity,h]
-    training_blocks = 4
-    trials_per_block=60
-    degradation_blocks=2
+    training_blocks = [4]
+    degradation_blocks=[2]
+    trials_per_block=[60]
 
+    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    # needs to be run only the first you use main
+    # create_config_files(training_blocks, degradation_blocks, trials_per_block)
 
     lst = []
     for i in product(*arrays):
         lst.append(list(i))
 
+    # failed efforts at parallel running of sims
     # n = len(lst)
     # ca = [None]*len(constant_arguments)
     # for i,arg in enumerate(constant_arguments):
@@ -546,19 +570,24 @@ def main():
     # print(f'Finished in {round(finish-start, 2)} second(s) for multithreader')
 
     start = time.perf_counter()
-
+    db = degradation_blocks[0]
+    tb = training_blocks[0]
+    tpb = trials_per_block[0]
     for l in lst:
+        # name of experiment config file
         config = 'config_'+'degradation_'+ str(int(l[1]))+ '_switch_' + str(int(l[0]))\
-                + '_train' + str(training_blocks) + '_degr' + str(degradation_blocks) + '_n' + str(trials_per_block)+'.json'
-        run_single_sim(l, ns, na, npl, nc, nr, T, state_transition_matrix, planet_reward_probs, planet_reward_probs_switched,repetitions, config)
+                + '_train' + str(tb) + '_degr' + str(db) + '_n' + str(tpb)+'.json'
+
+        run_single_sim(l, ns, na, npl, nc, nr, T, state_transition_matrix, planet_reward_probs, planet_reward_probs_switched,repetitions, config,reward_naive=True)
+
     finish = time.perf_counter()
     print(f'Finished in {round(finish-start, 2)} second(s) for individual ones')
 
 
 # ################################################
 
-# if __name__ == '__main__':
-    # main()
+if __name__ == '__main__':
+    main()
 
 
 
