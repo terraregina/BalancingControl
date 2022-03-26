@@ -368,7 +368,13 @@ def create_trials_two_seqs(trials, export=True,
                   'starts': data[:,2].tolist(),
                   'planets': data[:,3:].tolist(),
                   'trial_type': trial_type.tolist(),
-                  'block': blocks.tolist()
+                  'block': blocks.tolist(),
+                  'degradation_blocks': degradation_blocks,
+                  'training_blocks': training_blocks,
+                  'interlace': interlace,
+                  'contingency_degradation': contingency_degradation,
+                  'switch_cues': switch_cues,
+                  'trials_per_block': trials_per_block
                 }
 
         with open(fname, "w") as file:
@@ -405,7 +411,7 @@ def run_single_sim(lst,
 
     nblocks = int(blocks.max()+1)         # number of blocks
     trials = blocks.size                  # number of trials
-    block = int(trials/nblocks)           # trials per block
+    block = task_params['trials_per_block']           # trials per block
  
     meta = {
         'trial_file' : fname, 
@@ -420,7 +426,12 @@ def run_single_sim(lst,
         'blocks' : blocks,
         'trials' : trials,
         'nblocks' : nblocks,
-        'trials_per_block': block,
+        'degradation_blocks': task_params['degradation_blocks'],
+        'training_blocks': task_params['training_blocks'],
+        'interlace': task_params['interlace'],
+        'contingency_degrdataion': task_params['contingency_degradation'],
+        'switch_cues': task_params['switch_cues'],
+        'trials_per_block': task_params['trials_per_block']
     }
 
     all_optimal_seqs = np.unique(sequence)                                                                            
