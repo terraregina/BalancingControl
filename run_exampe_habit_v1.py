@@ -30,7 +30,6 @@ import agent as agt
 from environment import PlanetWorld
 from agent import BayesianPlanner
 from world import World
-from planet_sequences import generate_trials_df
 
 
 #%%
@@ -313,10 +312,13 @@ def create_trials_two_seqs(trials, export=True,
     fname = 'config_'+'degradation_'+ str(int(contingency_degradation))+ '_switch_' + str(int(switch_cues))\
              + '_train' + str(training_blocks) + '_degr' + str(degradation_blocks) + '_n' + str(trials_per_block)+'.json'
 
+    for ti, tr in enumerate(trials):            
+        trials[ti] = np.tile(tr, (2,1))
 
     nblocks = training_blocks + degradation_blocks + 1
     shift = np.int(trials[0].shape[0]/2)
     half_block = np.int(trials_per_block/2)
+    
 
     # block = np.int(trials[0].shape[0]/nblocks)
     data = np.zeros([nblocks*trials_per_block, trials[0].shape[1]])
@@ -326,7 +328,6 @@ def create_trials_two_seqs(trials, export=True,
 
     # populate training blocks and extinction block
     for i in range(training_blocks+1):
-
         if i == training_blocks:                   # if now populating extinction block
             i = training_blocks + degradation_blocks
             tt = 2
@@ -453,7 +454,7 @@ def run_single_sim(lst,
     if reward_naive==True:
         reward_counts = np.ones([nr, npl, nc])
     else:
-        reward_counts = np.tile(planet_reward_probs.T[:,:,np.newaxis]*100,(1,1,nc))
+        reward_counts = np.tile(planet_reward_probs.T[:,:,np.newaxis]*100,(1,1,nc))+1
 
     par_list = [h,                        
                 context_trans_prob,
@@ -478,11 +479,12 @@ def run_single_sim(lst,
         prefix += 'degr1_'
     else:
         prefix += 'degr0_'
+    fname = prefix +'p' + str(cue_ambiguity) +'_learn_rew' + str(int(learn_rew == True)) + '_q' + str(context_trans_prob) + '_h' + str(h)+ '_' +\
+    str(meta['trials_per_block']) +'_'+str(meta['training_blocks']) + str(meta['degradation_blocks']) + '.json'
 
     worlds = [run_agent(par_list, trials, T, ns , na, nr, nc, npl) for _ in range(repetitions)]
 
     worlds.append(meta)
-    fname = prefix +'p' + str(cue_ambiguity) + '_q' + str(context_trans_prob) + '_h' + str(h) + '.json'
     fname = os.path.join(os.path.join(folder,'data'), fname)
     jsonpickle_numpy.register_handlers()
     pickled = pickle.encode(worlds)
@@ -490,8 +492,6 @@ def run_single_sim(lst,
         json.dump(pickled, outfile)
 
     return fname
-
-
 
 """"""
 def main():
@@ -503,6 +503,7 @@ def main():
     npl = 3
     steps = 3                                        # numbe of decisions made in an episode
     T = steps + 1                                    # episode length
+    creating_configs = False
 
     # reward probabiltiy vector
     repetitions = 1
@@ -533,7 +534,7 @@ def main():
     # setup simulation parameters here
     h =  [1,100]
     cue_ambiguity = [0.8]                      # cue ambiguity reffers to how certain agent is a given observation refers to a given context
-    context_trans_prob = [nc]                  # the higher the value the more peaked the distribution is
+    context_trans_prob = [1/nc]                  # the higher the value the more peaked the distribution is
     degradation = [True]                       # bit counter intuitive, should change the name :D
     cue_switch = [True]
     learn_rew = [True]
@@ -545,8 +546,11 @@ def main():
     data_path = os.path.join(os.getcwd(),'data')
     if not os.path.isdir(data_path): 
         os.mkdir(data_path)
+
     # needs to be run only the first time you use main
-    create_config_files(training_blocks, degradation_blocks, trials_per_block)
+    if creating_configs:
+        from planet_sequences import generate_trials_df
+        create_config_files(training_blocks, degradation_blocks, trials_per_block)
 
     lst = []
     for i in product(*arrays):
@@ -585,10 +589,14 @@ def main():
     print(f'Finished in {round(finish-start, 2)} second(s) for individual ones')
 
 
+
+from planet_sequences import generate_trials_df
+
+# create_config_files([4], [4], [60])
 # ################################################
 
-if __name__ == '__main__':
-    main()
+# if __name__ == '__main__':
+    # main()
 
 
 
