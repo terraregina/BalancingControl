@@ -592,7 +592,7 @@ def main():
 
 from planet_sequences import generate_trials_df
 
-# create_config_files([4], [4], [60])
+create_config_files([4], [6], [60])
 # ################################################
 
 # if __name__ == '__main__':
