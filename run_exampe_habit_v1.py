@@ -297,7 +297,7 @@ def create_config_files(training_blocks, degradation_blocks, trials_per_block):
 function that actually creates the trials for a given experimental version
 '''
 
-def create_trials_two_seqs(trials, export=True,
+def create_trials_two_seqs(trials_orig, export=True,
                            contingency_degradation = False,
                            switch_cues = True,
                            training_blocks=4,
@@ -312,8 +312,12 @@ def create_trials_two_seqs(trials, export=True,
     fname = 'config_'+'degradation_'+ str(int(contingency_degradation))+ '_switch_' + str(int(switch_cues))\
              + '_train' + str(training_blocks) + '_degr' + str(degradation_blocks) + '_n' + str(trials_per_block)+'.json'
 
-    for ti, tr in enumerate(trials):            
-        trials[ti] = np.tile(tr, (2,1))
+    start = np.argmax(trials_orig[0][:,1])
+    inds = np.concatenate((np.arange(start), np.arange(start*2, start*3,1), np.arange(start,start*2,1), np.arange(start*3,start*4,1)))
+    trials = [None]*len(trials_orig)
+    for ti, tr in enumerate(trials_orig):            
+        trials[ti] = np.tile(tr[:start*2,:], (2,1))
+        trials[ti] = trials[0][inds,:]
 
     nblocks = training_blocks + degradation_blocks + 1
     shift = np.int(trials[0].shape[0]/2)
@@ -592,7 +596,7 @@ def main():
 
 from planet_sequences import generate_trials_df
 
-create_config_files([4], [6], [60])
+create_config_files([4], [4], [60])
 # ################################################
 
 # if __name__ == '__main__':
