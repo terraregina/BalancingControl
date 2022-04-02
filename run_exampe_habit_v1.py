@@ -395,13 +395,21 @@ def run_single_sim(lst,
                     state_transition_matrix,
                     planet_reward_probs,
                     planet_reward_probs_switched,
-                    repetitions,
-                    fname, reward_naive):
+                    repetitions):
+
+
+    switch_cues, contingency_degradation, learn_rew, context_trans_prob, cue_ambiguity, h,\
+    reward_naive, training_blocks, degradation_blocks, trials_per_block = lst
+    
+    config = 'config' + '_degradation_'+ str(int(contingency_degradation)) \
+                      + '_switch_' + str(int(switch_cues))                \
+                      + '_train' + str(training_blocks)                   \
+                      + '_degr' + str(degradation_blocks)                 \
+                      + '_n' + str(trials_per_block)+'.json'
 
     folder = os.getcwd()
-    switch_cues, contingency_degradation, learn_rew, context_trans_prob, cue_ambiguity, h  = lst
 
-    file = open(os.path.join(folder,fname))
+    file = open(os.path.join(folder,config))
 
     task_params = js.load(file)                                                                                 
 
@@ -418,7 +426,7 @@ def run_single_sim(lst,
     block = task_params['trials_per_block']           # trials per block
  
     meta = {
-        'trial_file' : fname, 
+        'trial_file' : config, 
         'trial_type' : trial_type,
         'switch_cues': switch_cues == True,
         'contingency_degradation' : contingency_degradation == True,
@@ -497,7 +505,7 @@ def run_single_sim(lst,
     return fname
 
 """"""
-def main():
+def main(create_configs = False):
 
     na = 2                                           # number of unique possible actions
     nc = 4                                           # number of contexts, planning and habit
@@ -506,7 +514,6 @@ def main():
     npl = 3
     steps = 3                                        # numbe of decisions made in an episode
     T = steps + 1                                    # episode length
-    creating_configs = False
 
     # reward probabiltiy vector
     repetitions = 1
@@ -519,7 +526,6 @@ def main():
                                             [0.95, 0.05 , 0.0]]).T 
 
 
-    nplanets = 6
     state_transition_matrix = np.zeros([ns,ns,na])
 
 
@@ -535,34 +541,37 @@ def main():
     state_transition_matrix = np.repeat(state_transition_matrix[:,:,:,np.newaxis], repeats=nc, axis=3)
 
     # setup simulation parameters here
+
     h =  [1,10,3, 4, 5, 4,5,6,7,8,9,70,100]
-    cue_ambiguity = [0.8]                      # cue ambiguity reffers to how certain agent is a given observation refers to a given context
-    context_trans_prob = [1/nc]                  # the higher the value the more peaked the distribution is
+    cue_ambiguity = [0.8]                      # cue ambiguity refers to how certain agent is a given observation refers to a given context
+    context_trans_prob = [1/nc]                # the higher the value the more peaked the distribution is
     degradation = [True]                       # bit counter intuitive, should change the name :D
     cue_switch = [True]
     learn_rew = [True]
-    arrays = [cue_switch, degradation, learn_rew, context_trans_prob, cue_ambiguity,h]
+    reward_naive = [True]
     training_blocks = [4]
-    degradation_blocks=[2]
+    degradation_blocks=[2,4,6]
     trials_per_block=[60]
+    arrays = [cue_switch, degradation, learn_rew, context_trans_prob, cue_ambiguity,h,\
+              reward_naive, training_blocks, degradation_blocks, trials_per_block]
 
     data_path = os.path.join(os.getcwd(),'data')
     if not os.path.isdir(data_path): 
         os.mkdir(data_path)
 
     # needs to be run only the first time you use main
-    # if creating_configs:
-    #     from planet_sequences import generate_trials_df
-    #     create_config_files(training_blocks, degradation_blocks, trials_per_block)
+    if create_configs:
+        from planet_sequences import generate_trials_df
+        create_config_files(training_blocks, degradation_blocks, trials_per_block)
 
     lst = []
     for i in product(*arrays):
         lst.append(list(i))
 
     fname = 'config_degradation_0_switch_0_train4_degr4_n60.json'
-    reward_naive = True
     # failed efforts at parallel running of sims
-    ca = [ns, na, npl, nc, nr, T, state_transition_matrix, planet_reward_probs, planet_reward_probs_switched,repetitions, fname, reward_naive]
+    ca = [ns, na, npl, nc, nr, T, state_transition_matrix, planet_reward_probs,\
+          planet_reward_probs_switched,repetitions]
 
     start =  time.perf_counter()
     with Pool() as pool:
@@ -576,15 +585,13 @@ def main():
                                         repeat(ca[6]),\
                                         repeat(ca[7]),\
                                         repeat(ca[8]),\
-                                        repeat(ca[9]),\
-                                        repeat(ca[10]),\
-                                        repeat(ca[11])))
+                                        repeat(ca[9])))
     finish = time.perf_counter()
     print(finish-start)
 
     start =  time.perf_counter()
     for l in lst:
-        run_single_sim(l, ca[0], ca[1], ca[2], ca[3], ca[4], ca[5], ca[6], ca[7], ca[8], ca[9], ca[10], ca[11])
+        run_single_sim(l, ca[0], ca[1], ca[2], ca[3], ca[4], ca[5], ca[6], ca[7], ca[8], ca[9])
     finish = time.perf_counter()
     print(f'Finished in {round(finish-start, 2)} second(s) for sequential')
 
