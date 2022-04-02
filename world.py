@@ -42,9 +42,10 @@ class World(object):
                 if print_thoughts:
                     print("tau", tau, ", t", t)
                 self.__update_world(tau, t, print_thoughts=print_thoughts)
+            # print('tau: ', tau, ' t:', t)
+            # print(self.agent.context_obs[tau], self.actions[tau,:])
 
-
-    def estimate_par_evidence(self, params, method='MLE'):
+    def estimate_par_evidence(self, params , method='MLE'):
 
 
         val = np.zeros(params.shape[0])

@@ -317,7 +317,7 @@ def create_trials_two_seqs(trials_orig, export=True,
     trials = [None]*len(trials_orig)
     for ti, tr in enumerate(trials_orig):            
         trials[ti] = np.tile(tr[:start*2,:], (2,1))
-        trials[ti] = trials[0][inds,:]
+        trials[ti] = trials[ti][inds,:]
 
     nblocks = training_blocks + degradation_blocks + 1
     shift = np.int(trials[0].shape[0]/2)
@@ -445,7 +445,7 @@ def run_single_sim(lst,
     Rho = np.zeros([trials, nr, ns])
 
     for i, pl in enumerate(planets):
-        if i >= block*(nblocks-2) and i < block*(nblocks-1) and contingency_degradation:
+        if i >= block*meta['training_blocks'] and i < block*(meta['training_blocks'] + meta['degradation_blocks']) and contingency_degradation:
             # print(i)
             # print(pl)
             Rho[i,:,:] = planet_reward_probs_switched[[pl]].T
@@ -471,7 +471,7 @@ def run_single_sim(lst,
                 starts,                   
                 colors,
                 reward_counts,
-                learn_rew]
+                1]
 
     prefix = ''
     if switch_cues == True:
@@ -596,7 +596,7 @@ def main():
 
 from planet_sequences import generate_trials_df
 
-create_config_files([4], [4], [60])
+# create_config_files([4], [4,6], [60])
 # ################################################
 
 # if __name__ == '__main__':
