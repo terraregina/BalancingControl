@@ -15,15 +15,15 @@ import itertools
 import os
 import action_selection as asl
 import seaborn as sns
-from itertools import product
+from itertools import product, repeat
 import pickle
 import pandas as pd
 import matplotlib.pyplot as plt
 import jsonpickle as pickle
 import jsonpickle.ext.numpy as jsonpickle_numpy
 import json
-import concurrent.futures
 import time
+from multiprocessing import Pool
 
 import perception as prc
 import agent as agt
@@ -211,7 +211,6 @@ def run_agent(par_list, trials, T, ns=6, na=2, nr=3, nc=2, npl=2):
     return w
 
 
-
 '''
 function creating all possible trials and starting points
 for given optimal sequence (s1 and s2) and planet reward association (all_rewards)
@@ -387,17 +386,17 @@ def create_trials_two_seqs(trials_orig, export=True,
 
 
 def run_single_sim(lst,
-                                ns,
-                                na,
-                                npl,
-                                nc,
-                                nr,
-                                T,
-                                state_transition_matrix,
-                                planet_reward_probs,
-                                planet_reward_probs_switched,
-                                repetitions,
-                                fname, reward_naive=True):
+                    ns,
+                    na,
+                    npl,
+                    nc,
+                    nr,
+                    T,
+                    state_transition_matrix,
+                    planet_reward_probs,
+                    planet_reward_probs_switched,
+                    repetitions,
+                    fname, reward_naive):
 
     folder = os.getcwd()
     switch_cues, contingency_degradation, learn_rew, context_trans_prob, cue_ambiguity, h  = lst
@@ -448,9 +447,9 @@ def run_single_sim(lst,
         if i >= block*meta['training_blocks'] and i < block*(meta['training_blocks'] + meta['degradation_blocks']) and contingency_degradation:
             # print(i)
             # print(pl)
-            Rho[i,:,:] = planet_reward_probs_switched[[pl]].T
+            Rho[i,:,:] = planet_reward_probs_switched[tuple([pl])].T
         else:
-            Rho[i,:,:] = planet_reward_probs[[pl]].T
+            Rho[i,:,:] = planet_reward_probs[tuple([pl])].T
 
     u = 0.99
     utility = np.array([(1-u)/2,(1-u)/2,u])
@@ -536,7 +535,7 @@ def main():
     state_transition_matrix = np.repeat(state_transition_matrix[:,:,:,np.newaxis], repeats=nc, axis=3)
 
     # setup simulation parameters here
-    h =  [1,100]
+    h =  [1,10,3, 4, 5, 4,5,6,7,8,9,70,100]
     cue_ambiguity = [0.8]                      # cue ambiguity reffers to how certain agent is a given observation refers to a given context
     context_trans_prob = [1/nc]                  # the higher the value the more peaked the distribution is
     degradation = [True]                       # bit counter intuitive, should change the name :D
@@ -552,55 +551,51 @@ def main():
         os.mkdir(data_path)
 
     # needs to be run only the first time you use main
-    if creating_configs:
-        from planet_sequences import generate_trials_df
-        create_config_files(training_blocks, degradation_blocks, trials_per_block)
+    # if creating_configs:
+    #     from planet_sequences import generate_trials_df
+    #     create_config_files(training_blocks, degradation_blocks, trials_per_block)
 
     lst = []
     for i in product(*arrays):
         lst.append(list(i))
 
+    fname = 'config_degradation_0_switch_0_train4_degr4_n60.json'
+    reward_naive = True
     # failed efforts at parallel running of sims
-    # constant_arguments = [ns, na, npl, nc, nr, T, state_transition_matrix, planet_reward_probs, planet_reward_probs_switched,repetitions]
-    # n = len(lst)
-    # ca = [None]*len(constant_arguments)
-    # for i,arg in enumerate(constant_arguments):
-    #     ca[i] = [arg]*n
+    ca = [ns, na, npl, nc, nr, T, state_transition_matrix, planet_reward_probs, planet_reward_probs_switched,repetitions, fname, reward_naive]
 
-
-    # start = time.perf_counter()
-
-    # with concurrent.futures.ThreadPoolExecutor() as executor:
-    #     results = executor.map(run_single_sim, lst, ca[0],ca[1],ca[2],ca[3],ca[4],ca[5],ca[6],ca[7],ca[8],ca[9])
-    #     # for result in results:
-    #     #     print(result)
-    # finish = time.perf_counter()
-    # print(f'Finished in {round(finish-start, 2)} second(s) for multithreader')
-
-    start = time.perf_counter()
-    db = degradation_blocks[0]
-    tb = training_blocks[0]
-    tpb = trials_per_block[0]
-
-    for l in lst:
-        # name of experiment config file
-        config = 'config_'+'degradation_'+ str(int(l[1]))+ '_switch_' + str(int(l[0]))\
-                + '_train' + str(tb) + '_degr' + str(db) + '_n' + str(tpb)+'.json'
-
-        run_single_sim(l, ns, na, npl, nc, nr, T, state_transition_matrix, planet_reward_probs, planet_reward_probs_switched,repetitions, config,reward_naive=True)
-
+    start =  time.perf_counter()
+    with Pool() as pool:
+        M = pool.starmap(run_single_sim, zip(lst,\
+                                        repeat(ca[0]),\
+                                        repeat(ca[1]),\
+                                        repeat(ca[2]),\
+                                        repeat(ca[3]),\
+                                        repeat(ca[4]),\
+                                        repeat(ca[5]),\
+                                        repeat(ca[6]),\
+                                        repeat(ca[7]),\
+                                        repeat(ca[8]),\
+                                        repeat(ca[9]),\
+                                        repeat(ca[10]),\
+                                        repeat(ca[11])))
     finish = time.perf_counter()
-    print(f'Finished in {round(finish-start, 2)} second(s) for individual ones')
+    print(finish-start)
+
+    start =  time.perf_counter()
+    for l in lst:
+        run_single_sim(l, ca[0], ca[1], ca[2], ca[3], ca[4], ca[5], ca[6], ca[7], ca[8], ca[9], ca[10], ca[11])
+    finish = time.perf_counter()
+    print(f'Finished in {round(finish-start, 2)} second(s) for sequential')
 
 
 
-from planet_sequences import generate_trials_df
-
+# from planet_sequences import generate_trials_df
 # create_config_files([4], [4,6], [60])
 # ################################################
 
-# if __name__ == '__main__':
-    # main()
+if __name__ == '__main__':
+    main()
 
 
 
