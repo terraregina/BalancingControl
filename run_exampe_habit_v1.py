@@ -398,8 +398,8 @@ def run_single_sim(lst,
                     repetitions):
 
 
-    switch_cues, contingency_degradation, learn_rew, context_trans_prob, cue_ambiguity, h,\
-    reward_naive, training_blocks, degradation_blocks, trials_per_block = lst
+    switch_cues, contingency_degradation, reward_naive, context_trans_prob, cue_ambiguity, h,\
+    training_blocks, degradation_blocks, trials_per_block = lst
     
     config = 'config' + '_degradation_'+ str(int(contingency_degradation)) \
                       + '_switch_' + str(int(switch_cues))                \
@@ -430,7 +430,7 @@ def run_single_sim(lst,
         'trial_type' : trial_type,
         'switch_cues': switch_cues == True,
         'contingency_degradation' : contingency_degradation == True,
-        'learn_rew' : learn_rew == True,
+        'learn_rew' : reward_naive == True,
         'context_trans_prob': context_trans_prob,
         'cue_ambiguity' : cue_ambiguity,
         'h' : h,
@@ -490,7 +490,7 @@ def run_single_sim(lst,
         prefix += 'degr1_'
     else:
         prefix += 'degr0_'
-    fname = prefix +'p' + str(cue_ambiguity) +'_learn_rew' + str(int(learn_rew == True)) + '_q' + str(context_trans_prob) + '_h' + str(h)+ '_' +\
+    fname = prefix +'p' + str(cue_ambiguity) +'_learn_rew' + str(int(reward_naive == True)) + '_q' + str(context_trans_prob) + '_h' + str(h)+ '_' +\
     str(meta['trials_per_block']) +'_'+str(meta['training_blocks']) + str(meta['degradation_blocks']) + '.json'
 
     worlds = [run_agent(par_list, trials, T, ns , na, nr, nc, npl) for _ in range(repetitions)]
@@ -542,18 +542,17 @@ def main(create_configs = False):
 
     # setup simulation parameters here
 
-    h =  [1,10,3, 4, 5, 4,5,6,7,8,9,70,100]
+    h =  [1,70,100]
     cue_ambiguity = [0.8]                      # cue ambiguity refers to how certain agent is a given observation refers to a given context
     context_trans_prob = [1/nc]                # the higher the value the more peaked the distribution is
     degradation = [True]                       # bit counter intuitive, should change the name :D
     cue_switch = [True]
-    learn_rew = [True]
     reward_naive = [True]
     training_blocks = [4]
-    degradation_blocks=[2,4,6]
+    degradation_blocks=[2]
     trials_per_block=[60]
-    arrays = [cue_switch, degradation, learn_rew, context_trans_prob, cue_ambiguity,h,\
-              reward_naive, training_blocks, degradation_blocks, trials_per_block]
+    arrays = [cue_switch, degradation, reward_naive, context_trans_prob, cue_ambiguity,h,\
+              training_blocks, degradation_blocks, trials_per_block]
 
     data_path = os.path.join(os.getcwd(),'data')
     if not os.path.isdir(data_path): 
