@@ -397,7 +397,6 @@ def run_single_sim(lst,
                     planet_reward_probs_switched,
                     repetitions):
 
-
     switch_cues, contingency_degradation, reward_naive, context_trans_prob, cue_ambiguity, h,\
     training_blocks, degradation_blocks, trials_per_block = lst
     
