@@ -605,8 +605,8 @@ def main(create_configs = False):
 # create_config_files([4], [4,6], [60])
 # ################################################
 
-if __name__ == '__main__':
-    main()
+# if __name__ == '__main__':
+#     main()
 
 
 
