@@ -202,11 +202,15 @@ class BayesianPlanner(object):
         #if reward > 0:
         # check later if stuff still works!
         if self.learn_rew and t>0:#==self.T-1:
-            self.posterior_dirichlet_rew[tau,t] = self.perception.update_beliefs_dirichlet_rew_params(tau, t, \
+            if hasattr(self,  'trial_type'):
+                if not self.trial_type[tau] == 2:
+                    self.posterior_dirichlet_rew[tau,t] = self.perception.update_beliefs_dirichlet_rew_params(tau, t, \
                                                             reward, \
-                                                   self.posterior_states[tau, t], \
-                                                   self.posterior_policies[tau, t], \
-                                                   self.posterior_context[tau,t])
+                                                            self.posterior_states[tau, t], \
+                                                            self.posterior_policies[tau, t], \
+                                                            self.posterior_context[tau,t])
+            else:
+                raise('Agent not extinguishing reward!')
 
     def generate_response(self, tau, t):
 

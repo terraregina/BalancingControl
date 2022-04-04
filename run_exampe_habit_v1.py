@@ -45,7 +45,7 @@ from world import World
 
 
 
-def run_agent(par_list, trials, T, ns=6, na=2, nr=3, nc=2, npl=2):
+def run_agent(par_list, trials, T, ns=6, na=2, nr=3, nc=2, npl=2, trial_type=None):
 
     # learn_pol          = initial concentration parameters for POLICY PRIOR
     # context_trans_prob = probability of staing in a given context, int
@@ -198,6 +198,12 @@ def run_agent(par_list, trials, T, ns=6, na=2, nr=3, nc=2, npl=2):
 
     w = World(environment, bayes_pln, trials = trials, T = T)
     bayes_pln.world = w
+
+    if not trial_type is None:
+        bayes_pln.trial_type = trial_type
+        w.trial_type = trial_type
+    else:
+        raise('Agent not extinguishing during reward')
 
     """
     simulate experiment
@@ -492,7 +498,7 @@ def run_single_sim(lst,
     fname = prefix +'p' + str(cue_ambiguity) +'_learn_rew' + str(int(reward_naive == True)) + '_q' + str(context_trans_prob) + '_h' + str(h)+ '_' +\
     str(meta['trials_per_block']) +'_'+str(meta['training_blocks']) + str(meta['degradation_blocks']) + '.json'
 
-    worlds = [run_agent(par_list, trials, T, ns , na, nr, nc, npl) for _ in range(repetitions)]
+    worlds = [run_agent(par_list, trials, T, ns , na, nr, nc, npl,trial_type=trial_type) for _ in range(repetitions)]
 
     worlds.append(meta)
     fname = os.path.join(os.path.join(folder,'data'), fname)

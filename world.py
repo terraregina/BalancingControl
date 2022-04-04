@@ -150,6 +150,9 @@ class World(object):
         if t>0:
             self.rewards[tau, t] = self.environment.generate_rewards(tau, t)
 
+        if hasattr(self, 'trial_type'):
+            if self.trial_type[tau] == 2:
+                reward = 0
         observation = self.observations[tau, t]
 
         reward = self.rewards[tau, t]
