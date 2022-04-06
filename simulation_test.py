@@ -2,6 +2,13 @@
 # Imports
 # 
 
+
+
+
+# # %%
+# Imports
+# 
+
 import pickle
 import seaborn as sns
 import pandas as pd
@@ -224,7 +231,7 @@ np.random.seed(5)
 
 h =  [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,100]
 cue_ambiguity = [0.5, 0.6, 0.7,0.8]                       
-context_trans_prob = [1/nc -0.1, 1/nc, 1/nc+0.1]                
+context_trans_prob = [1/nc -0.1, 1/nc]                
 degradation = [True]
 cue_switch = [False]
 reward_naive = [False, True]
@@ -462,6 +469,5 @@ if True:
 
 
 # # %%
-
 
 

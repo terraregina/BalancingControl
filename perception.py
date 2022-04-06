@@ -38,8 +38,7 @@ class HierarchicalPerception(object):
         self.nh = prior_states.shape[0]
         self.npl = generative_model_rewards.shape[1]
         self.possible_rewards = possible_rewards
-        self.reward_ind  = {}
-
+        self.reward_ind  = {}    
         for r, reward in enumerate(possible_rewards):
             self.reward_ind[reward] = r  
 
@@ -210,7 +209,12 @@ class HierarchicalPerception(object):
     the posterior over policies. Then we calculated the posteriors over theta and phi, which were then used to calculate
     the posterior over contexts.
     '''
-    def update_beliefs_context(self, tau, t, reward, posterior_states, posterior_policies, prior_context, policies, context=None):
+    def update_beliefs_context(self, tau, t, reward,\
+                               posterior_states,\
+                                posterior_policies,\
+                                prior_context,\
+                                policies,\
+                                context=None):
 
 
         post_policies = (prior_context[np.newaxis,:] * posterior_policies).sum(axis=1)
@@ -279,9 +283,10 @@ class HierarchicalPerception(object):
 #                print(tau, np.exp(outcome_surprise[1])/np.exp(outcome_surprise[0]), np.exp(policy_surprise[1])/np.exp(policy_surprise[0]))
 
             posterior = np.nan_to_num(softmax(posterior+ln(prior_context)))
-
-        return posterior
-
+        if t>0:
+            return [posterior, outcome_surprise, entropy, context_obs_suprise]
+        else:
+           return [posterior, outcome_surprise, entropy, context_obs_suprise]
 
     def update_beliefs_dirichlet_pol_params(self, tau, t, posterior_policies, posterior_context = [1]):
         assert(t == self.T-1)

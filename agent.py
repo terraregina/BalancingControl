@@ -88,7 +88,10 @@ class BayesianPlanner(object):
         if hasattr(self.perception, 'generative_model_context'):
             self.context_obs = np.zeros(trials, dtype=int)
         self.prior_actions = np.zeros([trials, T-1, np.unique(self.policies).size])
-
+        self.outcome_suprise = np.zeros([trials, T, self.nc])
+        self.policy_entropy = np.zeros([trials, T, self.nc])
+        self.context_obs_surprise = np.zeros([trials, T, self.nc])
+        
     def reset(self, params, fixed):
 
         self.actions[:] = 0
@@ -167,14 +170,17 @@ class BayesianPlanner(object):
                 c_obs = self.context_obs[tau]
             else:
                 c_obs = None
-            self.posterior_context[tau, t] = \
-            self.perception.update_beliefs_context(tau, t, \
-                                                   reward, \
-                                                   self.posterior_states[tau, t], \
-                                                   self.posterior_policies[tau, t], \
-                                                   prior_context, \
-                                                   self.policies,\
-                                                   context=c_obs)
+
+            self.posterior_context[tau, t,:], self.outcome_suprise[tau, t,:],\
+            self.policy_entropy[tau,t,:], self.context_obs_surprise[tau,t,:] = self.perception.update_beliefs_context(tau, t, \
+                                                reward, \
+                                                self.posterior_states[tau, t], \
+                                                self.posterior_policies[tau, t], \
+                                                prior_context, \
+                                                self.policies,\
+                                                context=c_obs)
+
+
         elif self.nc>1 and t==0:
             self.posterior_context[tau, t] = prior_context
         else:
