@@ -160,10 +160,11 @@ class BayesianPlanner(object):
             prior_context = self.prior_context
         else: #elif t == 0:
             prior_context = np.dot(self.perception.transition_matrix_context, self.posterior_context[tau-1, -1]).reshape((self.nc))
+
 #            else:
 #                prior_context = np.dot(self.perception.transition_matrix_context, self.posterior_context[tau, t-1])
 
-        # check here what to do with the greater and equal sign
+
         if self.nc>1 and t>=0:
             
             if hasattr(self, 'context_obs'): 
@@ -179,17 +180,9 @@ class BayesianPlanner(object):
                                                 prior_context, \
                                                 self.policies,\
                                                 context=c_obs)
-
-
-        elif self.nc>1 and t==0:
-            self.posterior_context[tau, t] = prior_context
         else:
             self.posterior_context[tau,t] = 1
-
-        # print(tau,t)
-        # print("prior", prior_context)
-        # print("post", self.posterior_context[tau, t])
-
+        
         if t < self.T-1:
             post_pol = np.dot(self.posterior_policies[tau, t], self.posterior_context[tau, t])
             self.posterior_actions[tau, t] = self.estimate_action_probability(tau, t, post_pol)
@@ -199,14 +192,13 @@ class BayesianPlanner(object):
                                                             self.posterior_policies[tau,t], \
                                                             self.posterior_context[tau,t])
 
-        if False:
-            self.posterior_rewards[tau, t-1] = np.einsum('rsc,spc,pc,c->r',
-                                                  self.perception.generative_model_rewards,
-                                                  self.posterior_states[tau,t,:,t],
-                                                  self.posterior_policies[tau,t],
-                                                  self.posterior_context[tau,t])
+        # if False:
+        #     self.posterior_rewards[tau, t-1] = np.einsum('rsc,spc,pc,c->r',
+        #                                           self.perception.generative_model_rewards,
+        #                                           self.posterior_states[tau,t,:,t],
+        #                                           self.posterior_policies[tau,t],
+        #                                           self.posterior_context[tau,t])
         #if reward > 0:
-        # check later if stuff still works!
         if self.learn_rew and t>0:#==self.T-1:
             if hasattr(self,  'trial_type'):
                 if not self.trial_type[tau] == 2:
@@ -222,13 +214,13 @@ class BayesianPlanner(object):
 
         #get response probability
         posterior_states = self.posterior_states[tau, t]
-        posterior_policies = np.einsum('pc,c->p', self.posterior_policies[tau, t], self.posterior_context[tau, 0])
+        posterior_policies = np.einsum('pc,c->p', self.posterior_policies[tau, t], self.posterior_context[tau, t])
         posterior_policies /= posterior_policies.sum()
         
         # average likelihood refers to averaging over contexts
-        avg_likelihood = np.einsum('pc,c->p', self.likelihood[tau,t], self.posterior_context[tau, 0])
+        avg_likelihood = np.einsum('pc,c->p', self.likelihood[tau,t], self.posterior_context[tau, t])
         avg_likelihood /= avg_likelihood.sum()
-        prior = np.einsum('pc,c->p', self.prior_policies[tau-1], self.posterior_context[tau, 0])
+        prior = np.einsum('pc,c->p', self.prior_policies[tau-1], self.posterior_context[tau, t])
         prior /= prior.sum()
         self.prior_actions = self.estimate_action_probability(tau,t,prior)
         #print(self.posterior_context[tau, t])
@@ -372,6 +364,7 @@ class BayesianPlanner_old(object):
             prior_context = self.prior_context
         else: #elif t == 0:
             prior_context = np.dot(self.perception.transition_matrix_context, self.posterior_context[tau-1, -1]).reshape((self.nc))
+            print(prior_context)
 #            else:
 #                prior_context = np.dot(self.perception.transition_matrix_context, self.posterior_context[tau, t-1])
 

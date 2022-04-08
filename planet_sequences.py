@@ -196,13 +196,13 @@ def generate_trials_df(planet_rewards, sequences):
     Generate trials for the actual experiment
     '''
 
-    slices = []
+    slices = np.empty(len(sequences), dtype=object)
 
-    for s in sequences:
+    for si, s in enumerate(sequences):
         slice = data.loc[( data['optimal'] == True) & ( data['sequence'] == s)]
         datatype = {'conf_ind':int, 'start':int, 'planet_conf':int, 'sequence':int}
         slice = slice.astype(datatype)
-        slices.append(slice)
+        slices[si] = slice
 
     return slices, planet_confs
 
