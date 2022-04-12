@@ -245,7 +245,7 @@ def run_single_sim(lst,
     switch_cues, contingency_degradation, reward_naive, context_trans_prob, cue_ambiguity, h,\
     training_blocks, degradation_blocks, trials_per_block = lst
     
-    config = 'config' + '_degradation_'+ str(int(contingency_degradation)) \
+    config = 'config/config' + '_degradation_'+ str(int(contingency_degradation)) \
                       + '_switch_' + str(int(switch_cues))                \
                       + '_train' + str(training_blocks)                   \
                       + '_degr' + str(degradation_blocks)                 \
@@ -340,13 +340,14 @@ def run_single_sim(lst,
     worlds = [run_agent(par_list, trials, T, ns , na, nr, nc, npl,trial_type=trial_type) for _ in range(repetitions)]
 
     worlds.append(meta)
-    fname = os.path.join(os.path.join(folder,'data'), fname)
-    jsonpickle_numpy.register_handlers()
-    pickled = pickle.encode(worlds)
-    with open(fname, 'w') as outfile:
-        json.dump(pickled, outfile)
+    if False:
+        fname = os.path.join(os.path.join(folder,'data'), fname)
+        jsonpickle_numpy.register_handlers()
+        pickled = pickle.encode(worlds)
+        with open(fname, 'w') as outfile:
+            json.dump(pickled, outfile)
 
-    return fname
+        return fname
 
 """"""
 def main(create_configs = False):
@@ -385,15 +386,15 @@ def main(create_configs = False):
     state_transition_matrix = np.repeat(state_transition_matrix[:,:,:,np.newaxis], repeats=nc, axis=3)
 
     # setup simulation parameters here
-
+# config_degradation_1_switch_1_train4_degr4_n60.json'
     h =  [1,70,100]
     cue_ambiguity = [0.8]                      # cue ambiguity refers to how certain agent is a given observation refers to a given context
     context_trans_prob = [1/nc]                # the higher the value the more peaked the distribution is
     degradation = [True]                       # bit counter intuitive, should change the name :D
-    cue_switch = [True]
+    cue_switch = [False]
     reward_naive = [True]
     training_blocks = [4]
-    degradation_blocks=[2]
+    degradation_blocks=[4]
     trials_per_block=[60]
     arrays = [cue_switch, degradation, reward_naive, context_trans_prob, cue_ambiguity,h,\
               training_blocks, degradation_blocks, trials_per_block]
@@ -411,7 +412,7 @@ def main(create_configs = False):
     for i in product(*arrays):
         lst.append(list(i))
 
-    fname = 'config_degradation_0_switch_0_train4_degr4_n60.json'
+    fname = 'config/config_degradation_0_switch_0_train4_degr4_n60.json'
     # failed efforts at parallel running of sims
     ca = [ns, na, npl, nc, nr, T, state_transition_matrix, planet_reward_probs,\
           planet_reward_probs_switched,repetitions]
@@ -443,8 +444,8 @@ def main(create_configs = False):
 
 # ################################################
 
-# if __name__ == '__main__':
-#     main()
+if __name__ == '__main__':
+    main()
 
 
 

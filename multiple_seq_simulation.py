@@ -223,8 +223,8 @@ state_transition_matrix = np.repeat(state_transition_matrix[:,:,:,np.newaxis], r
 np.random.seed(5)
 
 h =  [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,100,200]
-cue_ambiguity = [0.52, 0.54, 0.56, 0.58]                       
-context_trans_prob = [1/nc -0.1, 1/nc]                
+cue_ambiguity = [0.5, 0.6,0.7, 0.8]                       
+context_trans_prob = [1/nc -0.1, 1/nc, 1/nc+0.1]                
 degradation = [True]
 cue_switch = [False]
 reward_naive = [False, True]
