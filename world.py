@@ -5,6 +5,7 @@ provide the environment class and the agent class that will be used for the
 experiment.
 """
 import numpy as np
+import torch as np
 from misc import ln
 
 class World(object):
@@ -20,13 +21,13 @@ class World(object):
         self.free_parameters = {}
 
         #container for observations
-        self.observations = np.zeros((self.trials, self.T), dtype = int)
+        self.observations = np.zeros((self.trials, self.T))
 
         #container for agents actions
-        self.actions = np.zeros((self.trials, self.T), dtype = int)
+        self.actions = np.zeros((self.trials, self.T))
 
         #container for rewards
-        self.rewards = np.zeros((self.trials, self.T), dtype = int)
+        self.rewards = np.zeros((self.trials, self.T))
         self.environment.possible_rewards = self.agent.perception.possible_rewards
 
     def simulate_experiment(self, curr_trials=None, print_thoughts=False):
@@ -149,6 +150,8 @@ class World(object):
 
         if t>0:
             self.rewards[tau, t] = self.environment.generate_rewards(tau, t)
+            ## REMOVE
+            self.rewards[tau, t] = 1
 
         if hasattr(self, 'trial_type'):
             if self.trial_type[tau] == 2:

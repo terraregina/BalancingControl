@@ -223,18 +223,18 @@ state_transition_matrix = np.repeat(state_transition_matrix[:,:,:,np.newaxis], r
 np.random.seed(5)
 
 h =  [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,100,200]
-cue_ambiguity = [0.6, 0.7,0.8]                       
-context_trans_prob = [1/nc -0.1, 1/nc, 1/nc + 0.1]                
+cue_ambiguity = [0.6, 0.7, 0.8]                       
+context_trans_prob = [1/nc -0.1, 1/nc]                
 degradation = [True]
 cue_switch = [False]
-reward_naive = [False, True]
+reward_naive = [False]
 training_blocks = [4]
 degradation_blocks=[2,4,6]
-trials_per_block=[60]
+trials_per_block=[70]
 arrays = [cue_switch, degradation, reward_naive, context_trans_prob, cue_ambiguity,h,\
         training_blocks, degradation_blocks, trials_per_block]
 
-repetitions = 1
+repetitions = 5
 lst = []
 path = os.path.join(os.getcwd(),'temp')
 existing_files = os.listdir(path)
@@ -270,7 +270,7 @@ for li, l in enumerate(lst):
 missing_files = []
 for name in names:
     if not name[1] in existing_files:
-        print('appending')
+        print(name)
         missing_files.append(name[0])
 
 lst = [lst[i] for i in missing_files]

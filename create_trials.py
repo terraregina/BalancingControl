@@ -235,7 +235,7 @@ def create_trials_two_seqs(trials_orig, export=True,
         trials[ti] = np.tile(tr[:start*2,:], (2,1))
         trials[ti] = trials[ti][inds,:]
 
-    nblocks = training_blocks + degradation_blocks + 1
+    nblocks = training_blocks + degradation_blocks + 2
     shift = np.int(trials[0].shape[0]/2)
     half_block = np.int(trials_per_block/2)
     
@@ -247,9 +247,9 @@ def create_trials_two_seqs(trials_orig, export=True,
     tt=0
 
     # populate training blocks and extinction block
-    for i in range(training_blocks+1):
-        if i == training_blocks:                   # if now populating extinction block
-            i = training_blocks + degradation_blocks
+    for i in range(nblocks):
+        if i >= training_blocks:                   # if now populating extinction block
+            # i = training_blocks + degradation_blocks
             tt = 2
 
         data[(2*i)*half_block : (2*i+1)*half_block , :] = trials[0][i*half_block : (i+1)*half_block,:]
@@ -257,7 +257,7 @@ def create_trials_two_seqs(trials_orig, export=True,
 
         trial_type[(2*i)*half_block:(2*i+2)*half_block] = tt
         blocks[(2*i)*half_block:(2*i+2)*half_block] = i
-        
+
 
     # populate the degradation blocks
     for i in range(training_blocks, degradation_blocks + training_blocks):
@@ -277,7 +277,7 @@ def create_trials_two_seqs(trials_orig, export=True,
             data[(2*i)*half_block:(2*i+2)*half_block,0] = data[(2*i)*half_block:(2*i+2)*half_block,0] == 0
 
     if interlace:
-        for i in range(degradation_blocks + training_blocks+1):
+        for i in range(nblocks):
             np.random.shuffle(data[(2*i)*half_block:(2*i+2)*half_block,:])
             
     data = data.astype('int32')
@@ -394,7 +394,7 @@ def create_trials_two_seqs_sequence_dependent_degradation(trials_orig, export=Fa
         #     data[(2*i)*half_block:(2*i+2)*half_block,0] = data[(2*i)*half_block:(2*i+2)*half_block,0] == 0
 
     if interlace:
-        for i in range(degradation_blocks + training_blocks+1):
+        for i in range(nblocks):
             np.random.shuffle(data[(2*i)*half_block:(2*i+2)*half_block,:])
             
     data = data.astype('int32')
@@ -439,13 +439,17 @@ def create_config_files_context_dependent_degradation(training_blocks, degradati
  
 #%%
 
-create_config_files_planning([4],[2,4,6],[70])
+# create_config_files_planning([4],[2,4,6],[70])
+create_config_files([4], [2,4,6], [70])
+# create_config_files_context_dependent_degradation([4],[2,4,6],[70])
 
 # %%
 
-# old configs where no differential degradation
-# create_config_files([4], [2,4,6], [60])
+fname = 'config/' + 'config_degradation_1_switch_0_train4_degr2_n70.json' 
+file = os.path.join(os.getcwd(), fname)
+import pandas as pd
+file = open(file, 'r')
+data = js.load(file)
+df = pd.DataFrame(data)
+df.query('trial_type == 2').tail(30)
 
-# files with differential extinction
-
-# create_config_files_context_dependent_degradation([4],[4,6],[60])

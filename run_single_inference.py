@@ -45,8 +45,8 @@ h=1
 db = 2
 tb = 4
 eb = 1
-tpb = 60
-
+tpb = 70
+n_part = 1
 folder = "temp"
 
 run_name = "switch"+str(switch) +"_degr"+str(degr) +"_p"+str(p)+ "_learn_rew"+str(learn_rew)+\
@@ -67,6 +67,7 @@ data["actions"] = ar.tensor(world.actions)
 data["rewards"] = ar.tensor(world.rewards)
 data["observations"] = ar.tensor(world.observations)
 data["context_obs"] = ar.tensor(world.environment.context_cues)
+data["planets"] = ar.tensor(world.environment.planet_conf)
 
 ###################################
 """experiment parameters"""
@@ -82,8 +83,6 @@ npl = 3
 
 learn_pol=1
 learn_habit=True
-
-learn_rew = 1
 
 utility = []
 
@@ -200,6 +199,7 @@ bayes_prc = prc.FittingPerception(A, B, C_agent, transition_matrix_context,
                                        state_prior, utility, prior_pi, pol,
                                        pol_par, C_alphas, T=T, trials=trials)
 
+
 agent = agt.FittingAgent(bayes_prc, [], pol,
                   trials = trials, T = T,
                   prior_states = state_prior,
@@ -210,7 +210,7 @@ agent = agt.FittingAgent(bayes_prc, [], pol,
                   learn_rew = True,
                   #save_everything = True,
                   number_of_policies = npi,
-                  number_of_rewards = nr)
+                  number_of_rewards = nr, npart=n_part)
 
 
 ###################################
@@ -218,4 +218,4 @@ agent = agt.FittingAgent(bayes_prc, [], pol,
 
 inferrer = inf.SingleInference(agent, data)
 
-loss = inferrer.infer_posterior()
+loss = inferrer.infer_posterior(iter_steps=200, num_particles=n_part)
