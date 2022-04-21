@@ -40,9 +40,9 @@ switch = 0
 degr = 1
 p = 0.6
 learn_rew  = 0
-q = 0.15
+q = 0.25
 h=1
-db = 2
+db = 4
 tb = 4
 eb = 1
 tpb = 70
@@ -68,7 +68,7 @@ data["rewards"] = ar.tensor(world.rewards)
 data["observations"] = ar.tensor(world.observations)
 data["context_obs"] = ar.tensor(world.environment.context_cues)
 data["planets"] = ar.tensor(world.environment.planet_conf)
-
+print(data['planets'][:10,:])
 ###################################
 """experiment parameters"""
 

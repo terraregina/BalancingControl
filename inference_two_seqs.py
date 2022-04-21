@@ -52,8 +52,8 @@ class SingleInference(object):
                     # context = None
         
                 observation = self.data["observations"][tau, t]
-        
                 reward = self.data["rewards"][tau, t]
+                reward=ar.tensor(1)
                 self.agent.planets = self.data["planets"][tau]
                 self.agent.update_beliefs(tau, t, observation, reward, prev_response, context)
         

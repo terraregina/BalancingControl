@@ -111,7 +111,6 @@ class FittingAgent(object):
         # return gen_mod_rewards
 
     def update_beliefs(self, tau, t, observation, reward, response, context=None):
-        
 
         if t == 0:
             self.initiate_planet_rewards()

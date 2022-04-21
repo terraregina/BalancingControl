@@ -92,11 +92,14 @@ class GridWorld(object):
                           p = self.Theta[:, current_state, int(response)])
 
     def generate_rewards(self, tau, t):
+        
         #generate one sample from multinomial distribution
         curr_loc = self.hidden_states[tau,t]           # t+1 because we are still at t but have already moved the rocket
         rp = self.R[tau,0,curr_loc]                      # reward probability at current planet
         reward = np.random.binomial(n=1, p=rp)
-
+        
+        rewards = [1,-1,0]
+        reward = rewards[t]
         return reward
 
 """

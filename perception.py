@@ -184,11 +184,14 @@ class FittingPerception(object):
         #       for i in range(self.npart)], dim=-1).to(device)
 
         rew_messages = ar.stack(\
-            [ar.stack([generative_model_rewards[r,:,:,i].to(device) for r in self.rewards[-t-1:]] \
+            [ar.stack([generative_model_rewards[self.reward_ind[int(r)],:,:,i].to(device) for r in self.rewards[-t-1:]] \
             + [ar.matmul(
                 ar.moveaxis(generative_model_rewards[:,:,:,i],(0,1,2),(2,0,1)).to(device), self.prior_rewards
-                ).to(device)]*(self.T-t-1),dim=-1).to(device)\
+                ).to(device)]*(self.T-t-1),dim=-2).to(device)\
               for i in range(self.npart)], dim=-1).to(device)
+
+
+
         #print(rew.shape)
         
         # for i in range(t):
@@ -201,8 +204,7 @@ class FittingPerception(object):
         
         self.obs_messages.append(obs_messages)
         self.rew_messages.append(rew_messages)
-        print(rew_messages.shape)
-        exit()    
+
     def update_messages(self, tau, t, possible_policies):
         
         # bwd_messages = ar.zeros((self.nh, self.T,self.npi)) #+ 1./self.nh
@@ -221,7 +223,7 @@ class FittingPerception(object):
         rew_messages = self.rew_messages[-1]
                 
         for i in range(self.T-2,-1,-1):
-            tmp = ar.einsum('hpcn,shpc,hcn,hcn->spcn',bwd[-1],self.big_trans_matrix[...,i],obs_messages[:,:,i+1],rew_messages[:,:,i+1]).to(device)
+            tmp = ar.einsum('hpcn,shpc,hcn,hcn->spcn',bwd[-1],self.big_trans_matrix[...,i],obs_messages[:,i+1,:],rew_messages[:,i+1,:]).to(device)
             # tmp = ar.einsum('hpn,shp,hn,hn->spn',bwd[-1],self.big_trans_matrix[...,i],obs_messages[:,i+1],rew_messages[:,i+1]).to(device)
 
             bwd.append(tmp)
@@ -249,7 +251,7 @@ class FittingPerception(object):
         # bwd_messages = ar.stack(bwd_messages).permute((1,0,2))
  
         for i in range(self.T-1):
-            tmp = ar.einsum('spcn,shpc,scn,scn->hpcn',fwd[-1],self.big_trans_matrix[...,i],obs_messages[:,:,i],rew_messages[:,:,i]).to(device)
+            tmp = ar.einsum('spcn,shpc,scn,scn->hpcn',fwd[-1],self.big_trans_matrix[...,i],obs_messages[:,i,:],rew_messages[:,i,:]).to(device)
             fwd.append(tmp)
             # fwd_messages[:, 1+i, pi] = fwd_messages[:,i, pi]*\
             #                              obs_messages[:, i]*\
@@ -593,7 +595,6 @@ class HierarchicalPerception(object):
         self.rew_messages = np.zeros((self.nh, self.T, self.nc))
         #self.rew_messages[:] = np.tile(self.prior_rewards.dot(self.generative_model_rewards),(self.T,1)).T
         print(self.rew_messages.shape)
-        exit()
         for c in range(self.nc):
             # sum(r)[p(r|s)p'(r)]
             self.rew_messages[:,:,c] = self.prior_rewards.dot(self.current_gen_model_rewards[:,:,c])[:,np.newaxis]
@@ -626,7 +627,11 @@ class HierarchicalPerception(object):
                     self.bwd_messages[:,t-1-i, pi,c] /= norm
 
         if len(cs[t:]) > 0:
-           for i, u in enumerate(cs[t:]):
+            pass
+            for i, u in enumerate(cs[t:]):
+                print(self.rew_messages[:,:,0])
+                print(self.obs_messages[:,:,0])
+                print(self.obs_messages.shape)
                 self.fwd_messages.shape
                 self.fwd_messages[:, t+1+i, pi,c] = self.fwd_messages[:,t+i, pi,c]*\
                                                 self.obs_messages[:, t+i,c]*\
