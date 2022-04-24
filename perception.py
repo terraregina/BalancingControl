@@ -85,9 +85,10 @@ class FittingPerception(object):
 
     def reset(self):
         
-        #self.npart = self.dec_temp.shape[0]
-        
-        self.dirichlet_pol_params_init = ar.zeros((self.npi, self.nc, self.npart)).to(device) + self.alpha_0[:,None,None].to(device)
+        print(self.alpha_0)
+        self.npart = self.alpha_0.shape[0]
+        # self.dirichlet_pol_params_init = ar.zeros((self.npi, self.nc, self.npart)).to(device) + self.alpha_0[:,None,None].to(device)
+        self.dirichlet_pol_params_init = ar.zeros((self.npi, self.nc, self.npart)).to(device) + self.alpha_0.to(device)
         # self.dirichlet_pol_params_init = ar.zeros((self.npi, self.nc, self.npart)).to(device) + self.alpha_0[:,:,None]#ar.stack([dirichlet_pol_params]*self.npart, dim=-1)
 
         self.dirichlet_rew_params = [ar.stack([self.dirichlet_rew_params_init]*self.npart, dim=-1).to(device)]
@@ -323,7 +324,7 @@ class FittingPerception(object):
             alpha_prime = self.dirichlet_pol_params[-1]
             # print(id(alpha_prime))
             alpha_prime = alpha_prime + \
-                ar.stack([prior_context if p == int(chosen_pol) else ar.zeros(self.nc)[:,None] for p in range(self.npi)])
+                ar.stack([prior_context if p == int(chosen_pol) else ar.zeros(self.nc,self.npart) for p in range(self.npi)])
             # print(alpha_prime.shape)
             #alpha_prime[chosen_pol,inf_context] = self.dirichlet_pol_params[chosen_pol,inf_context] + 1
         else:
@@ -346,7 +347,7 @@ class FittingPerception(object):
                 policy_surprise = 0
                 
             if context is not None:
-                context_obs_suprise = ln(self.generative_model_context[context]+1e-10)[:,None]
+                context_obs_suprise = ar.stack([ln(self.generative_model_context[context]+1e-10) for n in range(self.npart)],dim=-1).to(device)
             else:
                 context_obs_suprise = 0
             posterior = outcome_surprise + policy_surprise + entropy + context_obs_suprise
@@ -365,12 +366,12 @@ class FittingPerception(object):
         if t<self.T-1:
 
             posterior_policies = ar.einsum('pcn,cn->pn', self.posterior_policies[-1], self.posterior_contexts[-1])
-            posterior_policies /= posterior_policies.sum()
+            posterior_policies /= posterior_policies.sum(axis=0)
             
 
             posterior_actions = ar.stack(\
                 [\
-                    ar.tensor([(posterior_policies[self.policies[:,t] == a]).sum(axis=0) for _ in range(self.npart)])\
+                    ar.tensor([(posterior_policies[self.policies[:,t] == a,p]).sum() for p in range(self.npart)])\
                 for a in range(self.na)
                 ], dim=0)
 
@@ -510,6 +511,7 @@ class HierarchicalPerception(object):
                     # self.test[:,planet_type,c] /= self.test[:,planet_type,c].sum()
                 
                    # # look at exercise 5, Eq (42-50)
+
     def reset(self, params, fixed):
 
         alphas = np.zeros((self.npi, self.nc)) + params

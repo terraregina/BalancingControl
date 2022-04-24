@@ -2,6 +2,7 @@
 different modules that govern agent's behavior.
 """
 
+from logging import raiseExceptions
 import numpy as np
 from perception import HierarchicalPerception
 from misc import ln, softmax
@@ -99,6 +100,7 @@ class FittingAgent(object):
             self.context_obs = ar.zeros(self.trials, dtype=int).to(device)
 
         self.set_parameters(**param_dict)
+        self.npart = self.perception.alpha_0.shape[0]
         self.perception.reset()
 
 
@@ -146,7 +148,7 @@ class FittingAgent(object):
         #update beliefs about policies
         self.perception.update_beliefs_policies(tau, t) #self.posterior_policies[tau, t], self.likelihood[tau,t]
         if tau == 0:
-            prior_context = self.prior_context[:,None]
+            prior_context = self.prior_context[:,None].repeat(1,self.npart)
         else: #elif t == 0:
             prior_context = ar.einsum('ncp,cp-> np',self.perception.transition_matrix_context[:,:,None],self.perception.posterior_contexts[-1])
 
@@ -176,17 +178,27 @@ class FittingAgent(object):
             self.perception.update_beliefs_dirichlet_rew_params(tau, t,\
                                                             self.planets, reward)
 
-        # if t == 3:
-        #     # if context == 0:
+        if t == 3:
+            # if context == 0:
 
-        #     print('\n', tau,t)
-        #     print(self.planets)
-        #     a = ar.stack([self.perception.posterior_actions[-t][:,0] for t in range(self.T-1,0,-1)],dim=1)
-        #     a = ar.where((self.policies == ar.argmax(a,dim=0)).all(dim=1))[0]
-        #     print('context obs:',  int(context))
-        #     print('chosen policy: ', int(a))
-        #     print('chosen policy by run: ', int(self.possible_policies[0]))
-        #     print('inferred_context', int(ar.argmax(self.perception.posterior_contexts[-1][:,0])),'\n')
+            # print('\n', tau,t)
+            # print(self.planets)
+
+            ass = []
+            for p in range(self.npart):
+                a = ar.stack([self.perception.posterior_actions[-t][:,p] for t in range(self.T-1,0,-1)],dim=1)
+                ass.append(ar.where((self.policies == ar.argmax(a,dim=0)).all(dim=1))[0])
+            ass = ar.tensor(ass)
+
+            # if(ass.unique().shape[0] != 1):
+            #     print('different')
+            #     print(ass)
+            #     raiseExceptions('different!!!')
+
+            # print('context obs:',  int(context))
+            # print('chosen policy: ', ass)
+            # print('chosen policy by run: ', int(self.possible_policies[0]))
+            # print('inferred_context', int(ar.argmax(self.perception.posterior_contexts[-1][:,0])),'\n')
 
     def generate_response(self, tau, t):
 

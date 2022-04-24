@@ -46,7 +46,7 @@ db = 4
 tb = 4
 eb = 1
 tpb = 70
-n_part = 1
+n_part = 3
 folder = "temp"
 
 run_name = "switch"+str(switch) +"_degr"+str(degr) +"_p"+str(p)+ "_learn_rew"+str(learn_rew)+\

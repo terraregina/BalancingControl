@@ -67,13 +67,10 @@ class SingleInference(object):
                         print(h)
             
                     curr_response = self.data["actions"][tau, t]
-                    print('planets: ', self.agent.planets)
-                    print('observation: ', observation)
+                    # print('planets: ', self.agent.planets)
+                    # print('observation: ', observation)
                     # print('inferred state:', self.agent.perception.posterior_states[-1][:,t,:,0,0])
-                    print('response: ', curr_response)
-                    print('posterior over actions: ', probs, '\n')
-                    print(tau,t,param_dict)
-                    
+                    # print(probs)
                     pyro.sample('res_{}_{}'.format(tau, t), dist.Categorical(probs.T), obs=curr_response)
                     
 
