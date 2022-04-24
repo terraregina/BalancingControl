@@ -1,4 +1,5 @@
 
+from logging import raiseExceptions
 from re import S
 import torch as ar
 array = ar.tensor
@@ -52,22 +53,25 @@ class SingleInference(object):
                     # context = None
         
                 observation = self.data["observations"][tau, t]
-                reward = self.data["rewards"][tau, t]
-                reward=ar.tensor(1)
+                reward = self.data["rewards"][tau, t] 
                 self.agent.planets = self.data["planets"][tau]
                 self.agent.update_beliefs(tau, t, observation, reward, prev_response, context)
         
                 if t < self.T-1:
-                
                     probs = self.agent.perception.posterior_actions[-1]
                     #print(probs)
                     if ar.any(ar.isnan(probs)):
+                        raiseExceptions('HAD NANS!')
+                        print('\nhad nan in actions probs:')
                         print(probs)
                         print(h)
             
                     curr_response = self.data["actions"][tau, t]
-                    print(curr_response)
-                    print(tau, t, probs, curr_response)
+                    print('planets: ', self.agent.planets)
+                    print('observation: ', observation)
+                    # print('inferred state:', self.agent.perception.posterior_states[-1][:,t,:,0,0])
+                    print('response: ', curr_response)
+                    print('posterior over actions: ', probs, '\n')
                     print(tau,t,param_dict)
                     
                     pyro.sample('res_{}_{}'.format(tau, t), dist.Categorical(probs.T), obs=curr_response)
@@ -108,14 +112,15 @@ class SingleInference(object):
         for step in pbar:
             loss.append(ar.tensor(svi.step()).to(device))
             pbar.set_description("Mean ELBO %6.2f" % ar.tensor(loss[-20:]).mean())
-            if ar.isnan(loss[-1]):
-                break
+            alpha_h = pyro.param("alpha_h").data.numpy()
+            beta_h = pyro.param("beta_h").data.numpy()
+            print("alpha: ", alpha_h, " beta: ", beta_h)
+            print('h: ', (alpha_h+beta_h)/alpha_h)        
+            # if ar.isnan(loss[-1]):
+                # break
 
         self.loss = [l.cpu() for l in loss]
         
-        alpha_h = pyro.param("alpha_lamb_r").data.numpy()
-        beta_h = pyro.param("beta_lamb_r").data.numpy()
-        h = pyro.param('h').data.numpy()        
         param_dict = {"alpha_h": alpha_h, "beta_h": beta_h, "h":h}
         
         return self.loss, param_dict

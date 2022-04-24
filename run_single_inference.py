@@ -41,7 +41,7 @@ degr = 1
 p = 0.6
 learn_rew  = 0
 q = 0.25
-h=1
+h=100
 db = 4
 tb = 4
 eb = 1
@@ -68,7 +68,7 @@ data["rewards"] = ar.tensor(world.rewards)
 data["observations"] = ar.tensor(world.observations)
 data["context_obs"] = ar.tensor(world.environment.context_cues)
 data["planets"] = ar.tensor(world.environment.planet_conf)
-print(data['planets'][:10,:])
+# print(data['planets'][:10,:])
 ###################################
 """experiment parameters"""
 
@@ -165,10 +165,10 @@ pol = array(list(itertools.product(list(range(na)), repeat=T-1)))
 npi = pol.shape[0]
 
 # prior over policies
-prior_pi = ar.ones(npi)/npi #ar.zeros(npi) + 1e-3/(npi-1)
-alphas = ar.zeros((npi)) + learn_pol
-prior_pi = alphas / alphas.sum()
-
+# prior_pi = ar.ones(npi)/npi #ar.zeros(npi) + 1e-3/(npi-1)
+alphas = ar.zeros((npi,nc)) + learn_pol
+prior_pi = alphas / alphas[:,0].sum()
+alphas = array([learn_pol])
 
 """
 set state prior (where agent thinks it starts)
@@ -195,9 +195,20 @@ set up agent
 pol_par = alphas
 
 # perception
-bayes_prc = prc.FittingPerception(A, B, C_agent, transition_matrix_context, 
-                                       state_prior, utility, prior_pi, pol,
-                                       pol_par, C_alphas, T=T, trials=trials)
+bayes_prc = prc.FittingPerception(
+    A, 
+    B, 
+    C_agent, 
+    transition_matrix_context, 
+    state_prior, 
+    utility, 
+    prior_pi, 
+    pol,
+    pol_par,
+    C_alphas,
+    generative_model_context=C,
+    T=T, 
+    trials=trials,npart=n_part)
 
 
 agent = agt.FittingAgent(bayes_prc, [], pol,
@@ -218,4 +229,4 @@ agent = agt.FittingAgent(bayes_prc, [], pol,
 
 inferrer = inf.SingleInference(agent, data)
 
-loss = inferrer.infer_posterior(iter_steps=200, num_particles=n_part)
+loss = inferrer.infer_posterior(iter_steps=100, num_particles=n_part)
