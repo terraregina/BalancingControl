@@ -779,7 +779,7 @@ class AveragedSelector(object):
 
         #generate the desired response from action probability
         u = np.random.choice(self.na, p = self.control_probability[tau, t])
-
+        # u = np.argmax(self.control_probability[tau,t])
         return u
 
     def estimate_action_probability(self, tau, t, posterior_policies, actions, *args):

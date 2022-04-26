@@ -444,8 +444,8 @@ def main(create_configs = False):
 
 # ################################################
 
-if __name__ == '__main__':
-    main()
+# if __name__ == '__main__':
+#     main()
 
 
 

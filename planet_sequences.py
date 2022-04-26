@@ -246,4 +246,4 @@ def generate_trials_df(planet_rewards, sequences):
 # %%
 
 
-generate_trials_df([-1,1,1],[3,6])
+# generate_trials_df([-1,1,1],[3,6])

@@ -728,10 +728,8 @@ class HierarchicalPerception(object):
 #                print(tau, np.exp(outcome_surprise[1])/np.exp(outcome_surprise[0]), np.exp(policy_surprise[1])/np.exp(policy_surprise[0]))
 
             posterior = np.nan_to_num(softmax(posterior+ln(prior_context)))
-        if t>0:
+
             return [posterior, outcome_surprise, entropy, context_obs_suprise]
-        else:
-           return [posterior, outcome_surprise, entropy, context_obs_suprise]
 
     def update_beliefs_dirichlet_pol_params(self, tau, t, posterior_policies, posterior_context = [1]):
         assert(t == self.T-1)

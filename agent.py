@@ -7,7 +7,7 @@ import numpy as np
 from perception import HierarchicalPerception
 from misc import ln, softmax
 import scipy.special as scs
-import torch as ar
+import numpy as ar
 
 
 try:
@@ -446,6 +446,8 @@ class BayesianPlanner(object):
         #                                           self.posterior_context[tau,t])
         #if reward > 0:
         if self.learn_rew and t>0:#==self.T-1:
+            # if t ==1:
+            #     print(tau)
             # if hasattr(self,  'trial_type'):
             #     if not self.trial_type[tau] == 2:
             # print('NOT UNLEARNING')
@@ -456,7 +458,12 @@ class BayesianPlanner(object):
                                                     self.posterior_context[tau,t])
             # else:
             #     raise('Agent not extinguishing reward!')
-        
+
+        # if(self.trial_type[tau] == 1 and c_obs == 1 and t==3):
+        #     # print(t)
+        #     # if(t == 2):
+        #     print(tau)
+        #     print(self.posterior_context[tau,t].round(2))
 
 
     def generate_response(self, tau, t):
