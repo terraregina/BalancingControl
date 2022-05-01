@@ -224,19 +224,19 @@ state_transition_matrix = np.repeat(state_transition_matrix[:,:,:,np.newaxis], r
 np.random.seed(5)
 
 
-h =  [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,100,200]
-cue_ambiguity = [0.6, 0.7, 0.8]                       
-context_trans_prob = [1/nc -0.1, 1/nc]                
+h =  [1, 2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,30,40,50,60,70,80,90,100,200]
+cue_ambiguity = [0.8]                       
+context_trans_prob = [0.9]                
 degradation = [True]
 cue_switch = [False]
 reward_naive = [False]
-training_blocks = [4]
-degradation_blocks=[2,4,6]
-trials_per_block=[70]
+training_blocks = [2]
+degradation_blocks=[2]
+trials_per_block=[40]
 arrays = [cue_switch, degradation, reward_naive, context_trans_prob, cue_ambiguity,h,\
         training_blocks, degradation_blocks, trials_per_block]
 
-repetitions = 5
+repetitions = 1
 lst = []
 path = os.path.join(os.getcwd(),'temp')
 existing_files = os.listdir(path)
@@ -282,35 +282,35 @@ ca = [ns, na, npl, nc, nr, T, state_transition_matrix, planet_reward_probs,\
     planet_reward_probs_switched,repetitions]
 
 if True:
-    # for l in lst:
-    #     run_single_sim(l,ca[0],\
-    #                     ca[1],\
-    #                     ca[2],\
-    #                     ca[3],\
-    #                     ca[4],\
-    #                     ca[5],\
-    #                     ca[6],\
-    #                     ca[7],\
-    #                     ca[8],\
-    #                     ca[9])
+    for l in lst:
+        run_single_sim(l,ca[0],\
+                        ca[1],\
+                        ca[2],\
+                        ca[3],\
+                        ca[4],\
+                        ca[5],\
+                        ca[6],\
+                        ca[7],\
+                        ca[8],\
+                        ca[9])
 
-    # start =  time.perf_counter()
+    start =  time.perf_counter()
 
 
-    with Pool() as pool:
+    # with Pool() as pool:
 
-        for _ in tqdm.tqdm(pool.istarmap(run_single_sim, zip(lst,\
-                                                repeat(ca[0]),\
-                                                repeat(ca[1]),\
-                                                repeat(ca[2]),\
-                                                repeat(ca[3]),\
-                                                repeat(ca[4]),\
-                                                repeat(ca[5]),\
-                                                repeat(ca[6]),\
-                                                repeat(ca[7]),\
-                                                repeat(ca[8]),\
-                                                repeat(ca[9]))),
-                        total=len(lst)):
-            pass
+    #     for _ in tqdm.tqdm(pool.istarmap(run_single_sim, zip(lst,\
+    #                                             repeat(ca[0]),\
+    #                                             repeat(ca[1]),\
+    #                                             repeat(ca[2]),\
+    #                                             repeat(ca[3]),\
+    #                                             repeat(ca[4]),\
+    #                                             repeat(ca[5]),\
+    #                                             repeat(ca[6]),\
+    #                                             repeat(ca[7]),\
+    #                                             repeat(ca[8]),\
+    #                                             repeat(ca[9]))),
+    #                     total=len(lst)):
+    #         pass
 
 

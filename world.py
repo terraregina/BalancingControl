@@ -6,6 +6,8 @@ experiment.
 """
 import numpy as np
 from misc import ln
+import torch as ar
+ar.set_default_dtype(ar.float64)
 
 class World(object):
 
@@ -317,8 +319,6 @@ class World_old(object):
         else:
             self.actions[tau, t] = -1
 
-
-
 class FakeWorld(object):
 
     def __init__(self, agent, observations, rewards, actions, trials = 1, T = 10, log_prior=0):
@@ -331,18 +331,35 @@ class FakeWorld(object):
         self.free_parameters = {}
 
         #container for observations
-        self.observations = observations.copy()
+        self.observations = observations
 
         #container for agents actions
-        self.actions = actions.copy()
+        self.actions = actions
 
         #container for rewards
-        self.rewards = rewards.copy()
+        self.rewards = rewards
 
         self.log_prior = log_prior
 
-        self.like_actions = np.zeros((trials,T-1))
-        self.like_rewards = np.zeros((trials,T-1))
+        self.like_actions = ar.zeros((trials,T-1))
+        self.like_rewards = ar.zeros((trials,T-1))
+        self.log_policies = []
+        self.log_context = []
+        self.log_prior_pols = []
+        self.log_post_pols = []
+    def simulate_experiment(self, curr_trials=None):
+        """This methods evolves all the states of the world by iterating
+        through all the trials and time steps of each trial.
+        """
+        if curr_trials is not None:
+            trials = curr_trials
+        else:
+            trials = range(self.trials)
+        for tau in trials:
+            print('\n')
+            for t in range(self.T):
+                print(tau, t)
+                self.__update_model(tau, t)
 
     def __simulate_agent(self):
         """This methods evolves all the states of the world by iterating
@@ -366,8 +383,8 @@ class FakeWorld(object):
         determine the set of parameter values that are most likely to cause
         the meassured behavior.
         """
-        self.like_actions = np.zeros((self.trials,self.T-1))
-        self.like_rewards = np.zeros((self.trials,self.T-1))
+        self.like_actions = ar.zeros((self.trials,self.T-1))
+        self.like_rewards = ar.zeros((self.trials,self.T-1))
         self.agent.reset(params, fixed)
 
         self.__simulate_agent()
@@ -385,8 +402,8 @@ class FakeWorld(object):
 
         self.__simulate_agent()
 
-        p1 = np.tile(np.arange(self.trials), (self.T-1, 1)).T
-        p2 = np.tile(np.arange(self.T-1), (self.trials, 1))
+        p1 = ar.tile(ar.arange(self.trials), (self.T-1, 1)).T
+        p2 = ar.tile(ar.arange(self.T-1), (self.trials, 1))
         p3 = self.actions.astype(int)
         #self.agent.log_probability
         ll = self.agent.log_probability#ln(self.agent.posterior_actions[p1, p2, p3].prod())
@@ -398,6 +415,9 @@ class FakeWorld(object):
         """This private method updates the internal states of the behavioral
         model given the avalible set of observations and actions.
         """
+
+        context = self.context_obs[tau]
+        self.agent.planets = self.planets[tau]
         if t==0:
             response = None
         else:
@@ -405,12 +425,37 @@ class FakeWorld(object):
 
             self.like_actions[tau,t-1] = self.agent.posterior_actions[tau, t-1, response]
 
-
         observation = self.observations[tau, t]
 
         reward = self.rewards[tau, t]
 
-        self.agent.update_beliefs(tau, t, observation, reward, response)
+        self.agent.update_beliefs(tau, t, observation, reward, response, context)
+        if (t == self.T-1):
+            try:
+                n_digits = 3
+                # ppls = (self.agent.perception.posterior_actions[-1][:,0])
+                # ppls = self.agent.perception.posterior_policies[-1][:,:,0]]
+                ppls = self.agent.perception.posterior_contexts[-1][:,0]
+                rounded = (ppls * 10**n_digits).round() / (10**n_digits)
+                self.log_context.append(int(ar.argmax( self.agent.perception.posterior_contexts[-1][:,0])))
+                self.log_policies.append(ar.argmax(self.agent.perception.posterior_policies[-1][:,:,0],axis=0).tolist())
+                self.log_post_pols.append(self.agent.perception.posterior_policies[-4][:,:,0].tolist())
+                self.log_prior_pols.append(self.agent.perception.prior_policies[-1][:,:,0].tolist())
 
-        if t==1:
-            self.like_rewards[tau,t-1] = self.agent.posterior_rewards[tau, t-1, reward]
+                # print('context: ', self.log_context[-1])
+                # print('policy: ', self.log_policies[-1])
+
+            except:
+                # print(self.agent.posterior_actions[tau,t,:].round(4))
+                # print(self.agent.posterior_policies[tau,t].round(4))
+                # print('poop')
+                self.log_context.append(int(np.argmax(self.agent.posterior_context[tau,t,:])))
+                self.log_policies.append(np.argmax(self.agent.posterior_policies[tau,t,:],axis=0).tolist())
+                self.log_post_pols.append(self.agent.perception.posterior_policies[tau,0,:].tolist())
+                self.log_prior_pols.append(self.agent.perception.prior_policies[:,:,0].tolist())
+                # print('context: ', self.log_context[-1])
+                # print('policy: ', self.log_policies[-1])
+
+
+        # if t==1:
+        #     self.like_rewards[tau,t-1] = self.agent.posterior_rewards[tau, t-1, reward]

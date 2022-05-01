@@ -1,6 +1,6 @@
 
 from logging import raiseExceptions
-from re import S
+# from re import S
 import torch as ar
 array = ar.tensor
 import numpy as np
@@ -16,6 +16,7 @@ import pyro.distributions as dist
 import agent as agt
 import perception as prc
 import action_selection as asl
+import distributions as analytical_dists
 
 device = ar.device("cpu")
 
@@ -67,9 +68,6 @@ class SingleInference(object):
                         print(h)
             
                     curr_response = self.data["actions"][tau, t]
-                    # print('planets: ', self.agent.planets)
-                    # print('observation: ', observation)
-                    # print('inferred state:', self.agent.perception.posterior_states[-1][:,t,:,0,0])
                     # print(probs)
                     pyro.sample('res_{}_{}'.format(tau, t), dist.Categorical(probs.T), obs=curr_response)
                     
@@ -111,8 +109,9 @@ class SingleInference(object):
             pbar.set_description("Mean ELBO %6.2f" % ar.tensor(loss[-20:]).mean())
             alpha_h = pyro.param("alpha_h").data.numpy()
             beta_h = pyro.param("beta_h").data.numpy()
+            h =  (alpha_h+beta_h)/alpha_h
             print("alpha: ", alpha_h, " beta: ", beta_h)
-            print('h: ', (alpha_h+beta_h)/alpha_h)        
+            print('h: ', h)      
             # if ar.isnan(loss[-1]):
                 # break
 
@@ -121,3 +120,64 @@ class SingleInference(object):
         param_dict = {"alpha_h": alpha_h, "beta_h": beta_h, "h":h}
         
         return self.loss, param_dict
+
+
+    def analytical_posteriors(self):
+        
+        alpha_lamb_pi = pyro.param("alpha_lamb_pi").data.cpu().numpy()
+        beta_lamb_pi = pyro.param("beta_lamb_pi").data.cpu().numpy()
+        alpha_lamb_r = pyro.param("alpha_lamb_r").data.cpu().numpy()
+        beta_lamb_r = pyro.param("beta_lamb_r").data.cpu().numpy()
+        alpha_h = pyro.param("alpha_lamb_r").data.cpu().numpy()
+        beta_h = pyro.param("beta_lamb_r").data.cpu().numpy()
+        concentration_dec_temp = pyro.param("concentration_dec_temp").data.cpu().numpy()
+        rate_dec_temp = pyro.param("rate_dec_temp").data.cpu().numpy()
+        
+        param_dict = {"alpha_lamb_pi": alpha_lamb_pi, "beta_lamb_pi": beta_lamb_pi,
+                      "alpha_lamb_r": alpha_lamb_r, "beta_lamb_r": beta_lamb_r,
+                      "alpha_h": alpha_h, "beta_h": beta_h,
+                      "concentration_dec_temp": concentration_dec_temp, "rate_dec_temp": rate_dec_temp}
+        
+        x_lamb = np.arange(0.01,1.,0.01)
+        
+        y_lamb_pi = analytical_dists.Beta(x_lamb, alpha_lamb_pi, beta_lamb_pi)
+        y_lamb_r = analytical_dists.Beta(x_lamb, alpha_lamb_r, beta_lamb_r)
+        y_h = analytical_dists.Beta(x_lamb, alpha_h, beta_h)
+        
+        x_dec_temp = np.arange(0.01,10.,0.01)
+        
+        y_dec_temp = analytical_dists.Gamma(x_dec_temp, concentration=concentration_dec_temp, rate=rate_dec_temp)
+        
+        xs = [x_lamb, x_lamb, x_lamb, x_dec_temp]
+        ys = [y_lamb_pi, y_lamb_r, y_h, y_dec_temp]
+        
+        return xs, ys, param_dict
+    
+
+
+    def plot_posteriors(self):
+        
+        #df, param_dict = self.sample_posteriors()
+        
+        xs, ys, param_dict = self.analytical_posteriors()
+        
+        lamb_pi_name = "$\\lambda_{\\pi}$ as Beta($\\alpha$="+str(param_dict["alpha_lamb_pi"][0])+", $\\beta$="+str(param_dict["beta_lamb_pi"][0])+")"
+        lamb_r_name = "$\\lambda_{r}$ as Beta($\\alpha$="+str(param_dict["alpha_lamb_r"][0])+", $\\beta$="+str(param_dict["beta_lamb_r"][0])+")"
+        h_name = "h"
+        dec_temp_name = "$\\gamma$ as Gamma(conc="+str(param_dict["concentration_dec_temp"][0])+", rate="+str(param_dict["rate_dec_temp"][0])+")"
+        names = [lamb_pi_name, lamb_r_name, h_name, dec_temp_name]
+        xlabels = ["forgetting rate prior policies: $\\lambda_{\pi}$",
+                   "forgetting rate reward probabilities: $\\lambda_{r}$",
+                   "h",
+                   "decision temperature: $\\gamma$"]
+        #xlims = {"lamb_pi": [0,1], "lamb_r": [0,1], "dec_temp": [0,10]}
+        
+        for i in range(len(xs)):
+            plt.figure()
+            plt.title(names[i])
+            plt.plot(xs[i],ys[i])
+            plt.xlim([xs[i][0]-0.01,xs[i][-1]+0.01])
+            plt.xlabel(xlabels[i])
+            plt.show()
+            
+        print(param_dict)

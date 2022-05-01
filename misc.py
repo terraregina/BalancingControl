@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 arr_type = "numpy"
+
 if arr_type == "numpy":
     import numpy as ar
     array = ar.array
 else:
     import torch as ar
     array = ar.tensor
+    
 import scipy.special as scs
 import matplotlib.pylab as plt
 import seaborn as sns
@@ -39,9 +41,10 @@ def own_logical_or(x,y):
 
 
 def ln(x):
-    # TODO
+
     #with ar.errstate(divide='ignore'):
     return ar.log(x+1e-20)#ar.nan_to_num(ar.log(x))
+
 
 def logit(x):
     with ar.errstate(divide = 'ignore'):

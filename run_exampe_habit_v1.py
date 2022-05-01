@@ -404,9 +404,9 @@ def main(create_configs = False):
         os.mkdir(data_path)
 
     # needs to be run only the first time you use main
-    if create_configs:
-        from planet_sequences import generate_trials_df
-        create_config_files(training_blocks, degradation_blocks, trials_per_block)
+    # if create_configs:
+    #     from planet_sequences import generate_trials_df
+    #     create_config_files(training_blocks, degradation_blocks, trials_per_block)
 
     lst = []
     for i in product(*arrays):

@@ -440,16 +440,16 @@ def create_config_files_context_dependent_degradation(training_blocks, degradati
 #%%
 
 # create_config_files_planning([4],[2,4,6],[70])
-create_config_files([4], [2,4,6], [70])
+create_config_files([2], [2], [40])
 # create_config_files_context_dependent_degradation([4],[2,4,6],[70])
 
 # %%
 
-fname = 'config/' + 'config_degradation_1_switch_0_train4_degr2_n70.json' 
-file = os.path.join(os.getcwd(), fname)
-import pandas as pd
-file = open(file, 'r')
-data = js.load(file)
-df = pd.DataFrame(data)
-df.query('trial_type == 2').tail(30)
+# fname = 'config/' + 'config_degradation_1_switch_0_train4_degr2_n70.json' 
+# file = os.path.join(os.getcwd(), fname)
+# import pandas as pd
+# file = open(file, 'r')
+# data = js.load(file)
+# df = pd.DataFrame(data)
+# df.query('trial_type == 2').tail(30)
 

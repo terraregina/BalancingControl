@@ -789,7 +789,7 @@ class AveragedSelector(object):
         for a in range(self.na):
             control_prob[a] = posterior_policies[actions == a].sum()
 
-
+        control_prob = control_prob/control_prob.sum()
         self.control_probability[tau, t] = control_prob
 
 

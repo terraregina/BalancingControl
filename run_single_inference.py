@@ -15,7 +15,7 @@ import agent as agt
 import perception as prc
 import action_selection as asl
 import inference_two_seqs as inf
-
+import action_selection as asl
 import numpy as np
 import itertools
 import matplotlib.pylab as plt
@@ -31,6 +31,10 @@ import os
 import scipy as sc
 import scipy.signal as ss
 import gc
+from environment import PlanetWorld
+from world import World
+import jsonpickle as pickle
+import jsonpickle.ext.numpy as jsonpickle_numpy
 
 #ar.autograd.set_detect_anomaly(True)
 ###################################
@@ -38,15 +42,14 @@ import gc
 
 switch = 0
 degr = 1
-p = 0.6
+p = 0.8
 learn_rew  = 0
-q = 0.25
-h=100
-db = 4
-tb = 4
-eb = 1
-tpb = 70
-n_part = 3
+q = 0.9
+h=200
+db = 2
+tb = 2
+tpb = 40
+n_part = 10 
 folder = "temp"
 
 run_name = "switch"+str(switch) +"_degr"+str(degr) +"_p"+str(p)+ "_learn_rew"+str(learn_rew)+\
@@ -68,6 +71,7 @@ data["rewards"] = ar.tensor(world.rewards)
 data["observations"] = ar.tensor(world.observations)
 data["context_obs"] = ar.tensor(world.environment.context_cues)
 data["planets"] = ar.tensor(world.environment.planet_conf)
+data['environment'] = world.environment
 # print(data['planets'][:10,:])
 ###################################
 """experiment parameters"""
@@ -194,6 +198,10 @@ set up agent
 
 pol_par = alphas
 
+
+environment = data['environment']
+environment.hidden_states[:] = 0
+
 # perception
 bayes_prc = prc.FittingPerception(
     A, 
@@ -210,8 +218,10 @@ bayes_prc = prc.FittingPerception(
     T=T, 
     trials=trials,npart=n_part)
 
+ac_sel = asl.AveragedSelector(trials = trials, T = T,
+                                      number_of_actions = na)
 
-agent = agt.FittingAgent(bayes_prc, [], pol,
+agent = agt.FittingAgent(bayes_prc, ac_sel, pol,
                   trials = trials, T = T,
                   prior_states = state_prior,
                   prior_policies = prior_pi,
@@ -224,9 +234,21 @@ agent = agt.FittingAgent(bayes_prc, [], pol,
                   number_of_rewards = nr, npart=n_part)
 
 
+
 ###################################
 """run inference"""
 
 inferrer = inf.SingleInference(agent, data)
 
-loss = inferrer.infer_posterior(iter_steps=100, num_particles=n_part)
+loss = inferrer.infer_posterior(iter_steps=10000, num_particles=n_part)
+
+
+
+plt.figure()
+plt.title("ELBO")
+plt.plot(loss)
+plt.ylabel("ELBO")
+plt.xlabel("iteration")
+plt.show()
+
+inferrer.plot_posteriors()

@@ -222,19 +222,20 @@ state_transition_matrix = np.repeat(state_transition_matrix[:,:,:,np.newaxis], r
 
 np.random.seed(5)
 
-h =  [1,100]#2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,100,200]
+h =  [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,100,200]
 cue_ambiguity = [0.6, 0.7, 0.8]                       
-context_trans_prob = [1/nc]                
+context_trans_prob = [0.7, 0.8, 0.9]
 degradation = [True]
 cue_switch = [False]
-reward_naive = [True, False]
+reward_naive = [False]
 training_blocks = [4]
 degradation_blocks=[4,6]
 trials_per_block=[70]
 arrays = [cue_switch, degradation, reward_naive, context_trans_prob, cue_ambiguity,h,\
         training_blocks, degradation_blocks, trials_per_block]
 
-repetitions = 1
+repetitions = 5
+
 
 lst = []
 path = os.path.join(os.getcwd(),'temp')

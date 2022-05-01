@@ -7,9 +7,9 @@ import numpy as np
 from perception import HierarchicalPerception
 from misc import ln, softmax
 import scipy.special as scs
-import numpy as ar
+import torch as ar
 
-
+ar.set_default_dtype(ar.float64)
 try:
     from inference_two_seqs import device
 except:
@@ -118,11 +118,11 @@ class FittingAgent(object):
         if t == 0:
             self.initiate_planet_rewards()
             self.perception.planets = self.planets
-            # print(self.perception.curr_gen_mod_rewards[-1][:,:,0,0])
-                        
-        #print(observation)
+
+
         self.observations[tau,t] = observation
         self.rewards[tau,t] = reward
+
         if context is not None:
             self.context_obs[tau] = context
 
@@ -130,7 +130,6 @@ class FittingAgent(object):
             self.prev_pols = ar.arange(0,self.npi,1, dtype=ar.long).to(device) + 1
             self.possible_policies = ar.arange(0,self.npi,1, dtype=ar.long).to(device)
         else:
-            #TODO!
             mask = self.policies[:,t-1]==response
             self.prev_pols = self.prev_pols*mask
             self.possible_policies = ar.where(self.prev_pols != 0)[0].to(device)
@@ -147,8 +146,10 @@ class FittingAgent(object):
 
         #update beliefs about policies
         self.perception.update_beliefs_policies(tau, t) #self.posterior_policies[tau, t], self.likelihood[tau,t]
+
         if tau == 0:
             prior_context = self.prior_context[:,None].repeat(1,self.npart)
+
         else: #elif t == 0:
             prior_context = ar.einsum('ncp,cp-> np',self.perception.transition_matrix_context[:,:,None],self.perception.posterior_contexts[-1])
 
@@ -177,36 +178,36 @@ class FittingAgent(object):
         if self.learn_rew:# and t>0:#==self.T-1:
             self.perception.update_beliefs_dirichlet_rew_params(tau, t,\
                                                             self.planets, reward)
+        # if self.npart > 1:
+        #     if t == 3 and c_obs == 1:
+                # if context == 0:
 
-        if t == 3:
-            # if context == 0:
+                # print('\n', tau,t)
+                # print(self.planets)
 
-            # print('\n', tau,t)
-            # print(self.planets)
+                # ass = []
+                # for p in range(self.npart):
+                #     a = ar.stack([self.perception.posterior_actions[-t][:,p] for t in range(self.T-1,0,-1)],dim=1)
+                #     ass.append(ar.where((self.policies == ar.argmax(a,dim=0)).all(dim=1))[0])
+                # ass = ar.tensor(ass)
 
-            ass = []
-            for p in range(self.npart):
-                a = ar.stack([self.perception.posterior_actions[-t][:,p] for t in range(self.T-1,0,-1)],dim=1)
-                ass.append(ar.where((self.policies == ar.argmax(a,dim=0)).all(dim=1))[0])
-            ass = ar.tensor(ass)
+                # if(ass.unique().shape[0] != 1):
+                #     print('different')
+                #     print(ass)
+                #     raiseExceptions('different!!!')
 
-            # if(ass.unique().shape[0] != 1):
-            #     print('different')
-            #     print(ass)
-            #     raiseExceptions('different!!!')
-
-            # print('context obs:',  int(context))
-            # print('chosen policy: ', ass)
-            # print('chosen policy by run: ', int(self.possible_policies[0]))
-            # print('inferred_context', int(ar.argmax(self.perception.posterior_contexts[-1][:,0])),'\n')
+                # print('context obs:',  int(c_obs))
+                # print('chosen policy: ', ass)
+                # print('chosen policy by run: ', int(self.possible_policies[0]))
+                # print('inferred_context', int(ar.argmax(self.perception.posterior_contexts[-1][:,0])),'\n')
 
     def generate_response(self, tau, t):
 
         #get response probability
         posterior_states = self.perception.posterior_states[-1]
         posterior_policies = self.perception.posterior_policies[-1]
-        posterior_context = self.perception.posterior_context[-1]
-        posterior_policies = ar.einsum('pc,c->p', posterior_policies, posterior_context)
+        posterior_context = self.perception.posterior_contexts[-1]
+        posterior_policies = ar.einsum('pcn,cn->pn', posterior_policies, posterior_context)
         posterior_policies /= posterior_policies.sum()
         # avg_likelihood = self.likelihood[tau,t]#ar.einsum('pc,c->p', self.likelihood[tau,t], self.posterior_context[tau, 0])
         # avg_likelihood /= avg_likelihood.sum()
@@ -388,20 +389,8 @@ class BayesianPlanner(object):
                                          self.policies,
                                          self.possible_polcies)
 
-        #!#print("start", self.world.environment.starting_position[tau],"\n")
-        #!#print("posterior over states for two contexts")
-        #!#print(self.posterior_states[tau,t,:,t,:,0].T)
-        #!#print("\n")
-        #!#print(self.posterior_states[tau,t,:,t,:,1].T)
-        #update beliefs about policies
         self.posterior_policies[tau, t], self.likelihood[tau,t] = self.perception.update_beliefs_policies(tau, t)
         
-
-        #!#print("\nself.posterior_policies[tau, t]\n", self.posterior_policies[tau, t])
-        #!#print("planet conf", self.world.environment.planet_conf[tau])
-        #!#print("c1: ", self.policies[np.argmax(self.posterior_policies[tau, t][:,0])])
-        #!#print("c2: ", self.policies[np.argmax(self.posterior_policies[tau, t][:,1])])
-
         if tau == 0:
             prior_context = self.prior_context
         else: #elif t == 0:
