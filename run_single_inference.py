@@ -239,7 +239,7 @@ agent = agt.FittingAgent(bayes_prc, ac_sel, pol,
 """run inference"""
 
 inferrer = inf.SingleInference(agent, data)
-iss = 3
+iss = 150
 loss = inferrer.infer_posterior(iter_steps=iss, num_particles=n_part)
 
 
