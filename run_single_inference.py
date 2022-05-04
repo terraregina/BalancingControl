@@ -49,7 +49,7 @@ h=100
 db = 4
 tb = 4
 tpb = 70
-n_part = 20 
+n_part = 1
 folder = "temp"
 
 run_name = "switch"+str(switch) +"_degr"+str(degr) +"_p"+str(p)+ "_learn_rew"+str(learn_rew)+\
@@ -239,16 +239,16 @@ agent = agt.FittingAgent(bayes_prc, ac_sel, pol,
 """run inference"""
 
 inferrer = inf.SingleInference(agent, data)
-
-loss = inferrer.infer_posterior(iter_steps=150, num_particles=n_part)
+iss = 3
+loss = inferrer.infer_posterior(iter_steps=iss, num_particles=n_part)
 
 
 
 plt.figure()
 plt.title("ELBO")
-plt.plot(loss)
+plt.plot(np.arange(iss), loss[0])
 plt.ylabel("ELBO")
 plt.xlabel("iteration")
 plt.show()
 
-inferrer.plot_posteriors()
+# inferrer.plot_posteriors()

@@ -161,15 +161,12 @@ class SingleInference(object):
         
         xs, ys, param_dict = self.analytical_posteriors()
         
-        lamb_pi_name = "$\\lambda_{\\pi}$ as Beta($\\alpha$="+str(param_dict["alpha_lamb_pi"][0])+", $\\beta$="+str(param_dict["beta_lamb_pi"][0])+")"
-        lamb_r_name = "$\\lambda_{r}$ as Beta($\\alpha$="+str(param_dict["alpha_lamb_r"][0])+", $\\beta$="+str(param_dict["beta_lamb_r"][0])+")"
+        # lamb_pi_name = "$\\lambda_{\\pi}$ as Beta($\\alpha$="+str(param_dict["alpha_lamb_pi"][0])+", $\\beta$="+str(param_dict["beta_lamb_pi"][0])+")"
+        # lamb_r_name = "$\\lambda_{r}$ as Beta($\\alpha$="+str(param_dict["alpha_lamb_r"][0])+", $\\beta$="+str(param_dict["beta_lamb_r"][0])+")"
         h_name = "h"
-        dec_temp_name = "$\\gamma$ as Gamma(conc="+str(param_dict["concentration_dec_temp"][0])+", rate="+str(param_dict["rate_dec_temp"][0])+")"
-        names = [lamb_pi_name, lamb_r_name, h_name, dec_temp_name]
-        xlabels = ["forgetting rate prior policies: $\\lambda_{\pi}$",
-                   "forgetting rate reward probabilities: $\\lambda_{r}$",
-                   "h",
-                   "decision temperature: $\\gamma$"]
+        # dec_temp_name = "$\\gamma$ as Gamma(conc="+str(param_dict["concentration_dec_temp"][0])+", rate="+str(param_dict["rate_dec_temp"][0])+")"
+        names = [h_name]
+        xlabels = ["h",]
         #xlims = {"lamb_pi": [0,1], "lamb_r": [0,1], "dec_temp": [0,10]}
         
         for i in range(len(xs)):

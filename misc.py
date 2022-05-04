@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-arr_type = "numpy"
+arr_type = "torch"
 
 if arr_type == "numpy":
     import numpy as ar
