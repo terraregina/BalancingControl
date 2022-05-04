@@ -179,13 +179,13 @@ def run_single_sim(lst,
     worlds.append(meta)
 
    
-    fname = os.path.join(os.path.join(os.getcwd(),'temp'), fname)
-    jsonpickle_numpy.register_handlers()
-    pickled = pickle.encode(worlds)
-    with open(fname, 'w') as outfile:
-        json.dump(pickled, outfile)
+    # fname = os.path.join(os.path.join(os.getcwd(),'temp'), fname)
+    # jsonpickle_numpy.register_handlers()
+    # pickled = pickle.encode(worlds)
+    # with open(fname, 'w') as outfile:
+    #     json.dump(pickled, outfile)
 
-    return fname
+    # return fname
 
 
 
@@ -225,6 +225,7 @@ np.random.seed(5)
 
 
 h =  [1, 2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,30,40,50,60,70,80,90,100,200]
+h = [100]
 cue_ambiguity = [0.8]                       
 context_trans_prob = [0.9]                
 degradation = [True]
@@ -269,13 +270,13 @@ for li, l in enumerate(lst):
     names.append([li, fname])
 
 
-missing_files = []
-for name in names:
-    if not name[1] in existing_files:
-        print(name)
-        missing_files.append(name[0])
+# missing_files = []
+# for name in names:
+#     if not name[1] in existing_files:
+#         print(name)
+#         missing_files.append(name[0])
     
-lst = [lst[i] for i in missing_files]
+# lst = [lst[i] for i in missing_files]
 print('simulations to run: ' + str(len(lst)))
 
 ca = [ns, na, npl, nc, nr, T, state_transition_matrix, planet_reward_probs,\
@@ -297,20 +298,20 @@ if True:
     start =  time.perf_counter()
 
 
-    # with Pool() as pool:
+# with Pool() as pool:
 
-    #     for _ in tqdm.tqdm(pool.istarmap(run_single_sim, zip(lst,\
-    #                                             repeat(ca[0]),\
-    #                                             repeat(ca[1]),\
-    #                                             repeat(ca[2]),\
-    #                                             repeat(ca[3]),\
-    #                                             repeat(ca[4]),\
-    #                                             repeat(ca[5]),\
-    #                                             repeat(ca[6]),\
-    #                                             repeat(ca[7]),\
-    #                                             repeat(ca[8]),\
-    #                                             repeat(ca[9]))),
-    #                     total=len(lst)):
-    #         pass
+#     for _ in tqdm.tqdm(pool.istarmap(run_single_sim, zip(lst,\
+#                                             repeat(ca[0]),\
+#                                             repeat(ca[1]),\
+#                                             repeat(ca[2]),\
+#                                             repeat(ca[3]),\
+#                                             repeat(ca[4]),\
+#                                             repeat(ca[5]),\
+#                                             repeat(ca[6]),\
+#                                             repeat(ca[7]),\
+#                                             repeat(ca[8]),\
+#                                             repeat(ca[9]))),
+#                     total=len(lst)):
+#         pass
 
 

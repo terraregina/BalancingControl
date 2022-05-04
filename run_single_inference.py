@@ -45,18 +45,18 @@ degr = 1
 p = 0.8
 learn_rew  = 0
 q = 0.9
-h=200
-db = 2
-tb = 2
-tpb = 40
-n_part = 10 
+h=100
+db = 4
+tb = 4
+tpb = 70
+n_part = 20 
 folder = "temp"
 
 run_name = "switch"+str(switch) +"_degr"+str(degr) +"_p"+str(p)+ "_learn_rew"+str(learn_rew)+\
            "_q"+str(q) + "_h"+str(h)  + "_" + str(tpb) +  "_" + str(tb) + str(db) + "_extinguish.json"
 fname = os.path.join(folder, run_name)
 jsonpickle_numpy.register_handlers()
-    
+print(run_name)  
 with open(fname, 'r') as infile:
     loaded = json.load(infile)
 
@@ -240,7 +240,7 @@ agent = agt.FittingAgent(bayes_prc, ac_sel, pol,
 
 inferrer = inf.SingleInference(agent, data)
 
-loss = inferrer.infer_posterior(iter_steps=10000, num_particles=n_part)
+loss = inferrer.infer_posterior(iter_steps=150, num_particles=n_part)
 
 
 

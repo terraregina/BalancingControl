@@ -118,41 +118,8 @@ class FittingPerception(object):
         self.curr_gen_mod_rewards = []
 
         
-    # def instantiate_messages(self):
-        
-    #     self.bwd_messages_init = ar.zeros((self.nh, self.T, self.npi))
-    #     self.bwd_messages_init[:,-1,:] = 1./self.nh
-    #     self.fwd_messages_init = ar.zeros((self.nh, self.T, self.npi))
-    #     self.fwd_messages_init[:,0,:] = self.prior_states[:,None]
-    #     self.fwd_norms_init = ar.zeros((self.T+1, self.npi))
-    #     self.fwd_norms_init[0,:] = 1.
-        
-    #     self.obs_messages_init = ar.zeros((self.nh, self.T)) + 1/self.nh
-
-    #     self.rew_messages_init = ar.zeros((self.nh, self.T))
-    #     self.rew_messages_init[:] = self.prior_rewards.matmul(self.generative_model_rewards_init)[:,None]
-        
-    #     for pi, cstates in enumerate(self.policies):
-    #         for t, u in enumerate(ar.flip(cstates, [0])):
-    #             tp = self.T - 2 - t
-    #             self.bwd_messages_init[:,tp,pi] = (self.bwd_messages_init[:,tp+1,pi]*\
-    #                                         self.obs_messages_init[:,tp+1]*\
-    #                                         self.rew_messages_init[:,tp+1])
-    #             bwd_message = (self.bwd_messages_init[:,tp,pi]\
-    #                 .matmul(self.generative_model_states[:,:,u]))
-    #             bwd_message /= bwd_message.sum()
-    #             self.bwd_messages_init[:,tp,pi] = bwd_message
-        
-    #     self.bwd_messages = [self.bwd_messages_init]
-    #     self.fwd_messages = [self.fwd_messages_init]
-    #     self.fwd_norms = [self.fwd_norms_init]
-    #     self.obs_messages = [self.obs_messages_init]
-    #     self.rew_messages = [self.rew_messages_init]
-        
-        
     def make_current_messages(self, tau, t):
-        
-        generative_model_rewards = self.generative_model_rewards[-1].to(device)
+    
         generative_model_rewards = self.curr_gen_mod_rewards[-1]
 
         
@@ -164,10 +131,25 @@ class FittingPerception(object):
         obs_messages = ar.stack(obs,dim=-1).to(device)
 
 
+        # rew_messages = ar.stack(\
+        #     [ar.stack([generative_model_rewards[self.reward_ind[int(r)],:,:,i].to(device) for r in self.rewards[-t-1:]] \
+        #     + [ar.matmul(
+        #         ar.moveaxis(generative_model_rewards[:,:,:,i],(0,1,2),(2,0,1)).to(device), self.prior_rewards
+        #         ).to(device)]*(self.T-t-1),dim=-2).to(device)\
+        #       for i in range(self.npart)], dim=-1).to(device)
+
+
+        # rew_messages = ar.stack(\
+        #     [ar.stack([self.curr_gen_mod_rewards[ti][self.reward_ind[int(self.rewards[ti])],:,:,i].to(device) for ti in range(-t-1,0,1)] \
+        #     + [ar.matmul(
+        #         ar.moveaxis(generative_model_rewards[:,:,:,i],(0,1,2),(2,0,1)).to(device), self.prior_rewards
+        #         ).to(device)]*(self.T-t-1),dim=-2).to(device)\
+        #       for i in range(self.npart)], dim=-1).to(device)
+
         rew_messages = ar.stack(\
-            [ar.stack([generative_model_rewards[self.reward_ind[int(r)],:,:,i].to(device) for r in self.rewards[-t-1:]] \
+            [ar.stack([self.curr_gen_mod_rewards[ti][self.reward_ind[int(self.rewards[ti])],:,:,i].to(device) for ti in range(-t-1,0,1)] \
             + [ar.matmul(
-                ar.moveaxis(generative_model_rewards[:,:,:,i],(0,1,2),(2,0,1)).to(device), self.prior_rewards
+                ar.moveaxis(self.curr_gen_mod_rewards[-t-1][:,:,:,i],(0,1,2),(2,0,1)).to(device), self.prior_rewards
                 ).to(device)]*(self.T-t-1),dim=-2).to(device)\
               for i in range(self.npart)], dim=-1).to(device)
 
@@ -201,24 +183,16 @@ class FittingPerception(object):
         self.make_current_messages(tau,t)
         
         obs_messages = self.obs_messages[-1]
-        rew_messages = self.rew_messages[-1]
-                
+        rew_messages = self.rew_messages[-1]    
         for i in range(self.T-2,-1,-1):
             tmp = ar.einsum('hpcn,shpc,hcn,hcn->spcn',bwd[-1],self.big_trans_matrix[...,i],obs_messages[:,i+1,:],rew_messages[:,i+1,:]).to(device)
             # tmp = ar.einsum('hpn,shp,hn,hn->spn',bwd[-1],self.big_trans_matrix[...,i],obs_messages[:,i+1],rew_messages[:,i+1]).to(device)
 
             bwd.append(tmp)
-            #bwd_messages[:,i,:] = ar.einsum('hp,shp,h,h->sp',bwd_messages[:,i+1,:],self.big_trans_matrix[...,i],obs_messages[:,i+1],rew_messages[:,i+1])
-            # bwd_messages[:,-2-i,pi] = bwd_messages[:,-1-i,pi]*\
-            #                             obs_messages[:,t-i]*\
-            #                             rew_messages[:, t-i]
-            # bwd_messages[:,-2-i,pi] = bwd_messages[:,-2-i,pi]\
-            #      .matmul(self.generative_model_states[:,:,u])
-            #bwd_messages[:,i,:] = test[-1]
-            norm = bwd[-1].sum(axis=0)
-            mask = norm > 0
-            bwd[-1][:,mask] /= norm[None,mask]
-
+            norm = bwd[-1].sum(axis=0) + 1e-20
+            # mask = norm > 0
+            # bwd[-1][:,mask] /= norm[None,mask]
+            bwd[-1] /= norm[None,:]
             
         bwd.reverse()
         bwd_messages = ar.stack(bwd).permute(1,0,2,3,4).to(device)
@@ -228,13 +202,17 @@ class FittingPerception(object):
             tmp = ar.einsum('spcn,shpc,scn,scn->hpcn',fwd[-1],self.big_trans_matrix[...,i],obs_messages[:,i,:],rew_messages[:,i,:]).to(device)
             fwd.append(tmp)
 
-            norm = fwd[-1].sum(axis=0)
-            mask = norm > 0
-            fwd[-1][:,mask] /= norm[None,mask]
-            fwd_norm.append((ar.zeros((self.npi,self.nc, self.npart)) + 1e-10).to(device))
-            fwd_norm[-1][possible_policies] = norm[possible_policies]
+            # norm = fwd[-1].sum(axis=0)
+            # mask = norm > 0
+            # fwd[-1][:,mask] /= norm[None,mask]
+            # fwd_norm.append((ar.zeros((self.npi,self.nc, self.npart)) + 1e-10).to(device))
+            # fwd_norm[-1][possible_policies] = norm[possible_policies]
 
-            
+            norm = fwd[-1].sum(axis=0) + 1e-20
+            fwd[-1] /= norm[None,:] 
+            fwd_norm.append(norm.to(device))
+
+
         fwd_messages = ar.stack(fwd).permute(1,0,2,3,4).to(device)
                 
         posterior = fwd_messages*bwd_messages*obs_messages[:,:,None,:,:]*rew_messages[:,:,None,:,:]
@@ -280,7 +258,6 @@ class FittingPerception(object):
                                 prior_context,\
                                 context=None):
 
-
         # post_policies = (prior_context[np.newaxis,:] * posterior_policies).sum(axis=1)
         post_policies = ar.einsum('pcn, cn -> pn', self.posterior_policies[-1], prior_context).to(device)
 
@@ -312,16 +289,21 @@ class FittingPerception(object):
                 outcome_surprise = 0
                 entropy = 0
                 policy_surprise = 0
-                
+    
             if context is not None:
                 context_obs_suprise = ar.stack([ln(self.generative_model_context[context]+1e-10) for n in range(self.npart)],dim=-1).to(device)
             else:
                 context_obs_suprise = 0
             posterior = outcome_surprise + policy_surprise + entropy + context_obs_suprise
+            # print(outcome_surprise)
+            # print(policy_surprise)
+            # print(entropy)
+            # print(context_obs_suprise)
 
 
+            posterior = ar.nan_to_num(softmax(posterior+ln(prior_context)))
 
-            posterior = ar.nan_to_num(softmax(posterior+ar.log(prior_context)))
+
             self.posterior_contexts.append(posterior)
 
         if t<self.T-1:
@@ -389,39 +371,6 @@ class FittingPerception(object):
         self.dirichlet_rew_params.append(dirichlet_rew_params.to(device))
         self.generative_model_rewards.append(generative_model_rewards.to(device))
 
-        # p_arr = []
-        # for p in range(self.npart):
-        #     c_arr = []
-        #     for c in range(self.nc):
-        #         st_arr = []
-        #         for state in range(self.npl):
-        #             # self.generative_model_rewards[:,state,c] =\
-        #             st_arr.append(\
-        #             ar.exp(ar.digamma(dirichlet_rew_params[:,state,c,p])\
-        #                     -ar.digamma(dirichlet_rew_params[:,state,c,p].sum()))\
-        #             )
-        #             st_arr[-1] /= st_arr[-1].sum()
-        #         c_arr.append(ar.stack(st_arr,dim=1))
-        #         st_arr = []
-        #     p_arr.append(ar.stack(c_arr, dim=-1))
-        #     c_arr = []
-
-        # gen_mod_rew = ar.stack(p_arr,dim=-1)
-        # self.generative_model_rewards.append(gen_mod_rew)
-        # print(gen_mod_rew[:,:,0,0])
-
-        #             # self.generative_model_rewards[:,state,c] /= self.generative_model_rewards[:,state,c].sum()
-        # import numpy as ar
-        # gmr = ar.zeros(self.generative_model_rewards[0].shape[:-1])
-        # for c in range(self.nc):
-        #     for state in range(self.npl):
-        #         gmr[:,state,c] =\
-        #         ar.exp(scs.digamma(dirichlet_rew_params[:,state,c,0])\
-        #                 -scs.digamma(dirichlet_rew_params[:,state,c,0].sum()))
-        #         gmr[:,state,c] /= gmr[:,state,c].sum()
-        # print(gmr[:,:,0])
-            
-        #return dirichlet_rew_params
 
 class HierarchicalPerception(object):
     
@@ -594,7 +543,7 @@ class HierarchicalPerception(object):
                     self.update_messages(t, pi, cs, c)
                 else:
                     self.fwd_messages[:,:,pi,c] = 0#1./self.nh
-
+                    self.fwd_norms[t+1:,pi,c] = 0
         #estimate posterior state distribution
         posterior = self.fwd_messages*self.bwd_messages*self.obs_messages[:,:,np.newaxis,:]*self.rew_messages[:,:,np.newaxis,:]
         norm = posterior.sum(axis = 0)
@@ -618,12 +567,7 @@ class HierarchicalPerception(object):
 
         return posterior, likelihood
 
-    '''
-    As most of the posteriors described here are interdependent on each other, one has to iterate over their updates
-    until convergence. Practically, we only used one iteration step: We used the priors over θ, φ and c_t to calculate
-    the posterior over policies. Then we calculated the posteriors over theta and phi, which were then used to calculate
-    the posterior over contexts.
-    '''
+
     def update_beliefs_context(self, tau, t, reward,\
                                posterior_states,\
                                 posterior_policies,\
@@ -699,6 +643,9 @@ class HierarchicalPerception(object):
 
             posterior = np.nan_to_num(softmax(posterior+ln(prior_context)))
 
+
+            print('\n',tau,t)
+            print(posterior)
             return [posterior, outcome_surprise, entropy, context_obs_suprise]
 
     def update_beliefs_dirichlet_pol_params(self, tau, t, posterior_policies, posterior_context = [1]):

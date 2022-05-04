@@ -115,8 +115,8 @@ class FittingAgent(object):
 
     def update_beliefs(self, tau, t, observation, reward, response, context=None):
 
+        self.initiate_planet_rewards()
         if t == 0:
-            self.initiate_planet_rewards()
             self.perception.planets = self.planets
 
 
@@ -151,7 +151,7 @@ class FittingAgent(object):
             prior_context = self.prior_context[:,None].repeat(1,self.npart)
 
         else: #elif t == 0:
-            prior_context = ar.einsum('ncp,cp-> np',self.perception.transition_matrix_context[:,:,None],self.perception.posterior_contexts[-1])
+            prior_context = ar.einsum('ncp,cp-> np',self.perception.transition_matrix_context[:,:,None],self.perception.posterior_contexts[-t-1])
 
 
         if self.nc>1 and t>=0:
@@ -175,7 +175,7 @@ class FittingAgent(object):
 
         #if reward > 0:
         # check later if stuff still works!
-        if self.learn_rew:# and t>0:#==self.T-1:
+        if self.learn_rew and t>0: #==self.T-1:
             self.perception.update_beliefs_dirichlet_rew_params(tau, t,\
                                                             self.planets, reward)
         # if self.npart > 1:

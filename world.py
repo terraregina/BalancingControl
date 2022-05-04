@@ -8,7 +8,7 @@ import numpy as np
 from misc import ln
 import torch as ar
 ar.set_default_dtype(ar.float64)
-
+ar.set_printoptions(precision=8, threshold=100)
 class World(object):
 
     def __init__(self, environment, agent, trials = 1, T = 10):
@@ -347,6 +347,7 @@ class FakeWorld(object):
         self.log_context = []
         self.log_prior_pols = []
         self.log_post_pols = []
+
     def simulate_experiment(self, curr_trials=None):
         """This methods evolves all the states of the world by iterating
         through all the trials and time steps of each trial.
@@ -356,9 +357,9 @@ class FakeWorld(object):
         else:
             trials = range(self.trials)
         for tau in trials:
-            print('\n')
+            # print('\n')
             for t in range(self.T):
-                print(tau, t)
+                # print(tau, t)
                 self.__update_model(tau, t)
 
     def __simulate_agent(self):
@@ -367,6 +368,7 @@ class FakeWorld(object):
         """
 
         for tau in range(self.trials):
+
             for t in range(self.T):
                 self.__update_model(tau, t)
 
@@ -415,7 +417,8 @@ class FakeWorld(object):
         """This private method updates the internal states of the behavioral
         model given the avalible set of observations and actions.
         """
-
+        if (tau == 0 and t == 0):
+            print(self.actions[:10,:])
         context = self.context_obs[tau]
         self.agent.planets = self.planets[tau]
         if t==0:
@@ -431,12 +434,16 @@ class FakeWorld(object):
 
         self.agent.update_beliefs(tau, t, observation, reward, response, context)
         if (t == self.T-1):
+            print('\n',tau,t)
+
             try:
                 n_digits = 3
                 # ppls = (self.agent.perception.posterior_actions[-1][:,0])
-                # ppls = self.agent.perception.posterior_policies[-1][:,:,0]]
-                ppls = self.agent.perception.posterior_contexts[-1][:,0]
+                ppls = self.agent.perception.posterior_policies[-4][:,:,0]
+                # ppls = self.agent.perception.posterior_contexts[-1][:,0]
                 rounded = (ppls * 10**n_digits).round() / (10**n_digits)
+                print(ppls)
+
                 self.log_context.append(int(ar.argmax( self.agent.perception.posterior_contexts[-1][:,0])))
                 self.log_policies.append(ar.argmax(self.agent.perception.posterior_policies[-1][:,:,0],axis=0).tolist())
                 self.log_post_pols.append(self.agent.perception.posterior_policies[-4][:,:,0].tolist())
@@ -448,11 +455,14 @@ class FakeWorld(object):
             except:
                 # print(self.agent.posterior_actions[tau,t,:].round(4))
                 # print(self.agent.posterior_policies[tau,t].round(4))
-                # print('poop')
+
+
                 self.log_context.append(int(np.argmax(self.agent.posterior_context[tau,t,:])))
                 self.log_policies.append(np.argmax(self.agent.posterior_policies[tau,t,:],axis=0).tolist())
-                self.log_post_pols.append(self.agent.perception.posterior_policies[tau,0,:].tolist())
-                self.log_prior_pols.append(self.agent.perception.prior_policies[:,:,0].tolist())
+                self.log_post_pols.append(self.agent.posterior_policies[tau,0,:].tolist())
+                self.log_prior_pols.append(self.agent.prior_policies[:,:,0].tolist())
+
+                print(self.agent.posterior_context[tau,t,:])
                 # print('context: ', self.log_context[-1])
                 # print('policy: ', self.log_policies[-1])
 

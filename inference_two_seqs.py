@@ -43,7 +43,7 @@ class SingleInference(object):
         self.agent.reset(param_dict)
         #self.agent.set_parameters(pol_lambda=lamb_pi, r_lambda=lamb_r, dec_temp=dec_temp)
         
-        for tau in range(self.trials):
+        for tau in range(250):
             for t in range(self.T):
                 
                 if t==0:
