@@ -27,11 +27,11 @@ from multiprocessing import Pool
 
 import perception as prc
 import agent as agt
-from environment import PlanetWorld
+from environment import PlanetWorld, FittingPlanetWorld
 from agent import BayesianPlanner
-from world import World
+from world import World, FittingWorld
 
-
+import torch as ar
 #%%
 
 ####### #     # #     #  #####  ####### ### ####### #     #       ######  ####### #######  #####  
@@ -45,7 +45,7 @@ from world import World
 
 
 
-def run_agent(par_list, trials, T, ns=6, na=2, nr=3, nc=2, npl=2, trial_type=None):
+def run_agent(par_list, trials, T, ns=6, na=2, nr=3, nc=2, npl=2, trial_type=None, use_fitting=False):
 
     # learn_pol          = initial concentration parameters for POLICY PRIOR
     # context_trans_prob = probability of staing in a given context, int
@@ -56,7 +56,8 @@ def run_agent(par_list, trials, T, ns=6, na=2, nr=3, nc=2, npl=2, trial_type=Non
     # npl                = number of unique planets accounted for in the reward contingency representation  
     # C_beta           = phi or estimate of p(reward|planet,context) 
     
-    learn_pol, context_trans_prob, cue_ambiguity, avg, Rho, utility, B, planets, starts, colors, rc, learn_rew = par_list
+    learn_pol, context_trans_prob, cue_ambiguity, avg,\
+    Rho, utility, B, planets, starts, colors, rc, learn_rew, dec_temp = par_list
 
 
     """
@@ -91,19 +92,7 @@ def run_agent(par_list, trials, T, ns=6, na=2, nr=3, nc=2, npl=2, trial_type=Non
     """ 
     create environment class
     """
-    
-    environment = PlanetWorld(A,
-                              B,
-                              Rho,
-                              planets,
-                              starts,
-                              colors,
-                              trials,
-                              T,
-                              ns,
-                              npl,
-                              nr,
-                              na)
+
 
 
     """ 
@@ -117,7 +106,7 @@ def run_agent(par_list, trials, T, ns=6, na=2, nr=3, nc=2, npl=2, trial_type=Non
 
     C_alphas = np.zeros((npi, nc)) + learn_pol
     prior_pi = C_alphas / C_alphas.sum(axis=0)
-
+    alpha_0 = learn_pol
     """
     set state prior
     """
@@ -130,14 +119,18 @@ def run_agent(par_list, trials, T, ns=6, na=2, nr=3, nc=2, npl=2, trial_type=Non
     set action selection method
     """
 
-    if avg:
+    # if avg:
+    #     ac_sel = asl.FittingAveragedSelector(trials = trials, T = T,
+    #                                   number_of_actions = na)
 
-        ac_sel = asl.AveragedSelector(trials = trials, T = T,
-                                      number_of_actions = na)
-    else:
+    #     ac_sel = asl.AveragedSelector(trials = trials, T = T,
+    #                                   number_of_actions = na)
 
-        ac_sel = asl.MaxSelector(trials = trials, T = T,
-                                      number_of_actions = na)
+    
+    # else:
+
+    #     ac_sel = asl.MaxSelector(trials = trials, T = T,
+    #                                   number_of_actions = na)
 
     """
     set context prior
@@ -161,25 +154,72 @@ def run_agent(par_list, trials, T, ns=6, na=2, nr=3, nc=2, npl=2, trial_type=Non
 
 
     """
+    set up environment
+    """
+
+
+
+
+    """
     set up agent
     """
 
     # perception
-    bayes_prc = prc.HierarchicalPerception(A, 
-                                           B, 
-                                           C_agent, 
-                                           transition_matrix_context, 
-                                           state_prior, 
-                                           utility, 
-                                           prior_pi, 
-                                           C_alphas,
-                                           C_beta,
-                                           generative_model_context = C,
-                                           T=T)
 
 
-    # agent
-    bayes_pln = agt.BayesianPlanner(bayes_prc,
+    if use_fitting == True:
+        A = ar.tensor(A)
+        B = ar.tensor(B)
+        Rho = ar.tensor(Rho)
+        planets  = ar.tensor(planets)
+        starts = ar.tensor(starts)
+        colors = ar.tensor(colors)
+        C_agent = ar.tensor(C_agent)
+        transition_matrix_context =  ar.tensor(transition_matrix_context) 
+        state_prior =  ar.tensor(state_prior) 
+        utility =  ar.tensor(utility) 
+        prior_pi =  ar.tensor(prior_pi)
+        C_alphas =  ar.tensor(C_alphas)
+        C_beta =  ar.tensor(C_beta)
+        C = ar.tensor(C)    
+        pols = ar.tensor(pols)
+        prior_context = ar.tensor(prior_context)
+        alpha_0 = ar.tensor([alpha_0])
+        dec_temp = ar.tensor([dec_temp])
+
+
+    if use_fitting ==True:
+
+        ac_sel = asl.FittingAveragedSelector(trials = trials, T = T,
+                                      number_of_actions = na)
+
+        environment = FittingPlanetWorld(A,
+                                B,
+                                Rho,
+                                planets,
+                                starts,
+                                colors,
+                                trials,
+                                T,
+                                ns,
+                                npl,
+                                nr,
+                                na)
+
+        bayes_prc = prc.FittingPerception(A, 
+                               B, 
+                               C_agent, 
+                               transition_matrix_context, 
+                               state_prior, 
+                               utility, 
+                               prior_pi,
+                               pols,
+                               alpha_0,
+                               C_beta,
+                               generative_model_context = C,
+                               T=T,dec_temp=dec_temp, trials=trials)
+    
+        bayes_pln = agt.FittingAgent(bayes_prc,
                                     ac_sel,
                                     pols,
                                     prior_states = state_prior,
@@ -187,16 +227,62 @@ def run_agent(par_list, trials, T, ns=6, na=2, nr=3, nc=2, npl=2, trial_type=Non
                                     trials = trials,
                                     prior_context = prior_context,
                                     learn_habit=True,
-                                    learn_rew = learn_rew,
-                                    number_of_planets = npl
+                                    learn_rew = learn_rew
                                     )
+        w = FittingWorld(environment, bayes_pln, trials = trials, T = T)
+
+
+
+
+
+    else:
+        ac_sel = asl.AveragedSelector(trials = trials, T = T,
+                                      number_of_actions = na)
+
+        environment = PlanetWorld(A,
+                              B,
+                              Rho,
+                              planets,
+                              starts,
+                              colors,
+                              trials,
+                              T,
+                              ns,
+                              npl,
+                              nr,
+                              na)
+
+        bayes_prc = prc.HierarchicalPerception(A, 
+                               B, 
+                               C_agent, 
+                               transition_matrix_context, 
+                               state_prior, 
+                               utility, 
+                               prior_pi,
+                               C_alphas,
+                               C_beta,
+                               generative_model_context = C,
+                               T=T,dec_temp=dec_temp)
+
+        bayes_pln = agt.BayesianPlanner(bayes_prc,
+                                        ac_sel,
+                                        pols,
+                                        prior_states = state_prior,
+                                        prior_policies = prior_pi,
+                                        trials = trials,
+                                        prior_context = prior_context,
+                                        learn_habit=True,
+                                        learn_rew = learn_rew,
+                                        number_of_planets = npl
+                                        )
+                                        
+        w = World(environment, bayes_pln, trials = trials, T = T)
 
 
     """
     create world
     """
 
-    w = World(environment, bayes_pln, trials = trials, T = T)
     bayes_pln.world = w
 
     if not trial_type is None:
@@ -212,6 +298,7 @@ def run_agent(par_list, trials, T, ns=6, na=2, nr=3, nc=2, npl=2, trial_type=Non
     w.h = learn_pol
     w.q = context_trans_prob
     w.p = cue_ambiguity
+    w.dec_temp = dec_temp
 
     return w
 

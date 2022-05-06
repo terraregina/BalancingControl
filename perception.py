@@ -4,6 +4,7 @@ import scipy.special as scs
 from misc import D_KL_nd_dirichlet, D_KL_dirichlet_categorical
 import torch as ar
 from sys import exit
+
 try:
     from inference_two_seqs import device
 except:
@@ -25,7 +26,7 @@ class FittingPerception(object):
                  dirichlet_rew_params = None,
                  generative_model_context = None,
                  T=5, trials=10, pol_lambda=0, r_lambda=0, non_decaying=0,
-                 dec_temp=ar.tensor(1), npart=1,npl=3,nr=3, possible_rewards=[-1,0,1]):
+                 dec_temp=1, npart=1, npl=3,nr=3, possible_rewards=[-1,0,1]):
         
         self.generative_model_observations = generative_model_observations
         self.generative_model_states = generative_model_states
@@ -37,7 +38,6 @@ class FittingPerception(object):
         self.trials = trials
         self.nh = prior_states.shape[0]
         self.npl = npl
-
         self.pol_lambda = pol_lambda
         self.r_lambda = r_lambda
         self.non_decaying = non_decaying
@@ -65,10 +65,10 @@ class FittingPerception(object):
         self.rewards = []
         self.context_cues = []
         self.nr = nr
-        self.possible_rewards = possible_rewards
         self.reward_ind  = {}    
-        for r, reward in enumerate(self.possible_rewards):
+        for r, reward in enumerate(possible_rewards):
             self.reward_ind[reward] = r  
+        self.possible_rewards = ar.tensor(possible_rewards)
         #self.instantiate_messages()
         self.bwd_messages = []
         self.fwd_messages = []
@@ -89,6 +89,7 @@ class FittingPerception(object):
         
         # print(self.alpha_0)
         self.npart = self.alpha_0.shape[0]
+        self.npart = self.dec_temp.shape[0]
         # self.dirichlet_pol_params_init = ar.zeros((self.npi, self.nc, self.npart)).to(device) + self.alpha_0[:,None,None].to(device)
         self.dirichlet_pol_params_init = ar.zeros((self.npi, self.nc, self.npart)).to(device) + self.alpha_0.to(device)
         # self.dirichlet_pol_params_init = ar.zeros((self.npi, self.nc, self.npart)).to(device) + self.alpha_0[:,:,None]#ar.stack([dirichlet_pol_params]*self.npart, dim=-1)
@@ -102,7 +103,6 @@ class FittingPerception(object):
         
         self.observations = []
         self.rewards = []
-        
         #self.instantiate_messages()
         self.bwd_messages = []
         self.fwd_messages = []
@@ -245,7 +245,11 @@ class FittingPerception(object):
     def update_beliefs_policies(self, tau, t):
 
         likelihood = (self.fwd_norms[-1]+1e-10).prod(axis=0).to(device)
-        likelihood /= likelihood.sum(axis=0)
+
+        norm = likelihood.sum(axis=0)
+        likelihood = ar.pow(likelihood/norm,self.dec_temp[None,:]).to(device) #* ar.pow(norm,self.dec_temp)
+        # likelihood /= likelihood.sum(axis=0)
+
         posterior= likelihood * self.prior_policies[-1]
         posterior /= posterior.sum(axis=0)
         self.posterior_policies.append(posterior)
@@ -387,6 +391,7 @@ class HierarchicalPerception(object):
                  generative_model_context = None,
                  T=4,
                  possible_rewards = [-1,0,1],
+                 dec_temp = 4,
                  reward_index_mapping = {}):
 
         self.generative_model_observations = generative_model_observations.copy()
@@ -403,6 +408,7 @@ class HierarchicalPerception(object):
         self.prior_policies = prior_policies.copy()
         self.npi = prior_policies.shape[0]
         self.T = T
+        self.dec_temp = dec_temp
         self.nh = prior_states.shape[0]
         self.npl = generative_model_rewards.shape[1]
         self.possible_rewards = possible_rewards
@@ -557,8 +563,11 @@ class HierarchicalPerception(object):
         #print((prior_policies>1e-4).sum())
         likelihood = self.fwd_norms.prod(axis=0)
         likelihood /= likelihood.sum(axis=0)[np.newaxis,:]
-        posterior = likelihood * self.prior_policies
+        posterior = np.power(likelihood,self.dec_temp) * self.prior_policies
         posterior/= posterior.sum(axis=0)[np.newaxis,:]
+
+
+        # posterior = np.power(likelihood,self.dec_temp) * self.prior_policies / (np.power(likelihood,self.dec_temp) * self.prior_policies).sum(axis=0)[None,:]
         posterior = np.nan_to_num(posterior)
 
         #posterior = softmax(ln(self.fwd_norms).sum(axis = 0)+ln(self.prior_policies))
@@ -644,8 +653,8 @@ class HierarchicalPerception(object):
             posterior = np.nan_to_num(softmax(posterior+ln(prior_context)))
 
 
-            print('\n',tau,t)
-            print(posterior)
+            # print('\n',tau,t)
+            # print(posterior)
             return [posterior, outcome_surprise, entropy, context_obs_suprise]
 
     def update_beliefs_dirichlet_pol_params(self, tau, t, posterior_policies, posterior_context = [1]):

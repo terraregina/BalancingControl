@@ -29,14 +29,15 @@ def all_possible_trials_planning(habit_seq=3):
             planet_conf = planet_confs[ci]
             ntrials = slice.shape[0]
             dt = np.zeros([slice.shape[0], 2 + ns])
-            plnts = slice.planet_conf                          # configuration indeces for s1 trials
+            plnts = slice.planet_conf                             # configuration indeces for s1 trials
             plnts = planet_conf[[plnts.values.tolist()]].tolist() # actual planet configurations for s1 trials
-            strts = slice.start.values.tolist()                # starting points for s1 trials 
+            strts = slice.start.values.tolist()                   # starting points for s1 trials 
 
             # dt[:,0] = [0]*ntrials      # context index
-            dt[:,0] = [s]*ntrials     # optimal sequence index
-            dt[:,1] = strts       # trial starting position
-            dt[:,2:] = plnts      # planets 
+            dt[:,0] = [s]*ntrials        # optimal sequence index
+            dt[:,1] = strts              # trial starting position
+            dt[:,2:] = plnts             # planets
+            np.random.shuffle(dt)
             data[s].append(dt)
 
 
@@ -203,6 +204,8 @@ def all_possible_trials_two_seqs():
         dt[n1:n1+n2,1] = [s2]*n2
         dt[n1:n1+n2,2] = strts
         dt[n1:n1+n2,3:] = plnts
+        np.random.shuffle(dt[:n1,:])
+        np.random.shuffle(dt[n1:,:])
         trials.append(dt)
 
     return trials
@@ -439,8 +442,10 @@ def create_config_files_context_dependent_degradation(training_blocks, degradati
  
 #%%
 
-# create_config_files_planning([4],[2,4,6],[70])
-create_config_files([2], [2], [40])
+create_config_files_planning([4],[2,4,6],[70])
+create_config_files([4], [2,4,6], [70])
+create_config_files([2], [2], [70])
+create_config_files_planning([2],[2],[70])
 # create_config_files_context_dependent_degradation([4],[2,4,6],[70])
 
 # %%

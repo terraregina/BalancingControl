@@ -42,18 +42,19 @@ import jsonpickle.ext.numpy as jsonpickle_numpy
 
 switch = 0
 degr = 1
-p = 0.8
+p = 0.95
 learn_rew  = 0
-q = 0.9
-h=100
-db = 4
-tb = 4
+q = 0.92
+h=1
+db = 2
+tb = 2
 tpb = 70
-n_part = 1
+n_part = 10
+dec_temp = 4
 folder = "temp"
 
-run_name = "switch"+str(switch) +"_degr"+str(degr) +"_p"+str(p)+ "_learn_rew"+str(learn_rew)+\
-           "_q"+str(q) + "_h"+str(h)  + "_" + str(tpb) +  "_" + str(tb) + str(db) + "_extinguish.json"
+run_name = "hier_switch"+str(switch) +"_degr"+str(degr) +"_p"+str(p)+ "_learn_rew"+str(learn_rew)+\
+           "_q"+str(q) + "_h"+str(h)  + "_" + str(tpb) +  "_" + str(tb) + str(db) + '_dec' + str(dec_temp) + "_extinguish.json"
 fname = os.path.join(folder, run_name)
 jsonpickle_numpy.register_handlers()
 print(run_name)  
@@ -66,12 +67,18 @@ world = worlds[0]
 meta = worlds[-1]
 
 data = {}
+
 data["actions"] = ar.tensor(world.actions)
 data["rewards"] = ar.tensor(world.rewards)
 data["observations"] = ar.tensor(world.observations)
 data["context_obs"] = ar.tensor(world.environment.context_cues)
 data["planets"] = ar.tensor(world.environment.planet_conf)
-data['environment'] = world.environment
+# data["actions"] = world.actions
+# data["rewards"] = world.rewards
+# data["observations"] = world.observations
+# data["context_obs"] = world.environment.context_cues
+# data["planets"] = world.environment.planet_conf
+
 # print(data['planets'][:10,:])
 ###################################
 """experiment parameters"""
@@ -199,8 +206,6 @@ set up agent
 pol_par = alphas
 
 
-environment = data['environment']
-environment.hidden_states[:] = 0
 
 # perception
 bayes_prc = prc.FittingPerception(
@@ -239,7 +244,7 @@ agent = agt.FittingAgent(bayes_prc, ac_sel, pol,
 """run inference"""
 
 inferrer = inf.SingleInference(agent, data)
-iss = 150
+iss = 1000
 loss = inferrer.infer_posterior(iter_steps=iss, num_particles=n_part)
 
 

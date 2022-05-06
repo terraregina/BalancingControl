@@ -1,6 +1,56 @@
 """This module contains various experimental environments used for testing
 human behavior."""
 import numpy as np
+import torch as ar
+
+
+
+class FittingPlanetWorld(object):
+
+    def __init__(self, O, S, R, planet_configurations, starts, contexts, mb = 10, T = 4, ns=6, npl=2, nr=2, na=2):
+
+        self.A = O                                       # prob dist for generating observations
+        self.B = S                                       # prob dist for state transitions
+        self.R = R                                       # prob dist for reward generation
+        self.trials = mb                                        # mb corresponds to number of miniblocks
+        self.T = T                                              # miniblock length of 3 actions + initial state = 4
+        self.ns = ns                                            # number of unique locations
+        self.nr = nr                                            # number of rewards
+        self.npl = npl                                          # number of unique planet types
+        self.na = na                                            # number of actions
+        self.context_cues = contexts                            # background colors, look at run_agent_simulation, load vars for coding
+        self.planet_conf = planet_configurations                # planet identities for each trial
+        self.starting_position = starts                         # initial rocket position for each trial
+        # hidden states tracks location and not planet identity
+        self.hidden_states = ar.zeros((mb, T), dtype=ar.int32) 
+
+
+    def set_initial_states(self, tau):
+        self.hidden_states[tau, 0] = self.starting_position[tau]
+
+    def generate_context_obs(self,tau):
+        return self.context_cues[tau]
+
+    def generate_observations(self,tau,t):
+        
+        return self.hidden_states[tau,t]
+        
+
+    # this function is specifically tailored to deterministic location transitions
+    def update_hidden_states(self,tau, t, action):
+
+        curr_loc =  self.hidden_states[tau,t-1]
+        self.hidden_states[tau,t] = ar.argmax(self.B[:,curr_loc,action,0])
+        #!#print( "curr_loc ", curr_loc, ", action ",action,", target ", self.hidden_states[tau,t])
+
+    def generate_rewards(self,tau,t):
+    # def generate_rewards(tau,t):
+
+        curr_loc = self.hidden_states[tau,t]           # t+1 because we are still at t but have already moved the rocket
+        rp = self.R[tau,:,curr_loc]                    # reward probability at current planet
+        ind = ar.multinomial(rp, num_samples=1, replacement=True)
+        reward = self.possible_rewards[ind]
+        return reward
 
 
 
@@ -23,7 +73,6 @@ class PlanetWorld(object):
         # hidden states tracks location and not planet identity
         self.hidden_states = np.zeros([mb, T],
          dtype="int32") 
-
 
     def set_initial_states(self, tau):
         self.hidden_states[tau, 0] = self.starting_position[tau]
@@ -48,6 +97,13 @@ class PlanetWorld(object):
         curr_loc = self.hidden_states[tau,t]           # t+1 because we are still at t but have already moved the rocket
         rp = self.R[tau,:,curr_loc]                    # reward probability at current planet
         reward = np.random.choice(self.possible_rewards, p=rp)
+        # reward = self.possible_rewards[np.argmax(rp)]
+        # print(self.hidden_states[tau,t], curr_loc)
+        # print(self.planet_conf[tau,:])
+        # print(self.R[tau,:,curr_loc])
+        # print('rewards')
+        # print(reward, reward_old)
+        # print('\n')
         return reward
 
 class GridWorld(object):

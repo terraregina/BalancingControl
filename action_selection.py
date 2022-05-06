@@ -5,7 +5,7 @@ import scipy.special as scs
 from scipy.stats import entropy
 import matplotlib.pylab as plt
 from misc import *
-
+import torch as ar
 
 
 '''
@@ -791,6 +791,44 @@ class AveragedSelector(object):
 
         control_prob = control_prob/control_prob.sum()
         self.control_probability[tau, t] = control_prob
+
+class FittingAveragedSelector(object):
+
+    def __init__(self, trials = 1, T = 10, number_of_actions = 2):
+        self.n_pars = 0
+
+        self.na = number_of_actions
+        self.control_probability = ar.zeros((trials, T, self.na))
+
+    def reset_beliefs(self):
+        self.control_probability[:,:,:] = 0
+
+    def set_pars(self, pars):
+        pass
+
+    def log_prior(self):
+        return 0
+
+    def select_desired_action(self, tau, t, posterior_policies, actions, *args):
+
+        #estimate action probability
+        self.estimate_action_probability(tau, t, posterior_policies, actions)
+
+        #generate the desired response from action probability
+        u = ar.multinomial(self.control_probability[tau, t],num_samples=1, replacement = True)[0]
+        # u = ar.argmax(self.control_probability[tau,t])
+        return u
+
+    def estimate_action_probability(self, tau, t, posterior_policies, actions, *args):
+
+        #estimate action probability
+        control_prob = ar.zeros(self.na)
+        for a in range(self.na):
+            control_prob[a] = posterior_policies[actions == a].sum()
+
+        control_prob = control_prob/control_prob.sum()
+        self.control_probability[tau, t] = control_prob
+
 
 
 class MaxSelector(object):

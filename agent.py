@@ -23,9 +23,9 @@ class FittingAgent(object):
                  prior_context = None,
                  learn_habit = False,
                  learn_rew = False,
-                 trials = 1, T = 10, number_of_states = 6,
-                 number_of_rewards = 2,
-                 number_of_policies = 10,npart=10):
+                 trials = 1, T = 4, number_of_states = 6,
+                 number_of_rewards = 3,
+                 number_of_policies = 8,npart=1):
 
         #set the modules of the agent
         self.npart = npart
@@ -100,8 +100,8 @@ class FittingAgent(object):
             self.context_obs = ar.zeros(self.trials, dtype=int).to(device)
 
         self.set_parameters(**param_dict)
-        self.npart = self.perception.alpha_0.shape[0]
         self.perception.reset()
+        self.npart = self.perception.alpha_0.shape[0]
 
 
     def initiate_planet_rewards(self):
@@ -251,8 +251,8 @@ class FittingAgent(object):
         if 'dec_temp' in kwargs.keys():
             self.perception.dec_temp = kwargs['dec_temp']
         if 'h' in kwargs.keys():
-            print(1./kwargs['h'])
             self.perception.alpha_0 = 1./kwargs['h']
+            print(1./kwargs['h'])
 
 class BayesianPlanner(object):
 
@@ -425,34 +425,19 @@ class BayesianPlanner(object):
         if t == self.T-1 and self.learn_habit:
             self.posterior_dirichlet_pol[tau], self.prior_policies[tau] = self.perception.update_beliefs_dirichlet_pol_params(tau, t, \
                                                             self.posterior_policies[tau,t], \
-                                                            self.posterior_context[tau,t])
+                                                           self.posterior_context[tau,t])
+            # if self.trial_type[tau] == 0:
+            #     print('\n', tau, t)
+            #     print(c_obs, np.argmax(self.posterior_policies[tau,t], axis=0))
+                
+        if self.learn_rew and t>0:
 
-        # if False:
-        #     self.posterior_rewards[tau, t-1] = np.einsum('rsc,spc,pc,c->r',
-        #                                           self.perception.generative_model_rewards,
-        #                                           self.posterior_states[tau,t,:,t],
-        #                                           self.posterior_policies[tau,t],
-        #                                           self.posterior_context[tau,t])
-        #if reward > 0:
-        if self.learn_rew and t>0:#==self.T-1:
-            # if t ==1:
-            #     print(tau)
-            # if hasattr(self,  'trial_type'):
-            #     if not self.trial_type[tau] == 2:
-            # print('NOT UNLEARNING')
             self.posterior_dirichlet_rew[tau,t] = self.perception.update_beliefs_dirichlet_rew_params(tau, t, \
                                                     reward, \
                                                     self.posterior_states[tau, t], \
                                                     self.posterior_policies[tau, t], \
                                                     self.posterior_context[tau,t])
-            # else:
-            #     raise('Agent not extinguishing reward!')
 
-        # if(self.trial_type[tau] == 1 and c_obs == 1 and t==3):
-        #     # print(t)
-        #     # if(t == 2):
-        #     print(tau)
-        #     print(self.posterior_context[tau,t].round(2))
 
 
     def generate_response(self, tau, t):
