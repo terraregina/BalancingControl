@@ -51,7 +51,7 @@ tb = 2
 tpb = 70
 n_part = 10
 dec_temp = 4
-folder = "temp"
+folder = "temp/fitt_hier"
 
 run_name = "hier_switch"+str(switch) +"_degr"+str(degr) +"_p"+str(p)+ "_learn_rew"+str(learn_rew)+\
            "_q"+str(q) + "_h"+str(h)  + "_" + str(tpb) +  "_" + str(tb) + str(db) + '_dec' + str(dec_temp) + "_extinguish.json"

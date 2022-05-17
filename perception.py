@@ -26,7 +26,7 @@ class FittingPerception(object):
                  dirichlet_rew_params = None,
                  generative_model_context = None,
                  T=5, trials=10, pol_lambda=0, r_lambda=0, non_decaying=0,
-                 dec_temp=1, npart=1, npl=3,nr=3, possible_rewards=[-1,0,1]):
+                 dec_temp=ar.tensor([4]), npart=1, npl=3,nr=3, possible_rewards=[-1,0,1]):
         
         self.generative_model_observations = generative_model_observations
         self.generative_model_states = generative_model_states
@@ -58,7 +58,7 @@ class FittingPerception(object):
         #self.prior_policies_init = self.dirichlet_pol_params[0] / self.dirichlet_pol_params[0].sum(axis=0)[None,...]
         self.prior_policies = [self.dirichlet_pol_params[0] / self.dirichlet_pol_params[0].sum(axis=0)[None,...]]
         # print(self.prior_policies[0].shape)
-        self.prior_context = ar.tensor([0.9] + [0.1/3]*3)
+        self.prior_context = ar.tensor([0.99] + [0.1/3]*3)
         #self.generative_model_rewards_init = self.dirichlet_rew_params[0] / self.dirichlet_rew_params[0].sum(axis=0)[None,...]
         self.generative_model_rewards = [self.dirichlet_rew_params[0] / self.dirichlet_rew_params[0].sum(axis=0)[None,...]]
         self.observations = []
@@ -991,4 +991,3 @@ class TwoStepPerception(object):
 # MMMMMMMMMMMMMNd,''''''''''''''''''''''''''''''''''''''''''''''xWMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
 # MMMMMMMMMMMMNd,'''''''''''''''''''''''''''''''''''''''''''''',kMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
 # MMMMMMMMMMMWk,''''''''''''''''''''''''''''''''''''''''''''''';OMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
-

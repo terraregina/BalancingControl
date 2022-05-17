@@ -466,31 +466,32 @@ class FakeWorld(object):
 
             try:
                 n_digits = 3
-                # ppls = (self.agent.perception.posterior_actions[-1][:,0])
-                ppls = self.agent.perception.posterior_policies[-4][:,:,0]
-                # ppls = self.agent.perception.posterior_contexts[-1][:,0]
-                rounded = (ppls * 10**n_digits).round() / (10**n_digits)
+                # ppls = self.agent.perception.posterior_policies[-4][:,:,0]
+                # rounded = (ppls * 10**n_digits).round() / (10**n_digits)
+                ppls = self.agent.perception.posterior_contexts[-1][:,0]
                 print(ppls)
-
-                self.log_context.append(int(ar.argmax( self.agent.perception.posterior_contexts[-1][:,0])))
-                self.log_policies.append(ar.argmax(self.agent.perception.posterior_policies[-1][:,:,0],axis=0).tolist())
-                self.log_post_pols.append(self.agent.perception.posterior_policies[-4][:,:,0].tolist())
-                self.log_prior_pols.append(self.agent.perception.prior_policies[-1][:,:,0].tolist())
+                ppls = (self.agent.perception.posterior_actions[-1][:,0])
+                print(ppls)
+                
+                # self.log_context.append(int(ar.argmax( self.agent.perception.posterior_contexts[-1][:,0])))
+                # self.log_policies.append(ar.argmax(self.agent.perception.posterior_policies[-1][:,:,0],axis=0).tolist())
+                # self.log_post_pols.append(self.agent.perception.posterior_policies[-4][:,:,0].tolist())
+                # self.log_prior_pols.append(self.agent.perception.prior_policies[-1][:,:,0].tolist())
 
                 # print('context: ', self.log_context[-1])
                 # print('policy: ', self.log_policies[-1])
 
             except:
-                # print(self.agent.posterior_actions[tau,t,:].round(4))
                 # print(self.agent.posterior_policies[tau,t].round(4))
 
 
-                self.log_context.append(int(np.argmax(self.agent.posterior_context[tau,t,:])))
-                self.log_policies.append(np.argmax(self.agent.posterior_policies[tau,t,:],axis=0).tolist())
-                self.log_post_pols.append(self.agent.posterior_policies[tau,0,:].tolist())
-                self.log_prior_pols.append(self.agent.prior_policies[:,:,0].tolist())
-
+                # self.log_context.append(int(np.argmax(self.agent.posterior_context[tau,t,:])))
+                # self.log_policies.append(np.argmax(self.agent.posterior_policies[tau,t,:],axis=0).tolist())
+                # self.log_post_pols.append(self.agent.posterior_policies[tau,0,:].tolist())
+                # self.log_prior_pols.append(self.agent.prior_policies[:,:,0].tolist())
+                # print(self.agent.posterior_actions.shape)
                 print(self.agent.posterior_context[tau,t,:])
+                print(self.agent.posterior_actions[tau,t-1,:])
                 # print('context: ', self.log_context[-1])
                 # print('policy: ', self.log_policies[-1])
 

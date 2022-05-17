@@ -15,7 +15,7 @@ try:
 except:
     device = ar.device("cpu")
 
-#?
+
 class FittingAgent(object):
 
     def __init__(self, perception, action_selection, policies,
@@ -23,9 +23,9 @@ class FittingAgent(object):
                  prior_context = None,
                  learn_habit = False,
                  learn_rew = False,
-                 trials = 1, T = 4, number_of_states = 6,
-                 number_of_rewards = 3,
-                 number_of_policies = 8,npart=1):
+                 trials = 1, T = 10, number_of_states = 6,
+                 number_of_rewards = 2,
+                 number_of_policies = 10,npart=10):
 
         #set the modules of the agent
         self.npart = npart
@@ -100,8 +100,8 @@ class FittingAgent(object):
             self.context_obs = ar.zeros(self.trials, dtype=int).to(device)
 
         self.set_parameters(**param_dict)
-        self.perception.reset()
         self.npart = self.perception.alpha_0.shape[0]
+        self.perception.reset()
 
 
     def initiate_planet_rewards(self):
@@ -173,33 +173,10 @@ class FittingAgent(object):
             self.perception.update_beliefs_dirichlet_pol_params(tau, t)
 
 
-        #if reward > 0:
-        # check later if stuff still works!
+
         if self.learn_rew and t>0: #==self.T-1:
             self.perception.update_beliefs_dirichlet_rew_params(tau, t,\
                                                             self.planets, reward)
-        # if self.npart > 1:
-        #     if t == 3 and c_obs == 1:
-                # if context == 0:
-
-                # print('\n', tau,t)
-                # print(self.planets)
-
-                # ass = []
-                # for p in range(self.npart):
-                #     a = ar.stack([self.perception.posterior_actions[-t][:,p] for t in range(self.T-1,0,-1)],dim=1)
-                #     ass.append(ar.where((self.policies == ar.argmax(a,dim=0)).all(dim=1))[0])
-                # ass = ar.tensor(ass)
-
-                # if(ass.unique().shape[0] != 1):
-                #     print('different')
-                #     print(ass)
-                #     raiseExceptions('different!!!')
-
-                # print('context obs:',  int(c_obs))
-                # print('chosen policy: ', ass)
-                # print('chosen policy by run: ', int(self.possible_policies[0]))
-                # print('inferred_context', int(ar.argmax(self.perception.posterior_contexts[-1][:,0])),'\n')
 
     def generate_response(self, tau, t):
 
@@ -251,8 +228,8 @@ class FittingAgent(object):
         if 'dec_temp' in kwargs.keys():
             self.perception.dec_temp = kwargs['dec_temp']
         if 'h' in kwargs.keys():
-            self.perception.alpha_0 = 1./kwargs['h']
             print(1./kwargs['h'])
+            self.perception.alpha_0 = 1./kwargs['h']
 
 class BayesianPlanner(object):
 
@@ -388,14 +365,13 @@ class BayesianPlanner(object):
                                          reward,
                                          self.policies,
                                          self.possible_polcies)
-
+            
         self.posterior_policies[tau, t], self.likelihood[tau,t] = self.perception.update_beliefs_policies(tau, t)
         
         if tau == 0:
             prior_context = self.prior_context
         else: #elif t == 0:
             prior_context = np.dot(self.perception.transition_matrix_context, self.posterior_context[tau-1, -1]).reshape((self.nc))
-
 #            else:
 #                prior_context = np.dot(self.perception.transition_matrix_context, self.posterior_context[tau, t-1])
 
@@ -425,20 +401,19 @@ class BayesianPlanner(object):
         if t == self.T-1 and self.learn_habit:
             self.posterior_dirichlet_pol[tau], self.prior_policies[tau] = self.perception.update_beliefs_dirichlet_pol_params(tau, t, \
                                                             self.posterior_policies[tau,t], \
-                                                           self.posterior_context[tau,t])
-            # if self.trial_type[tau] == 0:
-            #     print('\n', tau, t)
-            #     print(c_obs, np.argmax(self.posterior_policies[tau,t], axis=0))
-                
-        if self.learn_rew and t>0:
+                                                            self.posterior_context[tau,t])
 
+        if self.learn_rew and t>0:#==self.T-1:
+            # if t ==1:
+            #     print(tau)
+            # if hasattr(self,  'trial_type'):
+            #     if not self.trial_type[tau] == 2:
+            # print('NOT UNLEARNING')
             self.posterior_dirichlet_rew[tau,t] = self.perception.update_beliefs_dirichlet_rew_params(tau, t, \
                                                     reward, \
                                                     self.posterior_states[tau, t], \
                                                     self.posterior_policies[tau, t], \
                                                     self.posterior_context[tau,t])
-
-
 
     def generate_response(self, tau, t):
 
