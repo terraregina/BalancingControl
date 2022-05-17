@@ -89,7 +89,7 @@ class FittingPerception(object):
         
         # print(self.alpha_0)
         self.npart = self.alpha_0.shape[0]
-        self.npart = self.dec_temp.shape[0]
+        # self.npart = self.dec_temp.shape[0]
         # self.dirichlet_pol_params_init = ar.zeros((self.npi, self.nc, self.npart)).to(device) + self.alpha_0[:,None,None].to(device)
         self.dirichlet_pol_params_init = ar.zeros((self.npi, self.nc, self.npart)).to(device) + self.alpha_0.to(device)
         # self.dirichlet_pol_params_init = ar.zeros((self.npi, self.nc, self.npart)).to(device) + self.alpha_0[:,:,None]#ar.stack([dirichlet_pol_params]*self.npart, dim=-1)
@@ -284,15 +284,15 @@ class FittingPerception(object):
         else:
             # todo: recalc
             #outcome_surprise = ((states * prior_context[np.newaxis,:]).sum(axis=1)[:,np.newaxis] * (scs.digamma(beta_prime[reward]) - scs.digamma(beta_prime.sum(axis=0)))).sum(axis=0)
-            if t>0:
-                outcome_surprise = (self.posterior_policies[-1] * ln(self.fwd_norms[-1].prod(axis=0))).sum(axis=0)
-                entropy = - (self.posterior_policies[-1] * ln(self.posterior_policies[-1])).sum(axis=0)
-                #policy_surprise = (post_policies[:,np.newaxis] * scs.digamma(alpha_prime)).sum(axis=0) - scs.digamma(alpha_prime.sum(axis=0))
-                policy_surprise = (self.posterior_policies[-1] * ar.digamma(alpha_prime)).sum(axis=0) - ar.digamma(alpha_prime.sum(axis=0))
-            else:
-                outcome_surprise = 0
-                entropy = 0
-                policy_surprise = 0
+            # if t>0:
+            outcome_surprise = (self.posterior_policies[-1] * ln(self.fwd_norms[-1].prod(axis=0))).sum(axis=0)
+            entropy = - (self.posterior_policies[-1] * ln(self.posterior_policies[-1])).sum(axis=0)
+            #policy_surprise = (post_policies[:,np.newaxis] * scs.digamma(alpha_prime)).sum(axis=0) - scs.digamma(alpha_prime.sum(axis=0))
+            policy_surprise = (self.posterior_policies[-1] * ar.digamma(alpha_prime)).sum(axis=0) - ar.digamma(alpha_prime.sum(axis=0))
+            # else:
+                # outcome_surprise = 0
+                # entropy = 0
+                # policy_surprise = 0
     
             if context is not None:
                 context_obs_suprise = ar.stack([ln(self.generative_model_context[context]+1e-10) for n in range(self.npart)],dim=-1).to(device)
@@ -316,16 +316,16 @@ class FittingPerception(object):
             posterior_policies /= posterior_policies.sum(axis=0)
             
 
-            posterior_actions = ar.stack(\
-                [\
-                    ar.tensor([(posterior_policies[self.policies[:,t] == a,p]).sum() for p in range(self.npart)])\
-                for a in range(self.na)
-                ], dim=0)
+            # posterior_actions = ar.stack(\
+            #     [\
+            #         ar.tensor([(posterior_policies[self.policies[:,t] == a,p]).sum() for p in range(self.npart)])\
+            #     for a in range(self.na)
+            #     ], dim=0)
 
-            # print(tau,t)
-            # print(posterior_actions)
-            # for a in range(self.na):
-            #     posterior_actions[a] = posterior_policies[self.policies[:,t] == a].sum(axis=0)
+
+            posterior_actions = ar.zeros(self.na, self.npart)
+            for a in range(self.na):
+                posterior_actions[a] = posterior_policies[self.policies[:,t] == a].sum(axis=0)
                 
             self.posterior_actions.append(posterior_actions)
     

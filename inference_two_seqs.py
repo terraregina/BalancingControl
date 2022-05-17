@@ -33,21 +33,21 @@ class SingleInference(object):
 
     def model(self):
 
-        # alpha_h = ar.ones(1).to(device)
-        # beta_h = ar.ones(1).to(device)
+        alpha_h = ar.ones(1).to(device)
+        beta_h = ar.ones(1).to(device)
 
-        # # sample initial vaue of parameter from Beta distribution
-        # h = pyro.sample('h', dist.Beta(alpha_h, beta_h))
+        # sample initial vaue of parameter from Beta distribution
+        h = pyro.sample('h', dist.Beta(alpha_h, beta_h))
         
         
-        concentration_dec_temp = ar.tensor(1.).to(device)
-        rate_dec_temp = ar.tensor(0.5).to(device)
-        # sample initial vaue of parameter from normal distribution
-        dec_temp = pyro.sample('dec_temp', dist.Gamma(concentration_dec_temp, rate_dec_temp)).to(device)
+        # concentration_dec_temp = ar.tensor(1.).to(device)
+        # rate_dec_temp = ar.tensor(0.5).to(device)
+        # # sample initial vaue of parameter from normal distribution
+        # dec_temp = pyro.sample('dec_temp', dist.Gamma(concentration_dec_temp, rate_dec_temp)).to(device)
 
-        # param_dict = {"h": h, "dec_temp":dec_temp}
-        param_dict = {"dec_temp":dec_temp}
-
+        # # param_dict = {"h": h, "dec_temp":dec_temp}
+        # param_dict = {"dec_temp":dec_temp}
+        param_dict = {"h":h}
         self.agent.reset(param_dict)
 
         
@@ -76,31 +76,34 @@ class SingleInference(object):
                         # print(h)
             
                     curr_response = self.data["actions"][tau, t]
-                    # print(probs)
+                    # if(tau==self.trials-1):
+                    #     print(probs)
                     pyro.sample('res_{}_{}'.format(tau, t), dist.Categorical(probs.T), obs=curr_response)
                     
 
 
     def guide(self):
 
-        # alpha_h = pyro.param("alpha_h", ar.ones(1), constraint=ar.distributions.constraints.positive).to(device)#greater_than_eq(1.))
-        # beta_h = pyro.param("beta_h", ar.ones(1), constraint=ar.distributions.constraints.positive).to(device)#greater_than_eq(1.))
-        # # sample initial vaue of parameter from Beta distribution
-        # h = pyro.sample('h', dist.Beta(alpha_h, beta_h)).to(device)
+        alpha_h = pyro.param("alpha_h", ar.ones(1), constraint=ar.distributions.constraints.positive).to(device)#greater_than_eq(1.))
+        beta_h = pyro.param("beta_h", ar.ones(1), constraint=ar.distributions.constraints.positive).to(device)#greater_than_eq(1.))
+        # sample initial vaue of parameter from Beta distribution
+        h = pyro.sample('h', dist.Beta(alpha_h, beta_h)).to(device)
 
-        concentration_dec_temp = pyro.param("concentration_dec_temp", ar.ones(1)*3., constraint=ar.distributions.constraints.positive).to(device)#interval(0., 7.))
-        rate_dec_temp = pyro.param("rate_dec_temp", ar.ones(1), constraint=ar.distributions.constraints.positive).to(device)
-        dec_temp = pyro.sample('dec_temp', dist.Gamma(concentration_dec_temp, rate_dec_temp)).to(device)
+        # concentration_dec_temp = pyro.param("concentration_dec_temp", ar.ones(1), constraint=ar.distributions.constraints.positive).to(device)#interval(0., 7.))
+        # rate_dec_temp = pyro.param("rate_dec_temp", ar.ones(1), constraint=ar.distributions.constraints.positive).to(device)
+        # dec_temp = pyro.sample('dec_temp', dist.Gamma(concentration_dec_temp, rate_dec_temp)).to(device)
 
         # param_dict = {"alpha_h": alpha_h, "beta_h": beta_h, "h": h,"concentration_dec_temp": concentration_dec_temp, "rate_dec_temp": rate_dec_temp, "dec_temp": dec_temp}
-        param_dict = {"concentration_dec_temp": concentration_dec_temp, "rate_dec_temp": rate_dec_temp, "dec_temp": dec_temp}
+        # param_dict = {"concentration_dec_temp": concentration_dec_temp, "rate_dec_temp": rate_dec_temp, "dec_temp": dec_temp}
+
+        param_dict = {"alpha_h": alpha_h, "beta_h": beta_h, "h": h}
 
         return param_dict
 
     def infer_posterior(self,
                         iter_steps=1000,
                         num_particles=10,
-                        optim_kwargs={'lr': .005}):
+                        optim_kwargs={'lr': .01}):
 
         """
         Perform SVI over free model parameters.
@@ -119,12 +122,13 @@ class SingleInference(object):
         pbar = tqdm(range(iter_steps), position=0)
         for step in pbar:
             loss.append(ar.tensor(svi.step()).to(device))
-            pbar.set_description("Mean ELBO %6.2f" % ar.tensor(loss[-20:]).mean())
-            alpha = pyro.param("concentration_dec_temp").data.numpy()
-            beta = pyro.param("rate_dec_temp").data.numpy()
-            dec =  alpha/beta
+            pbar.set_description("Mean ELBO  %6.2f, %6.2f" % (ar.tensor(loss[:5]).mean(), ar.tensor(loss[-20:]).mean()))
+            alpha_h = pyro.param("alpha_h").data.numpy()
+            beta_h = pyro.param("beta_h").data.numpy()
+            print("alpha: ", alpha_h, " beta: ", beta_h)
+            print('h: ', (alpha_h+beta_h)/alpha_h)        
             # print("alpha: ", alpha_h, " beta: ", beta_h)
-            print('dec: ', dec)
+            # print('dec: ', dec)
             # print('h': h)      
             # if ar.isnan(loss[-1]):
                 # break

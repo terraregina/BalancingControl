@@ -228,7 +228,7 @@ class FittingAgent(object):
         if 'dec_temp' in kwargs.keys():
             self.perception.dec_temp = kwargs['dec_temp']
         if 'h' in kwargs.keys():
-            print(1./kwargs['h'])
+            # print(1./kwargs['h'])
             self.perception.alpha_0 = 1./kwargs['h']
 
 class BayesianPlanner(object):

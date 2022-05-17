@@ -44,13 +44,13 @@ switch = 0
 degr = 1
 p = 0.95
 learn_rew  = 0
-q = 0.92
-h=1
+q = 0.99
+h=100
 db = 2
 tb = 2
 tpb = 70
-n_part = 10
-dec_temp = 4
+n_part = 13
+dec_temp = 1
 folder = "temp/fitt_hier"
 
 run_name = "hier_switch"+str(switch) +"_degr"+str(degr) +"_p"+str(p)+ "_learn_rew"+str(learn_rew)+\
@@ -70,7 +70,7 @@ data = {}
 
 data["actions"] = ar.tensor(world.actions)
 data["rewards"] = ar.tensor(world.rewards)
-data["observations"] = ar.tensor(world.observations)
+data["observations"] = ar.tensor(world.observations)    
 data["context_obs"] = ar.tensor(world.environment.context_cues)
 data["planets"] = ar.tensor(world.environment.planet_conf)
 # data["actions"] = world.actions
