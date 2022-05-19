@@ -89,7 +89,7 @@ class FittingPerception(object):
         
         # print(self.alpha_0)
         self.npart = self.alpha_0.shape[0]
-        # self.npart = self.dec_temp.shape[0]
+        self.npart = self.dec_temp.shape[0]
         # self.dirichlet_pol_params_init = ar.zeros((self.npi, self.nc, self.npart)).to(device) + self.alpha_0[:,None,None].to(device)
         self.dirichlet_pol_params_init = ar.zeros((self.npi, self.nc, self.npart)).to(device) + self.alpha_0.to(device)
         # self.dirichlet_pol_params_init = ar.zeros((self.npi, self.nc, self.npart)).to(device) + self.alpha_0[:,:,None]#ar.stack([dirichlet_pol_params]*self.npart, dim=-1)
@@ -284,15 +284,15 @@ class FittingPerception(object):
         else:
             # todo: recalc
             #outcome_surprise = ((states * prior_context[np.newaxis,:]).sum(axis=1)[:,np.newaxis] * (scs.digamma(beta_prime[reward]) - scs.digamma(beta_prime.sum(axis=0)))).sum(axis=0)
-            # if t>0:
-            outcome_surprise = (self.posterior_policies[-1] * ln(self.fwd_norms[-1].prod(axis=0))).sum(axis=0)
-            entropy = - (self.posterior_policies[-1] * ln(self.posterior_policies[-1])).sum(axis=0)
-            #policy_surprise = (post_policies[:,np.newaxis] * scs.digamma(alpha_prime)).sum(axis=0) - scs.digamma(alpha_prime.sum(axis=0))
-            policy_surprise = (self.posterior_policies[-1] * ar.digamma(alpha_prime)).sum(axis=0) - ar.digamma(alpha_prime.sum(axis=0))
-            # else:
-                # outcome_surprise = 0
-                # entropy = 0
-                # policy_surprise = 0
+            if t>0:
+                outcome_surprise = (self.posterior_policies[-1] * ln(self.fwd_norms[-1].prod(axis=0))).sum(axis=0)
+                entropy = - (self.posterior_policies[-1] * ln(self.posterior_policies[-1])).sum(axis=0)
+                #policy_surprise = (post_policies[:,np.newaxis] * scs.digamma(alpha_prime)).sum(axis=0) - scs.digamma(alpha_prime.sum(axis=0))
+                policy_surprise = (self.posterior_policies[-1] * ar.digamma(alpha_prime)).sum(axis=0) - ar.digamma(alpha_prime.sum(axis=0))
+            else:
+                outcome_surprise = 0
+                entropy = 0
+                policy_surprise = 0
     
             if context is not None:
                 context_obs_suprise = ar.stack([ln(self.generative_model_context[context]+1e-10) for n in range(self.npart)],dim=-1).to(device)
@@ -596,21 +596,6 @@ class HierarchicalPerception(object):
         beta_prime = self.dirichlet_rew_params.copy()
         beta_prime[self.reward_ind[reward]] = beta[self.reward_ind[reward]] + planets
 
-#        for c in range(self.nc):
-#            for state in range(self.nh):
-#                self.generative_model_rewards[:,state,c] =\
-#                np.exp(scs.digamma(beta_prime[:,state,c])\
-#                       -scs.digamma(beta_prime[:,state,c].sum()))
-#                self.generative_model_rewards[:,state,c] /= self.generative_model_rewards[:,state,c].sum()
-#
-#            self.rew_messages[:,t+1:,c] = self.prior_rewards.dot(self.generative_model_rewards[:,:,c])[:,np.newaxis]
-#
-#        for c in range(self.nc):
-#            for pi, cs in enumerate(policies):
-#                if self.prior_policies[pi,c] > 1e-15:
-#                    self.update_messages(t, pi, cs, c)
-#                else:
-#                    self.fwd_messages[:,:,pi,c] = 1./self.nh #0
 
         alpha = self.dirichlet_pol_params.copy()
         if t == self.T-1:
@@ -629,6 +614,8 @@ class HierarchicalPerception(object):
             # todo: recalc
             #outcome_surprise = ((states * prior_context[np.newaxis,:]).sum(axis=1)[:,np.newaxis] * (scs.digamma(beta_prime[reward]) - scs.digamma(beta_prime.sum(axis=0)))).sum(axis=0)
             if t>0:
+                if (tau >= 141):
+                    a=0
                 outcome_surprise = (posterior_policies * ln(self.fwd_norms.prod(axis=0))).sum(axis=0)
                 entropy = - (posterior_policies * ln(posterior_policies)).sum(axis=0)
                 #policy_surprise = (post_policies[:,np.newaxis] * scs.digamma(alpha_prime)).sum(axis=0) - scs.digamma(alpha_prime.sum(axis=0))
@@ -643,19 +630,17 @@ class HierarchicalPerception(object):
             else:
                 context_obs_suprise = 0
             posterior = outcome_surprise + policy_surprise + entropy + context_obs_suprise
+            if (tau >= 130 and t == self.T-1 and tau <= 150):
+                print('\n', tau,t)
+                print(posterior.round(3), ' summed posterior')
 
                         #+ np.nan_to_num((posterior_policies * ln(self.fwd_norms).sum(axis = 0))).sum(axis=0)#\
-
-#            if tau in range(90,120) and t == 1:
-#                #print(tau, np.exp(outcome_surprise), np.exp(policy_surprise))
-#                print(tau, np.exp(outcome_surprise[1])/np.exp(outcome_surprise[0]), np.exp(policy_surprise[1])/np.exp(policy_surprise[0]))
 
             posterior = np.nan_to_num(softmax(posterior+ln(prior_context)))
 
 
             # print('\n',tau,t)
-            # print(posterior)
-            return [posterior, outcome_surprise, entropy, context_obs_suprise]
+            return [posterior, outcome_surprise, entropy, policy_surprise, context_obs_suprise]
 
     def update_beliefs_dirichlet_pol_params(self, tau, t, posterior_policies, posterior_context = [1]):
         assert(t == self.T-1)

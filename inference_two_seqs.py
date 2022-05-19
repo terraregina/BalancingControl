@@ -33,21 +33,21 @@ class SingleInference(object):
 
     def model(self):
 
-        alpha_h = ar.ones(1).to(device)
-        beta_h = ar.ones(1).to(device)
+        # alpha_h = ar.ones(1).to(device)
+        # beta_h = ar.ones(1).to(device)
 
-        # sample initial vaue of parameter from Beta distribution
-        h = pyro.sample('h', dist.Beta(alpha_h, beta_h))
+        # # sample initial vaue of parameter from Beta distribution
+        # h = pyro.sample('h', dist.Beta(alpha_h, beta_h))
         
         
-        # concentration_dec_temp = ar.tensor(1.).to(device)
-        # rate_dec_temp = ar.tensor(0.5).to(device)
-        # # sample initial vaue of parameter from normal distribution
-        # dec_temp = pyro.sample('dec_temp', dist.Gamma(concentration_dec_temp, rate_dec_temp)).to(device)
+        concentration_dec_temp = ar.tensor(1.).to(device)
+        rate_dec_temp = ar.tensor(0.5).to(device)
+        # sample initial vaue of parameter from normal distribution
+        dec_temp = pyro.sample('dec_temp', dist.Gamma(concentration_dec_temp, rate_dec_temp)).to(device)
 
         # # param_dict = {"h": h, "dec_temp":dec_temp}
-        # param_dict = {"dec_temp":dec_temp}
-        param_dict = {"h":h}
+        param_dict = {"dec_temp":dec_temp}
+        # param_dict = {"h":h}
         self.agent.reset(param_dict)
 
         
@@ -84,21 +84,25 @@ class SingleInference(object):
 
     def guide(self):
 
-        alpha_h = pyro.param("alpha_h", ar.ones(1), constraint=ar.distributions.constraints.positive).to(device)#greater_than_eq(1.))
-        beta_h = pyro.param("beta_h", ar.ones(1), constraint=ar.distributions.constraints.positive).to(device)#greater_than_eq(1.))
-        # sample initial vaue of parameter from Beta distribution
-        h = pyro.sample('h', dist.Beta(alpha_h, beta_h)).to(device)
+        # alpha_h = pyro.param("alpha_h", ar.ones(1), constraint=ar.distributions.constraints.positive).to(device)#greater_than_eq(1.))
+        # beta_h = pyro.param("beta_h", ar.ones(1), constraint=ar.distributions.constraints.positive).to(device)#greater_than_eq(1.))
+        ## sample initial vaue of parameter from Beta distribution
+        # h = pyro.sample('h', dist.Beta(alpha_h, beta_h)).to(device)
 
-        # concentration_dec_temp = pyro.param("concentration_dec_temp", ar.ones(1), constraint=ar.distributions.constraints.positive).to(device)#interval(0., 7.))
-        # rate_dec_temp = pyro.param("rate_dec_temp", ar.ones(1), constraint=ar.distributions.constraints.positive).to(device)
-        # dec_temp = pyro.sample('dec_temp', dist.Gamma(concentration_dec_temp, rate_dec_temp)).to(device)
+        concentration_dec_temp = pyro.param("concentration_dec_temp", ar.ones(1), constraint=ar.distributions.constraints.positive).to(device)#interval(0., 7.))
+        rate_dec_temp = pyro.param("rate_dec_temp", ar.ones(1), constraint=ar.distributions.constraints.positive).to(device)
+        dec_temp = pyro.sample('dec_temp', dist.Gamma(concentration_dec_temp, rate_dec_temp)).to(device)
 
         # param_dict = {"alpha_h": alpha_h, "beta_h": beta_h, "h": h,"concentration_dec_temp": concentration_dec_temp, "rate_dec_temp": rate_dec_temp, "dec_temp": dec_temp}
         # param_dict = {"concentration_dec_temp": concentration_dec_temp, "rate_dec_temp": rate_dec_temp, "dec_temp": dec_temp}
 
-        param_dict = {"alpha_h": alpha_h, "beta_h": beta_h, "h": h}
+        # self.param_dict = {"alpha_h": alpha_h, "beta_h": beta_h, "h": h}
+        self.param_dict = {
+             "concentration_dec_temp": concentration_dec_temp, "rate_dec_temp":rate_dec_temp,
+             "dec_temp":dec_temp
+             }
 
-        return param_dict
+        return self.param_dict
 
     def infer_posterior(self,
                         iter_steps=1000,
@@ -123,53 +127,61 @@ class SingleInference(object):
         for step in pbar:
             loss.append(ar.tensor(svi.step()).to(device))
             pbar.set_description("Mean ELBO  %6.2f, %6.2f" % (ar.tensor(loss[:5]).mean(), ar.tensor(loss[-20:]).mean()))
-            alpha_h = pyro.param("alpha_h").data.numpy()
-            beta_h = pyro.param("beta_h").data.numpy()
-            print("alpha: ", alpha_h, " beta: ", beta_h)
-            print('h: ', (alpha_h+beta_h)/alpha_h)        
+            alpha = pyro.param("concentration_dec_temp").data.numpy()
+            beta = pyro.param("rate_dec_temp").data.numpy()
+            dec = alpha/beta
+            print('dec: ', dec)
+            # alpha_h = pyro.param("alpha_h").data.numpy()
+            # beta_h = pyro.param("beta_h").data.numpy()
             # print("alpha: ", alpha_h, " beta: ", beta_h)
-            # print('dec: ', dec)
+            # print('h: ', (alpha_h+beta_h)/alpha_h)        
+            # print("alpha: ", alpha_h, " beta: ", beta_h)
             # print('h': h)      
             # if ar.isnan(loss[-1]):
                 # break
 
         self.loss = [l.cpu() for l in loss]
         
-        # param_dict = {"alpha_h": alpha_h, "beta_h": beta_h, "h":h}
-        
-        # return self.loss, param_dict
+        return self.loss
 
 
     def analytical_posteriors(self):
         
-        alpha_lamb_pi = pyro.param("alpha_lamb_pi").data.cpu().numpy()
-        beta_lamb_pi = pyro.param("beta_lamb_pi").data.cpu().numpy()
-        alpha_lamb_r = pyro.param("alpha_lamb_r").data.cpu().numpy()
-        beta_lamb_r = pyro.param("beta_lamb_r").data.cpu().numpy()
-        alpha_h = pyro.param("alpha_lamb_r").data.cpu().numpy()
-        beta_h = pyro.param("beta_lamb_r").data.cpu().numpy()
-        concentration_dec_temp = pyro.param("concentration_dec_temp").data.cpu().numpy()
-        rate_dec_temp = pyro.param("rate_dec_temp").data.cpu().numpy()
+        vals_dict = dict.fromkeys(tuple(self.param_dict.keys()))
+
+        for key in vals_dict:
+            try:
+                vals_dict[key] = pyro.param(key).data.cpu().numpy()
+            except:
+                pass
+
         
-        param_dict = {"alpha_lamb_pi": alpha_lamb_pi, "beta_lamb_pi": beta_lamb_pi,
-                      "alpha_lamb_r": alpha_lamb_r, "beta_lamb_r": beta_lamb_r,
-                      "alpha_h": alpha_h, "beta_h": beta_h,
-                      "concentration_dec_temp": concentration_dec_temp, "rate_dec_temp": rate_dec_temp}
-        
-        x_lamb = np.arange(0.01,1.,0.01)
-        
-        y_lamb_pi = analytical_dists.Beta(x_lamb, alpha_lamb_pi, beta_lamb_pi)
-        y_lamb_r = analytical_dists.Beta(x_lamb, alpha_lamb_r, beta_lamb_r)
-        y_h = analytical_dists.Beta(x_lamb, alpha_h, beta_h)
-        
-        x_dec_temp = np.arange(0.01,10.,0.01)
-        
-        y_dec_temp = analytical_dists.Gamma(x_dec_temp, concentration=concentration_dec_temp, rate=rate_dec_temp)
-        
-        xs = [x_lamb, x_lamb, x_lamb, x_dec_temp]
-        ys = [y_lamb_pi, y_lamb_r, y_h, y_dec_temp]
-        
-        return xs, ys, param_dict
+        xs = []
+        ys = []
+        for key in vals_dict:
+            if key == 'h':
+                x_h = np.arange(0.01,1.,0.01)
+                y_h = analytical_dists.Beta(x_h, vals_dict['alpha_h'], vals_dict['beta_h'])
+                xs.append(x_h)
+                ys.append(y_h)
+            elif key == 'alpha_lamb_pi':
+                x_lamb_pi = np.arange(0.01,1.,0.01)
+                y_lamb_pi = analytical_dists.Beta(x_lamb_pi, vals_dict[key], vals_dict['beta_lamb_pi'])
+                xs.append(x_lamb_pi)
+                ys.append(y_lamb_pi)
+            elif key == 'alpha_lamb_r':
+                x_lamb_r = np.arange(0.01,1.,0.01)
+                y_lamb_r = analytical_dists.Beta(x_lamb_r, vals_dict[key], vals_dict['beta_lamb_r'])
+                xs.append(x_lamb_r)
+                ys.append(y_lamb_r)
+            elif key == 'rate_dec_temp':
+                x_dec_temp = np.arange(0.01,10.,0.01)    
+                y_dec_temp = analytical_dists.Gamma(x_dec_temp, concentration=vals_dict['concentration_dec_temp'],\
+                                                    rate=vals_dict['rate_dec_temp'])
+                xs.append(x_dec_temp)
+                ys.append(y_dec_temp)
+
+        return xs, ys, vals_dict
     
 
 
@@ -178,13 +190,27 @@ class SingleInference(object):
         #df, param_dict = self.sample_posteriors()
         
         xs, ys, param_dict = self.analytical_posteriors()
-        
-        # lamb_pi_name = "$\\lambda_{\\pi}$ as Beta($\\alpha$="+str(param_dict["alpha_lamb_pi"][0])+", $\\beta$="+str(param_dict["beta_lamb_pi"][0])+")"
-        # lamb_r_name = "$\\lambda_{r}$ as Beta($\\alpha$="+str(param_dict["alpha_lamb_r"][0])+", $\\beta$="+str(param_dict["beta_lamb_r"][0])+")"
-        h_name = "h"
-        # dec_temp_name = "$\\gamma$ as Gamma(conc="+str(param_dict["concentration_dec_temp"][0])+", rate="+str(param_dict["rate_dec_temp"][0])+")"
-        names = [h_name]
-        xlabels = ["h",]
+        names = []
+        xlabels = []
+        for key in param_dict:
+            if key == 'h':
+                h_name = "h"
+                names.append(h_name)
+                xlabels.append("h")
+            elif key == 'alpha_lamb_pi':
+                lamb_pi_name = "$\\lambda_{\\pi}$ as Beta($\\alpha$="+str(param_dict["alpha_lamb_pi"][0])+", $\\beta$="+str(param_dict["beta_lamb_pi"][0])+")"
+                names.append(lamb_pi_name)
+                xlabels.append( "forgetting rate prior policies: $\\lambda_{\pi}$")
+            elif key == 'alpha_lamb_r':
+                lamb_r_name = "$\\lambda_{r}$ as Beta($\\alpha$="+str(param_dict["alpha_lamb_r"][0])+", $\\beta$="+str(param_dict["beta_lamb_r"][0])+")"
+                names.append(lamb_r_name)
+                xlabels.append("forgetting rate reward probabilities: $\\lambda_{r}$")
+            elif key == 'rate_dec_temp':
+                dec_temp_name = "$\\gamma$ as Gamma(conc="+str(param_dict["concentration_dec_temp"][0])+", rate="+str(param_dict["rate_dec_temp"][0])+")"
+                "decision temperature: $\\gamma$"
+                names.append(dec_temp_name)
+                xlabels.append("decision temperature: $\\gamma$")
+
         #xlims = {"lamb_pi": [0,1], "lamb_r": [0,1], "dec_temp": [0,10]}
         
         for i in range(len(xs)):

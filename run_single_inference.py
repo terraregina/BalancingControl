@@ -45,12 +45,12 @@ degr = 1
 p = 0.95
 learn_rew  = 0
 q = 0.99
-h=100
+h = 1
 db = 2
 tb = 2
 tpb = 70
-n_part = 13
-dec_temp = 1
+n_part = 14
+dec_temp = 4
 folder = "temp/fitt_hier"
 
 run_name = "hier_switch"+str(switch) +"_degr"+str(degr) +"_p"+str(p)+ "_learn_rew"+str(learn_rew)+\
@@ -247,11 +247,12 @@ inferrer = inf.SingleInference(agent, data)
 iss = 1000
 loss = inferrer.infer_posterior(iter_steps=iss, num_particles=n_part)
 
+inferrer.plot_posteriors()
 
 
 plt.figure()
 plt.title("ELBO")
-plt.plot(np.arange(iss), loss[0])
+plt.plot(np.arange(iss), loss)
 plt.ylabel("ELBO")
 plt.xlabel("iteration")
 plt.show()

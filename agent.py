@@ -314,8 +314,9 @@ class BayesianPlanner(object):
         self.prior_actions = np.zeros([trials, T-1, np.unique(self.policies).size])
         self.outcome_suprise = np.zeros([trials, T, self.nc])
         self.policy_entropy = np.zeros([trials, T, self.nc])
-        self.context_obs_surprise = np.zeros([trials, T, self.nc])
-        
+        self.policy_surprise = np.zeros([trials, T, self.nc])
+        self.context_obs_suprise = np.zeros([trials, T, self.nc])
+
     def reset(self, params, fixed):
 
         self.actions[:] = 0
@@ -372,6 +373,7 @@ class BayesianPlanner(object):
             prior_context = self.prior_context
         else: #elif t == 0:
             prior_context = np.dot(self.perception.transition_matrix_context, self.posterior_context[tau-1, -1]).reshape((self.nc))
+            self.pr_cont = prior_context
 #            else:
 #                prior_context = np.dot(self.perception.transition_matrix_context, self.posterior_context[tau, t-1])
 
@@ -384,15 +386,26 @@ class BayesianPlanner(object):
                 c_obs = None
 
             self.posterior_context[tau, t,:], self.outcome_suprise[tau, t,:],\
-            self.policy_entropy[tau,t,:], self.context_obs_surprise[tau,t,:] = self.perception.update_beliefs_context(tau, t, \
+            self.policy_entropy[tau,t,:], self.policy_surprise[tau,t,:],\
+            self.context_obs_suprise[tau, t] = self.perception.update_beliefs_context(tau, t, \
                                                 reward, \
                                                 self.posterior_states[tau, t], \
                                                 self.posterior_policies[tau, t], \
                                                 prior_context, \
                                                 self.policies,\
                                                 context=c_obs)
+            # print(tau,t, self.policy_entropy[tau,t,:])
         else:
             self.posterior_context[tau,t] = 1
+        
+        if self.context_obs[tau] == 0 and tau >= 130 and t == self.T-1 and tau <= 150:
+            print('\n', tau,t)
+            print(ln(self.pr_cont).round(3), ' prior context')
+            print(self.outcome_suprise[tau,:][:,[0,2]].round(3), ' outcome suprise')
+            print(self.policy_entropy[tau,:][:,[0,2]].round(3),' policy entropy')
+            print(self.policy_surprise[tau,:][:,[0,2]].round(3),'  policy surprise')
+            print(self.context_obs_suprise[tau,:][:,[0,2]].round(3), ' context obs suprise')
+            print(self.posterior_context[tau,:][:,[0,2]].round(3), ' posterior_context')
         
         if t < self.T-1:
             post_pol = np.dot(self.posterior_policies[tau, t], self.posterior_context[tau, t])
