@@ -1,5 +1,3 @@
-
-
 import pickle
 import seaborn as sns
 import pandas as pd
@@ -73,7 +71,7 @@ def run_single_sim(lst,
 
 
     switch_cues, contingency_degradation, reward_naive, context_trans_prob, cue_ambiguity, h,\
-    training_blocks, degradation_blocks, trials_per_block, dec_temp = lst
+    training_blocks, degradation_blocks, trials_per_block, dec_temp,config_folder = lst
     
     config = 'config' + '_degradation_'+ str(int(contingency_degradation)) \
                       + '_switch_' + str(int(switch_cues))                \
@@ -82,7 +80,7 @@ def run_single_sim(lst,
                       + '_n' + str(trials_per_block)+'.json'
 
 
-    folder = os.path.join(os.getcwd(),'config')
+    folder = os.path.join(os.getcwd(),'config/' + config_folder)
     file = open(os.path.join(folder,config))
 
     task_params = js.load(file)                                                                                 
@@ -173,7 +171,7 @@ def run_single_sim(lst,
         prefix += 'degr0_'
 
     fname = prefix +'p' + str(cue_ambiguity) +'_learn_rew' + str(int(reward_naive == True)) + '_q' + str(context_trans_prob) + '_h' + str(h)+ '_' +\
-    str(meta['trials_per_block']) +'_'+str(meta['training_blocks']) + str(meta['degradation_blocks']) + '_dec' + str(dec_temp)
+    str(meta['trials_per_block']) +'_'+str(meta['training_blocks']) + str(meta['degradation_blocks']) + '_dec' + str(dec_temp) +  '_' + config_folder
     
     if extinguish:
         fname +=  '_extinguish.json'
@@ -185,11 +183,11 @@ def run_single_sim(lst,
     worlds.append(meta)
 
    
-    # fname = os.path.join(os.path.join(os.getcwd(),'temp'), fname)
-    # jsonpickle_numpy.register_handlers()
-    # pickled = pickle.encode(worlds)
-    # with open(fname, 'w') as outfile:
-    #     json.dump(pickled, outfile)
+    fname = os.path.join(os.path.join(os.getcwd(),'temp'), fname)
+    jsonpickle_numpy.register_handlers()
+    pickled = pickle.encode(worlds)
+    with open(fname, 'w') as outfile:
+        json.dump(pickled, outfile)
 
     return fname
 
@@ -241,8 +239,8 @@ ar.manual_seed(seed)
 
 
 h =  [1, 2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,30,40,50,60,70,80,90,100,200]
-h = [1,40]
-cue_ambiguity = [0.95]                       
+h = [1,10]
+cue_ambiguity = [0.9, 0.8]                       
 context_trans_prob = [0.9, 0.92, 0.93, 0.95, 0.97, 0.99]                
 degradation = [True]
 cue_switch = [False]
@@ -251,13 +249,15 @@ training_blocks = [2]
 degradation_blocks=[2]
 trials_per_block=[70]
 dec_temps = [1,4]
-
+conf_folder = ['ordered']
 
 arrays = [cue_switch, degradation, reward_naive, context_trans_prob, cue_ambiguity,h,\
-        training_blocks, degradation_blocks, trials_per_block,dec_temps]
+        training_blocks, degradation_blocks, trials_per_block,dec_temps,conf_folder]
 use_fitting = False
 
 repetitions = 1
+
+
 lst = []
 path = os.path.join(os.getcwd(),'temp')
 existing_files = os.listdir(path)
@@ -281,7 +281,7 @@ for li, l in enumerate(lst):
         prefix += 'degr0_'
 
     fname = prefix + 'p' + str(l[4])  +'_learn_rew' + str(int(l[2] == True))+ '_q' + str(l[3]) + '_h' + str(l[5]) + '_' +\
-    str(l[8]) + '_' + str(l[6]) + str(l[7]) + '_dec' + str(l[9])
+    str(l[8]) + '_' + str(l[6]) + str(l[7]) + '_dec' + str(l[9]) + '_' + l[10]
 
     if extinguish:
         fname += '_extinguish.json'
@@ -291,19 +291,20 @@ for li, l in enumerate(lst):
     names.append([li, fname])
 
 
-# missing_files = []
-# for name in names:
-#     if not name[1] in existing_files:
-#         print(name)
-#         missing_files.append(name[0])
+missing_files = []
+for name in names:
+    if not name[1] in existing_files:
+        print(name)
+        missing_files.append(name[0])
     
-# lst = [lst[i] for i in missing_files]
+lst = [lst[i] for i in missing_files]
 print('simulations to run: ' + str(len(lst)))
 
 ca = [ns, na, npl, nc, nr, T, state_transition_matrix, planet_reward_probs,\
     planet_reward_probs_switched,repetitions,use_fitting]
 
-if True:
+# if True:
+if False:
     for l in [lst[0]]:
         run_single_sim(l,ca[0],\
                         ca[1],\
@@ -317,22 +318,22 @@ if True:
                         ca[9],\
                         ca[10])
 
-# with Pool() as pool:
+with Pool() as pool:
 
-#     for _ in tqdm.tqdm(pool.istarmap(run_single_sim, zip(lst,\
-#                                             repeat(ca[0]),\
-#                                             repeat(ca[1]),\
-#                                             repeat(ca[2]),\
-#                                             repeat(ca[3]),\
-#                                             repeat(ca[4]),\
-#                                             repeat(ca[5]),\
-#                                             repeat(ca[6]),\
-#                                             repeat(ca[7]),\
-#                                             repeat(ca[8]),\
-#                                             repeat(ca[9]),\
-#                                             repeat(ca[10]))),
-#                     total=len(lst)):
-#         pass
+    for _ in tqdm.tqdm(pool.istarmap(run_single_sim, zip(lst,\
+                                            repeat(ca[0]),\
+                                            repeat(ca[1]),\
+                                            repeat(ca[2]),\
+                                            repeat(ca[3]),\
+                                            repeat(ca[4]),\
+                                            repeat(ca[5]),\
+                                            repeat(ca[6]),\
+                                            repeat(ca[7]),\
+                                            repeat(ca[8]),\
+                                            repeat(ca[9]),\
+                                            repeat(ca[10]))),
+                    total=len(lst)):
+        pass
 
 
  

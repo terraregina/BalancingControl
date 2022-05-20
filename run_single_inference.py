@@ -42,19 +42,26 @@ import jsonpickle.ext.numpy as jsonpickle_numpy
 
 switch = 0
 degr = 1
-p = 0.95
+p = 0.8
 learn_rew  = 0
-q = 0.99
-h = 1
+q = 0.9
+h = 10
 db = 2
 tb = 2
 tpb = 70
-n_part = 14
-dec_temp = 4
-folder = "temp/fitt_hier"
+n_part = 16
+iss = 600
+dec_temp = 1 
+config = 'ordered'
+folder = "temp"
 
-run_name = "hier_switch"+str(switch) +"_degr"+str(degr) +"_p"+str(p)+ "_learn_rew"+str(learn_rew)+\
-           "_q"+str(q) + "_h"+str(h)  + "_" + str(tpb) +  "_" + str(tb) + str(db) + '_dec' + str(dec_temp) + "_extinguish.json"
+infer_h = True
+infer_dec = False
+infer_both = infer_h and infer_dec
+
+prefix = 'multiple_'
+run_name = prefix+"hier_switch"+str(switch) +"_degr"+str(degr) +"_p"+str(p)+ "_learn_rew"+str(learn_rew)+\
+           "_q"+str(q) + "_h"+str(h)  + "_" + str(tpb) +  "_" + str(tb) + str(db) + '_dec' + str(dec_temp) + '_' + config + "_extinguish.json"
 fname = os.path.join(folder, run_name)
 jsonpickle_numpy.register_handlers()
 print(run_name)  
@@ -92,7 +99,11 @@ npi = na**(T-1)
 nr = 3
 npl = 3
 
-learn_pol=1
+if infer_h:
+    learn_pol=1
+else:
+    learn_pol = h
+    
 learn_habit=True
 
 utility = []
@@ -206,6 +217,10 @@ set up agent
 pol_par = alphas
 
 
+if infer_dec:
+    dec_temp = array([1])
+else:
+    dec_temp = array([dec_temp])
 
 # perception
 bayes_prc = prc.FittingPerception(
@@ -221,7 +236,7 @@ bayes_prc = prc.FittingPerception(
     C_alphas,
     generative_model_context=C,
     T=T, 
-    trials=trials,npart=n_part)
+    trials=trials,npart=n_part,dec_temp=dec_temp)
 
 ac_sel = asl.AveragedSelector(trials = trials, T = T,
                                       number_of_actions = na)
@@ -243,13 +258,22 @@ agent = agt.FittingAgent(bayes_prc, ac_sel, pol,
 ###################################
 """run inference"""
 
-inferrer = inf.SingleInference(agent, data)
-iss = 1000
+params_dict = {'infer_h':infer_h, 'infer_dec': infer_dec, 'infer_both': infer_both}
+print('\n\ninference for:')
+print(run_name)
+print('\ninferring:')
+print(params_dict)
+print('agent vals pre inference ', 'dec: ', bayes_prc.dec_temp, ' h: ', bayes_prc.alpha_0)
+
+inferrer = inf.SingleInference(agent, data, params_dict)
 loss = inferrer.infer_posterior(iter_steps=iss, num_particles=n_part)
 
+
+print('\n\ninference for:')
+print(run_name)
+print('\ninferring:')
+print(params_dict)
 inferrer.plot_posteriors()
-
-
 plt.figure()
 plt.title("ELBO")
 plt.plot(np.arange(iss), loss)

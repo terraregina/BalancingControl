@@ -23,34 +23,40 @@ device = ar.device("cpu")
 ar.set_num_threads(1)
 class SingleInference(object):
 
-    def __init__(self, agent, data):
+    def __init__(self, agent, data, params):
         self.agent = agent
         self.trials = agent.trials
         self.T = agent.T
         self.data = data
+        self.params = params
 
 
 
     def model(self):
-
-        # alpha_h = ar.ones(1).to(device)
-        # beta_h = ar.ones(1).to(device)
-
-        # # sample initial vaue of parameter from Beta distribution
-        # h = pyro.sample('h', dist.Beta(alpha_h, beta_h))
         
-        
-        concentration_dec_temp = ar.tensor(1.).to(device)
-        rate_dec_temp = ar.tensor(0.5).to(device)
-        # sample initial vaue of parameter from normal distribution
-        dec_temp = pyro.sample('dec_temp', dist.Gamma(concentration_dec_temp, rate_dec_temp)).to(device)
+        if self.params['infer_h']:
+            alpha_h = ar.ones(1).to(device)
+            beta_h = ar.ones(1).to(device)
 
-        # # param_dict = {"h": h, "dec_temp":dec_temp}
-        param_dict = {"dec_temp":dec_temp}
-        # param_dict = {"h":h}
+            # sample initial vaue of parameter from Beta distribution
+            h = pyro.sample('h', dist.Beta(alpha_h, beta_h))
+        
+        if self.params['infer_dec']:
+            concentration_dec_temp = ar.tensor(1.).to(device)
+            rate_dec_temp = ar.tensor(0.5).to(device)
+            # sample initial vaue of parameter from normal distribution
+            dec_temp = pyro.sample('dec_temp', dist.Gamma(concentration_dec_temp, rate_dec_temp)).to(device)
+
+        if self.params['infer_both']:
+            param_dict = {"h": h, "dec_temp":dec_temp}
+        else:
+            if self.params['infer_h']:
+                param_dict = {"h":h}
+            elif self.params['infer_dec']:
+                param_dict = {"dec_temp":dec_temp}
+
+
         self.agent.reset(param_dict)
-
-        
         for tau in range(self.trials):
             for t in range(self.T):
                 
@@ -84,23 +90,31 @@ class SingleInference(object):
 
     def guide(self):
 
-        # alpha_h = pyro.param("alpha_h", ar.ones(1), constraint=ar.distributions.constraints.positive).to(device)#greater_than_eq(1.))
-        # beta_h = pyro.param("beta_h", ar.ones(1), constraint=ar.distributions.constraints.positive).to(device)#greater_than_eq(1.))
-        ## sample initial vaue of parameter from Beta distribution
-        # h = pyro.sample('h', dist.Beta(alpha_h, beta_h)).to(device)
 
-        concentration_dec_temp = pyro.param("concentration_dec_temp", ar.ones(1), constraint=ar.distributions.constraints.positive).to(device)#interval(0., 7.))
-        rate_dec_temp = pyro.param("rate_dec_temp", ar.ones(1), constraint=ar.distributions.constraints.positive).to(device)
-        dec_temp = pyro.sample('dec_temp', dist.Gamma(concentration_dec_temp, rate_dec_temp)).to(device)
 
-        # param_dict = {"alpha_h": alpha_h, "beta_h": beta_h, "h": h,"concentration_dec_temp": concentration_dec_temp, "rate_dec_temp": rate_dec_temp, "dec_temp": dec_temp}
-        # param_dict = {"concentration_dec_temp": concentration_dec_temp, "rate_dec_temp": rate_dec_temp, "dec_temp": dec_temp}
+        if self.params['infer_h']:
+            alpha_h = pyro.param("alpha_h", ar.ones(1), constraint=ar.distributions.constraints.positive).to(device)#greater_than_eq(1.))
+            beta_h = pyro.param("beta_h", ar.ones(1), constraint=ar.distributions.constraints.positive).to(device)#greater_than_eq(1.))
+            # sample initial vaue of parameter from Beta distribution
+            h = pyro.sample('h', dist.Beta(alpha_h, beta_h)).to(device)
+        if self.params['infer_dec']:
+            concentration_dec_temp = pyro.param("concentration_dec_temp", ar.ones(1), constraint=ar.distributions.constraints.positive).to(device)#interval(0., 7.))
+            rate_dec_temp = pyro.param("rate_dec_temp", ar.ones(1), constraint=ar.distributions.constraints.positive).to(device)
+            dec_temp = pyro.sample('dec_temp', dist.Gamma(concentration_dec_temp, rate_dec_temp)).to(device)
 
-        # self.param_dict = {"alpha_h": alpha_h, "beta_h": beta_h, "h": h}
-        self.param_dict = {
-             "concentration_dec_temp": concentration_dec_temp, "rate_dec_temp":rate_dec_temp,
-             "dec_temp":dec_temp
-             }
+
+        if self.params['infer_both']:
+            param_dict = {"alpha_h": alpha_h, "beta_h": beta_h, "h": h,\
+                          "concentration_dec_temp": concentration_dec_temp,\
+                          "rate_dec_temp": rate_dec_temp, "dec_temp": dec_temp}
+        else:
+            if self.params['infer_h']:
+                param_dict = {"alpha_h": alpha_h, "beta_h": beta_h, "h": h}
+            elif self.params['infer_dec']:
+                param_dict = {"concentration_dec_temp": concentration_dec_temp,\
+                              "rate_dec_temp": rate_dec_temp, "dec_temp": dec_temp}
+
+        self.param_dict = param_dict
 
         return self.param_dict
 
@@ -127,18 +141,21 @@ class SingleInference(object):
         for step in pbar:
             loss.append(ar.tensor(svi.step()).to(device))
             pbar.set_description("Mean ELBO  %6.2f, %6.2f" % (ar.tensor(loss[:5]).mean(), ar.tensor(loss[-20:]).mean()))
-            alpha = pyro.param("concentration_dec_temp").data.numpy()
-            beta = pyro.param("rate_dec_temp").data.numpy()
-            dec = alpha/beta
-            print('dec: ', dec)
-            # alpha_h = pyro.param("alpha_h").data.numpy()
-            # beta_h = pyro.param("beta_h").data.numpy()
-            # print("alpha: ", alpha_h, " beta: ", beta_h)
-            # print('h: ', (alpha_h+beta_h)/alpha_h)        
-            # print("alpha: ", alpha_h, " beta: ", beta_h)
-            # print('h': h)      
-            # if ar.isnan(loss[-1]):
-                # break
+            
+            if self.params['infer_h']:
+                alpha_h = pyro.param("alpha_h").data.numpy()
+                beta_h = pyro.param("beta_h").data.numpy()
+                # print("alpha: ", alpha_h, " beta: ", beta_h)
+                print('h: ', (alpha_h+beta_h)/alpha_h)
+            
+            if self.params['infer_dec']:       
+                alpha = pyro.param("concentration_dec_temp").data.numpy()
+                beta = pyro.param("rate_dec_temp").data.numpy()
+                dec = alpha/beta
+                print('dec: ', dec)
+      
+            if ar.isnan(loss[-1]):
+                break
 
         self.loss = [l.cpu() for l in loss]
         
@@ -186,8 +203,6 @@ class SingleInference(object):
 
 
     def plot_posteriors(self):
-        
-        #df, param_dict = self.sample_posteriors()
         
         xs, ys, param_dict = self.analytical_posteriors()
         names = []

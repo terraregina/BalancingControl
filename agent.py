@@ -398,14 +398,14 @@ class BayesianPlanner(object):
         else:
             self.posterior_context[tau,t] = 1
         
-        if self.context_obs[tau] == 0 and tau >= 130 and t == self.T-1 and tau <= 150:
-            print('\n', tau,t)
-            print(ln(self.pr_cont).round(3), ' prior context')
-            print(self.outcome_suprise[tau,:][:,[0,2]].round(3), ' outcome suprise')
-            print(self.policy_entropy[tau,:][:,[0,2]].round(3),' policy entropy')
-            print(self.policy_surprise[tau,:][:,[0,2]].round(3),'  policy surprise')
-            print(self.context_obs_suprise[tau,:][:,[0,2]].round(3), ' context obs suprise')
-            print(self.posterior_context[tau,:][:,[0,2]].round(3), ' posterior_context')
+        # if self.context_obs[tau] == 0 and tau >= 130 and t == self.T-1 and tau <= 150:
+        #     print('\n', tau,t)
+        #     print(ln(self.pr_cont).round(3), ' prior context')
+        #     print(self.outcome_suprise[tau,:][:,[0,2]].round(3), ' outcome suprise')
+        #     print(self.policy_entropy[tau,:][:,[0,2]].round(3),' policy entropy')
+        #     print(self.policy_surprise[tau,:][:,[0,2]].round(3),'  policy surprise')
+        #     print(self.context_obs_suprise[tau,:][:,[0,2]].round(3), ' context obs suprise')
+        #     print(self.posterior_context[tau,:][:,[0,2]].round(3), ' posterior_context')
         
         if t < self.T-1:
             post_pol = np.dot(self.posterior_policies[tau, t], self.posterior_context[tau, t])

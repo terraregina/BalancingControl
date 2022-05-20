@@ -26,7 +26,7 @@ class FittingPerception(object):
                  dirichlet_rew_params = None,
                  generative_model_context = None,
                  T=5, trials=10, pol_lambda=0, r_lambda=0, non_decaying=0,
-                 dec_temp=ar.tensor([4]), npart=1, npl=3,nr=3, possible_rewards=[-1,0,1]):
+                 dec_temp=ar.tensor([1]), npart=1, npl=3,nr=3, possible_rewards=[-1,0,1]):
         
         self.generative_model_observations = generative_model_observations
         self.generative_model_states = generative_model_states
@@ -88,8 +88,12 @@ class FittingPerception(object):
     def reset(self):
         
         # print(self.alpha_0)
-        self.npart = self.alpha_0.shape[0]
-        self.npart = self.dec_temp.shape[0]
+        ds = self.dec_temp.shape[0]
+        hs = self.alpha_0.shape[0]
+        if hs > ds:
+            self.npart = hs
+        else:
+            self.npart = ds
         # self.dirichlet_pol_params_init = ar.zeros((self.npi, self.nc, self.npart)).to(device) + self.alpha_0[:,None,None].to(device)
         self.dirichlet_pol_params_init = ar.zeros((self.npi, self.nc, self.npart)).to(device) + self.alpha_0.to(device)
         # self.dirichlet_pol_params_init = ar.zeros((self.npi, self.nc, self.npart)).to(device) + self.alpha_0[:,:,None]#ar.stack([dirichlet_pol_params]*self.npart, dim=-1)
@@ -298,12 +302,8 @@ class FittingPerception(object):
                 context_obs_suprise = ar.stack([ln(self.generative_model_context[context]+1e-10) for n in range(self.npart)],dim=-1).to(device)
             else:
                 context_obs_suprise = 0
-            posterior = outcome_surprise + policy_surprise + entropy + context_obs_suprise
-            # print(outcome_surprise)
-            # print(policy_surprise)
-            # print(entropy)
-            # print(context_obs_suprise)
-
+            
+            posterior = outcome_surprise + policy_surprise + entropy + context_obs_suprise           
 
             posterior = ar.nan_to_num(softmax(posterior+ln(prior_context)))
 
@@ -391,7 +391,7 @@ class HierarchicalPerception(object):
                  generative_model_context = None,
                  T=4,
                  possible_rewards = [-1,0,1],
-                 dec_temp = 4,
+                 dec_temp = 1,
                  reward_index_mapping = {}):
 
         self.generative_model_observations = generative_model_observations.copy()
@@ -630,9 +630,10 @@ class HierarchicalPerception(object):
             else:
                 context_obs_suprise = 0
             posterior = outcome_surprise + policy_surprise + entropy + context_obs_suprise
-            if (tau >= 130 and t == self.T-1 and tau <= 150):
-                print('\n', tau,t)
-                print(posterior.round(3), ' summed posterior')
+            
+            # if (tau >= 130 and t == self.T-1 and tau <= 150):
+            #     print('\n', tau,t)
+            #     print(posterior.round(3), ' summed posterior')
 
                         #+ np.nan_to_num((posterior_policies * ln(self.fwd_norms).sum(axis = 0))).sum(axis=0)#\
 

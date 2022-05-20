@@ -37,7 +37,7 @@ def all_possible_trials_planning(habit_seq=3):
             dt[:,0] = [s]*ntrials        # optimal sequence index
             dt[:,1] = strts              # trial starting position
             dt[:,2:] = plnts             # planets
-            # np.random.shuffle(dt)
+            np.random.shuffle(dt)
             data[s].append(dt)
 
 
@@ -204,8 +204,8 @@ def all_possible_trials_two_seqs():
         dt[n1:n1+n2,1] = [s2]*n2
         dt[n1:n1+n2,2] = strts
         dt[n1:n1+n2,3:] = plnts
-        # np.random.shuffle(dt[:n1,:])
-        # np.random.shuffle(dt[n1:,:])
+        np.random.shuffle(dt[:n1,:])
+        np.random.shuffle(dt[n1:,:])
         trials.append(dt)
 
     return trials
