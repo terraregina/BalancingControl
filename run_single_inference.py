@@ -39,7 +39,7 @@ import jsonpickle.ext.numpy as jsonpickle_numpy
 #ar.autograd.set_detect_anomaly(True)
 ###################################
 """load data"""
-
+ar.set_num_threads(1)
 switch = 0
 degr = 1
 p = 0.8
@@ -49,14 +49,14 @@ h = 10
 db = 2
 tb = 2
 tpb = 70
-n_part = 16
+n_part = 15
 iss = 600
-dec_temp = 1 
+dec_temp = 4 
 config = 'ordered'
 folder = "temp"
 
-infer_h = True
-infer_dec = False
+infer_h = False
+infer_dec = True
 infer_both = infer_h and infer_dec
 
 prefix = 'multiple_'
@@ -266,7 +266,19 @@ print(params_dict)
 print('agent vals pre inference ', 'dec: ', bayes_prc.dec_temp, ' h: ', bayes_prc.alpha_0)
 
 inferrer = inf.SingleInference(agent, data, params_dict)
-loss = inferrer.infer_posterior(iter_steps=iss, num_particles=n_part)
+# loss = inferrer.infer_posterior(iter_steps=iss, num_particles=n_part)
+
+storage_name = os.path.join(folder, run_name[:-5] + '.save')
+
+num_steps = 1000
+size_chunk = 50
+for i in range(num_steps//size_chunk):
+    loss = inferrer.infer_posterior(iter_steps=size_chunk, num_particles=n_part)#, param_dict 
+    total_num_iter_so_far = (i+1)*size_chunk
+    storage_name = 'inferred_'+str(total_num_iter_so_far)+'.save'
+    storage_name = os.path.join(folder, storage_name)
+    inferrer.save_parameters(storage_name)
+    inferrer.load_parameters(storage_name)
 
 
 print('\n\ninference for:')
@@ -276,9 +288,8 @@ print(params_dict)
 inferrer.plot_posteriors()
 plt.figure()
 plt.title("ELBO")
-plt.plot(np.arange(iss), loss)
+plt.plot(np.arange((i+1)*size_chunk), inferrer.loss)
 plt.ylabel("ELBO")
 plt.xlabel("iteration")
 plt.show()
 
-# inferrer.plot_posteriors()

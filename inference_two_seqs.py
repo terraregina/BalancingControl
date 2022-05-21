@@ -19,6 +19,7 @@ import action_selection as asl
 import distributions as analytical_dists
 
 device = ar.device("cpu")
+ar.set_default_dtype(ar.float32)
 
 ar.set_num_threads(1)
 class SingleInference(object):
@@ -29,8 +30,9 @@ class SingleInference(object):
         self.T = agent.T
         self.data = data
         self.params = params
-
-
+        self.svi = None
+        self.loss = []
+        ar.manual_seed(5)
 
     def model(self):
         
@@ -82,8 +84,8 @@ class SingleInference(object):
                         # print(h)
             
                     curr_response = self.data["actions"][tau, t]
-                    # if(tau==self.trials-1):
-                    #     print(probs)
+                    if(tau==self.trials-1):
+                        print(probs)
                     pyro.sample('res_{}_{}'.format(tau, t), dist.Categorical(probs.T), obs=curr_response)
                     
 
@@ -115,8 +117,22 @@ class SingleInference(object):
                               "rate_dec_temp": rate_dec_temp, "dec_temp": dec_temp}
 
         self.param_dict = param_dict
-
+        print(self.param_dict)
         return self.param_dict
+
+
+    def init_svi(self, optim_kwargs={'lr': .01},
+                 num_particles=10):
+        
+        pyro.clear_param_store()
+    
+        self.svi = pyro.infer.SVI(model=self.model,
+                  guide=self.guide,
+                  optim=pyro.optim.Adam(optim_kwargs),
+                  loss=pyro.infer.Trace_ELBO(num_particles=num_particles,
+                                  #set below to true once code is vectorized
+                                  vectorize_particles=True))
+
 
     def infer_posterior(self,
                         iter_steps=1000,
@@ -126,26 +142,20 @@ class SingleInference(object):
         """
         Perform SVI over free model parameters.
         """
+ 
+        if self.svi is None:
+            self.init_svi(optim_kwargs, num_particles)
 
-        pyro.clear_param_store()
-
-        svi = pyro.infer.SVI(model=self.model,
-                  guide=self.guide,
-                  optim=pyro.optim.Adam(optim_kwargs),
-                  loss=pyro.infer.Trace_ELBO(num_particles=num_particles,
-                                  #set below to true once code is vectorized
-                                  vectorize_particles=True))
-
-        loss = []
         pbar = tqdm(range(iter_steps), position=0)
         for step in pbar:
-            loss.append(ar.tensor(svi.step()).to(device))
-            pbar.set_description("Mean ELBO  %6.2f, %6.2f" % (ar.tensor(loss[:5]).mean(), ar.tensor(loss[-20:]).mean()))
+            self.loss.append(ar.tensor(self.svi.step()).to(device))
+            pbar.set_description("Mean ELBO  %6.2f, %6.2f" % (ar.tensor(self.loss[:5]).mean(), ar.tensor(self.loss[-20:]).mean()))
             
             if self.params['infer_h']:
                 alpha_h = pyro.param("alpha_h").data.numpy()
                 beta_h = pyro.param("beta_h").data.numpy()
                 # print("alpha: ", alpha_h, " beta: ", beta_h)
+                print('alpha_h: ', alpha_h, ', beta_h: ', beta_h) 
                 print('h: ', (alpha_h+beta_h)/alpha_h)
             
             if self.params['infer_dec']:       
@@ -154,10 +164,10 @@ class SingleInference(object):
                 dec = alpha/beta
                 print('dec: ', dec)
       
-            if ar.isnan(loss[-1]):
+            if ar.isnan(self.loss[-1]):
                 break
 
-        self.loss = [l.cpu() for l in loss]
+        # self.loss += [l.cpu() for l in loss]
         
         return self.loss
 
@@ -237,3 +247,11 @@ class SingleInference(object):
             plt.show()
             
         print(param_dict)
+
+    def save_parameters(self, fname):
+        
+        pyro.get_param_store().save(fname)
+        
+    def load_parameters(self, fname):
+        
+        pyro.get_param_store().load(fname)
