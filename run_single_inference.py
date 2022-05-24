@@ -49,7 +49,7 @@ h = 10
 db = 2
 tb = 2
 tpb = 70
-n_part = 15
+n_part = 1
 iss = 600
 dec_temp = 4 
 config = 'ordered'
@@ -268,28 +268,38 @@ print('agent vals pre inference ', 'dec: ', bayes_prc.dec_temp, ' h: ', bayes_pr
 inferrer = inf.SingleInference(agent, data, params_dict)
 # loss = inferrer.infer_posterior(iter_steps=iss, num_particles=n_part)
 
-storage_name = os.path.join(folder, run_name[:-5] + '.save')
 
-num_steps = 1000
-size_chunk = 50
+num_steps = 2
+size_chunk = 2
+converged = False
+i = 0
+# while not converged:
+
 for i in range(num_steps//size_chunk):
-    loss = inferrer.infer_posterior(iter_steps=size_chunk, num_particles=n_part)#, param_dict 
+    loss = inferrer.infer_posterior(iter_steps=size_chunk, num_particles=n_part)#, param_dict
     total_num_iter_so_far = (i+1)*size_chunk
-    storage_name = 'inferred_'+str(total_num_iter_so_far)+'.save'
-    storage_name = os.path.join(folder, storage_name)
+    storage_name = os.path.join(folder, run_name[:-5] + '.save')
     inferrer.save_parameters(storage_name)
-    inferrer.load_parameters(storage_name)
+    converged = inferrer.check_convergence(loss)
+    # i += 1
+    if converged:
+        inferred_params = inferrer.return_inferred_parameters()
+        break
+    else:
+        inferrer.load_parameters(storage_name)
+
 
 
 print('\n\ninference for:')
 print(run_name)
 print('\ninferring:')
 print(params_dict)
-inferrer.plot_posteriors()
-plt.figure()
+# inferrer.plot_posteriors()
+fig = plt.figure()
 plt.title("ELBO")
 plt.plot(np.arange((i+1)*size_chunk), inferrer.loss)
 plt.ylabel("ELBO")
 plt.xlabel("iteration")
+fig.savefig(run_name[:-5] + '.png', dpi=300)
 plt.show()
 

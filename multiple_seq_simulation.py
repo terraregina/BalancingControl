@@ -8,13 +8,13 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-import chart_studio.plotly as py
-import plotly.express as px
+# import chart_studio.plotly as py
+# import plotly.express as px
 import pandas as pd
-import cufflinks as cf
+# import cufflinks as cf
 import json as js
-cf.go_offline()
-cf.set_config_file(offline=False, world_readable=True)
+# cf.go_offline()
+# cf.set_config_file(offline=False, world_readable=True)
 from itertools import product, repeat
 import os
 import action_selection as asl
@@ -233,16 +233,16 @@ np.random.seed(seed)
 ar.manual_seed(seed)
 
 h =  [1, 2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,30,40,50,60,70,80,90,100,200]
-h = [40]
-cue_ambiguity = [0.8,0.9]                       
-context_trans_prob = [0.9]                
+# h = [40]
+cue_ambiguity = [0.8,0.9,0.95]                       
+context_trans_prob = [0.9, 0.95]                
 degradation = [True]
 cue_switch = [False]
 reward_naive = [False]
 training_blocks = [2]
 degradation_blocks=[2]
 trials_per_block=[70]
-dec_temps = [4,1]
+dec_temps = [1,2,3,4,5,6]
 conf_folder = ['ordered']
 
 arrays = [cue_switch, degradation, reward_naive, context_trans_prob, cue_ambiguity,h,\
