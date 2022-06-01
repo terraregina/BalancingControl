@@ -227,7 +227,7 @@ def run_agent(par_list, trials, T, ns=6, na=2, nr=3, nc=2, npl=2, trial_type=Non
                                     trials = trials,
                                     prior_context = prior_context,
                                     learn_habit=True,
-                                    learn_rew = learn_rew
+                                    learn_rew = learn_rew,T=T
                                     )
         w = FittingWorld(environment, bayes_pln, trials = trials, T = T)
 

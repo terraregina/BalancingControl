@@ -9,7 +9,7 @@ from misc import ln, softmax
 import scipy.special as scs
 import torch as ar
 
-ar.set_default_dtype(ar.float64)
+# ar.set_default_dtype(ar.float64)
 try:
     from inference_two_seqs import device
 except:
@@ -23,9 +23,9 @@ class FittingAgent(object):
                  prior_context = None,
                  learn_habit = False,
                  learn_rew = False,
-                 trials = 1, T = 10, number_of_states = 6,
-                 number_of_rewards = 2,
-                 number_of_policies = 10,npart=10):
+                 trials = 1, T = 4, number_of_states = 6,
+                 number_of_rewards = 3,
+                 number_of_policies = 8,npart=1):
 
         #set the modules of the agent
         self.npart = npart
@@ -76,11 +76,11 @@ class FittingAgent(object):
         self.actions = ar.zeros((trials, T), dtype = int).to(device)
         self.observations = ar.zeros((trials, T), dtype = int).to(device)
         self.rewards = ar.zeros((trials, T), dtype = int).to(device)
-        self.posterior_actions = ar.zeros((trials, T-1, self.na)).to(device)
-        self.posterior_rewards = ar.zeros((trials, T, self.nr)).to(device)
-        self.posterior_contexts = ar.zeros((trials, T, self.nc)).to(device)
+        # self.posterior_actions = ar.zeros((trials, T-1, self.na)).to(device)
+        # self.posterior_rewards = ar.zeros((trials, T, self.nr)).to(device)
+        # self.posterior_contexts = ar.zeros((trials, T, self.nc)).to(device)
 
-        self.control_probs  = ar.zeros((trials, T, self.na)).to(device)
+        # self.control_probs  = ar.zeros((trials, T, self.na)).to(device)
         self.log_probability = 0
         if hasattr(self.perception, 'generative_model_context'):
             self.context_obs = ar.zeros(trials, dtype=int).to(device)
@@ -91,10 +91,10 @@ class FittingAgent(object):
         self.actions = ar.zeros((self.trials, self.T), dtype = int).to(device)
         self.observations = ar.zeros((self.trials, self.T), dtype = int).to(device)
         self.rewards = ar.zeros((self.trials, self.T), dtype = int).to(device)
-        self.posterior_actions = ar.zeros((self.trials, self.T-1, self.na)).to(device)
-        self.posterior_rewards = ar.zeros((self.trials, self.T, self.nr)).to(device)
-        self.posterior_contexts = ar.zeros((self.trials, self.T, self.nc)).to(device)
-        self.control_probs  = ar.zeros((self.trials, self.T, self.na)).to(device)
+        # self.posterior_actions = ar.zeros((self.trials, self.T-1, self.na)).to(device)
+        # self.posterior_rewards = ar.zeros((self.trials, self.T, self.nr)).to(device)
+        # self.posterior_contexts = ar.zeros((self.trials, self.T, self.nc)).to(device)
+        # self.control_probs  = ar.zeros((self.trials, self.T, self.na)).to(device)
         self.log_probability = 0
         if hasattr(self.perception, 'generative_model_context'):
             self.context_obs = ar.zeros(self.trials, dtype=int).to(device)
@@ -107,10 +107,13 @@ class FittingAgent(object):
     def initiate_planet_rewards(self):
         
         # gen_mod_rewards = ar.zeros([self.nr, self.nh, self.nc, self.npart])
+        try:
+            self.perception.curr_gen_mod_rewards.append(\
+                self.perception.generative_model_rewards[-1][:,self.planets,:,:])
+        except:
+            self.perception.curr_gen_mod_rewards.append(\
+                self.perception.generative_model_rewards[-1][:,self.planets.long(),:,:])
 
-        self.perception.curr_gen_mod_rewards.append(\
-            self.perception.generative_model_rewards[-1][:,self.planets,:,:])
-  
         # return gen_mod_rewards
 
     def update_beliefs(self, tau, t, observation, reward, response, context=None):
@@ -134,7 +137,8 @@ class FittingAgent(object):
             self.prev_pols = self.prev_pols*mask
             self.possible_policies = ar.where(self.prev_pols != 0)[0].to(device)
             self.possible_polcies = self.policies[self.possible_policies,:].to(device)
-
+            # if t == 3 and self.possible_policies[0] != 3 and self.possible_policies[0] != 6:
+            #     print('suboptimal',tau) 
         # print(self.possible_policies)
         self.perception.update_beliefs_states(
                                          tau, t,
@@ -143,9 +147,12 @@ class FittingAgent(object):
                                          #self.policies,
                                          self.possible_policies)
 
+        # print('\n', tau,t,self.perception.rew_messages[-1][...,0])
 
         #update beliefs about policies
         self.perception.update_beliefs_policies(tau, t) #self.posterior_policies[tau, t], self.likelihood[tau,t]
+
+        # print('\n', tau,t,self.perception.posterior_policies[-1][...,0])
 
         if tau == 0:
             prior_context = self.prior_context[:,None].repeat(1,self.npart)
@@ -167,8 +174,9 @@ class FittingAgent(object):
                                                 # self.perception.posterior_policies[-1], \
                                                 prior_context, \
                                                 context=c_obs)
-        # print("post_context: ", self.perception.posterior_contexts[-1])
-
+        if tau < 180:# and tau < 170:
+            print(tau, t, self.perception.posterior_contexts[-1][...,0])
+            
         if t == self.T-1 and self.learn_habit:
             self.perception.update_beliefs_dirichlet_pol_params(tau, t)
 
@@ -178,6 +186,10 @@ class FittingAgent(object):
             self.perception.update_beliefs_dirichlet_rew_params(tau, t,\
                                                             self.planets, reward)
 
+
+        # if tau == 6 and t == 3:
+        #     print(tau,t, self.perception.dirichlet_rew_params[-1][...,0])
+            
     def generate_response(self, tau, t):
 
         #get response probability
@@ -358,7 +370,8 @@ class BayesianPlanner(object):
             possible_policies = np.where(self.policies[:,t-1]==response)[0]
             self.possible_polcies = np.intersect1d(self.possible_polcies, possible_policies)
             self.log_probability += ln(self.posterior_actions[tau,t-1,response])
-
+            # if t == 3 and self.possible_polcies[0] != 3 and self.possible_polcies[0] != 6:
+            #     print('suboptimal',tau) 
         self.perception.current_gen_model_rewards = self.initiate_planet_rewards()
         self.posterior_states[tau, t] = self.perception.update_beliefs_states(
                                          tau, t,
@@ -427,6 +440,8 @@ class BayesianPlanner(object):
                                                     self.posterior_states[tau, t], \
                                                     self.posterior_policies[tau, t], \
                                                     self.posterior_context[tau,t])
+    
+        # print(self.posterior_dirichlet_rew[tau,t])
 
     def generate_response(self, tau, t):
 

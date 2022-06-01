@@ -224,7 +224,7 @@ class FittingPerception(object):
         #fwd_norms[-1] = norm[-1]
         fwd_norm.append(norm[-1])
         fwd_norms = ar.stack(fwd_norm).to(device)
-        # print(tau,t,self.fwd_norms[tau,t])
+        # print(tau,t,fwd_norms[...,0])
         non_zero = norm > 0
         posterior[:,non_zero] /= norm[non_zero]
             
@@ -248,8 +248,8 @@ class FittingPerception(object):
     
     def update_beliefs_policies(self, tau, t):
 
-        likelihood = (self.fwd_norms[-1]+1e-10).prod(axis=0).to(device)
-
+        likelihood = (self.fwd_norms[-1]).prod(axis=0).to(device)
+        # print('\n', tau,t,likelihood[...,0])
         norm = likelihood.sum(axis=0)
         likelihood = ar.pow(likelihood/norm,self.dec_temp[None,:]).to(device) #* ar.pow(norm,self.dec_temp)
         # likelihood /= likelihood.sum(axis=0)
@@ -304,8 +304,17 @@ class FittingPerception(object):
                 context_obs_suprise = 0
             
             posterior = outcome_surprise + policy_surprise + entropy + context_obs_suprise           
-
             posterior = ar.nan_to_num(softmax(posterior+ln(prior_context)))
+            
+            # if tau > 139 and t!=0 and context == 0 and tau < 180:
+            # if tau > 130 and t > 0 and tau < 160:
+            # if tau == 140 and t == 1:
+                # print('\n', tau,t, ', obs: ', int(context))
+                # print('\n', tau,t,posterior.numpy().T, 'posterior')
+                # print(ln(prior_context).numpy().T.round(2), 'prior_context')
+                # print(outcome_surprise.numpy().T.round(2), 'outcome surprise')
+                # print(entropy.numpy().T.round(2), 'entropy')
+                # print(policy_surprise.numpy().T.round(2), 'policy_surprise')    	
 
 
             self.posterior_contexts.append(posterior)

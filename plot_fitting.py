@@ -7,28 +7,29 @@
 
 # %%
 # Run first
+import time
 import pickle
 import seaborn as sns
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-import chart_studio.plotly as py
-import plotly.express as px
+# import chart_studio.plotly as py
+# import plotly.express as px
 import pandas as pd
-import cufflinks as cf
+# import cufflinks as cf
 import json as js
-cf.go_offline()
-cf.set_config_file(offline=False, world_readable=True)
+# cf.go_offline()
+# cf.set_config_file(offline=False, world_readable=True)
 import itertools
-from plotly.offline import download_plotlyjs, init_notebook_mode, plot, iplot
+# from plotly.offline import download_plotlyjs, init_notebook_mode, plot, iplot
 import os
 import action_selection as asl
 from itertools import product, repeat
 import jsonpickle as pickle
 import jsonpickle.ext.numpy as jsonpickle_numpy
 import json
-import plotly.graph_objects as go
+# import plotly.graph_objects as go
 import perception as prc
 import agent as agt
 from environment import PlanetWorld
@@ -39,7 +40,8 @@ from multiprocessing import Pool
 import time
 import torch as tr
 # functions
-def load_file_names(arrays, use_fitting=False):
+
+def load_file_names(arrays, use_fitting=False,ordered=True):
     lst = []
     for i in product(*arrays):
         lst.append(list(i))
@@ -58,7 +60,6 @@ def load_file_names(arrays, use_fitting=False):
             prefix += 'switch1_'
         else:
             prefix +='switch0_'
-
         if l[1] == True:
             prefix += 'degr1_'
         else:
@@ -67,6 +68,8 @@ def load_file_names(arrays, use_fitting=False):
         fname = prefix + 'p' + str(l[4])  +'_learn_rew' + str(int(l[2] == True))+ '_q' + str(l[3]) + '_h' + str(l[5]) + '_' +\
         str(l[8]) + '_' + str(l[6]) + str(l[7])+ '_dec' + str(l[9])
 
+        if ordered == True:
+            fname += '_ordered'
 
         fname +=  '_extinguish.json'
 
@@ -108,12 +111,23 @@ def load_df(names,data_folder='data'):
         ntb = np.repeat(meta['training_blocks'], ntrials*nw*nt)
 
 
-        post_dir_rewards = [tr.stack(per.dirichlet_rew_params) for per in perception]
-        post_dir_rewards = [np.asarray(post[1:,:,:,:,0].reshape((ntrials,nt-1) + tuple(post.shape[1:-1]))) \
+        post_dir_rewards = [np.stack(per.dirichlet_rew_params) for per in perception]
+        post_dir_rewards = [post[1:,:,:,:,0].reshape((ntrials,nt-1) + tuple(post.shape[1:-1])) \
             for post in post_dir_rewards]
+        
+        # post_dir_rewards = [tr.stack(per.dirichlet_rew_params) for per in perception]
+        # post_dir_rewards = [np.asarray(post[1:,:,:,:,0].reshape((ntrials,nt-1) + tuple(post.shape[1:-1]))) \
+        #     for post in post_dir_rewards]
 
-        post_context = [tr.stack(per.posterior_contexts) for per in perception]
-        post_context = [np.asarray(post[:,:,0].reshape((ntrials,nt,nc))) for post in post_context]
+
+        post_context = [np.stack(per.posterior_contexts) for per in perception]
+        post_context = [post[:,:,0].reshape((ntrials,nt,nc)) for post in post_context]
+
+        # post_context_tr = [tr.stack([tr.tensor(pr) for pr in per.posterior_contexts]) for per in perception]
+        # post_context_tr = [np.asarray(post[:,:,0].reshape((ntrials,nt,nc))) for post in post_context_tr]
+
+        # post_context = [tr.stack(per.posterior_contexts) for per sin perception]
+        # post_context = [np.asarray(post[:,:,0].reshape((ntrials,nt,nc))) for post in post_context]
 
         
         entropy_rewards = np.zeros([nw*ntrials*nt,nc])
@@ -337,6 +351,7 @@ def context_plot_cue_dependent(query='p == 0.6'):
             + str(int(switch)) + ', degradation: ' + str(int(contingency_degr)) + \
             ', reward_naive: ' + str(int(reward_naive))
     fig.suptitle(title, fontsize=15)
+    print('poop')
     fig.show()
 
 
@@ -725,40 +740,42 @@ def explore_counts(names,data_folder='temp',nc=4):
 
 # %%
 nc = 4
-h =  [100]
-h=[1,100]
-cue_ambiguity = [0.95]                     
-context_trans_prob = [0.9, 0.92, 0.93, 0.95, 0.97, 0.99]                         
+h =  [1, 2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,30,40,50,60,70,80,90,100,200]
+
+cue_ambiguity = [0.9]#, 0.8]                       
+context_trans_prob = [0.9]#, 0.92, 0.93, 0.95, 0.97, 0.99]                
 degradation = [True]
 cue_switch = [False]
 reward_naive = [False]
 training_blocks = [2]
 degradation_blocks=[2]
 trials_per_block=[70]
-dec_temps = [1,4]
+dec_temps = [1]#,2,3,4,5,6]
+conf_folder = ['ordered']
+
 arrays = [cue_switch, degradation, reward_naive, context_trans_prob, cue_ambiguity,h,\
         training_blocks, degradation_blocks, trials_per_block,dec_temps]
 use_fitting = True
 names = load_file_names(arrays, use_fitting = use_fitting)
-print(names)
 # df = load_df(names, data_folder='temp/old',extinguish=extinguish)
-df = load_df(names, data_folder='temp/fitt_hier')
+df = load_df(names, data_folder='temp')
+# print(names)
 
 #%%
 # context plot
-ind = 1
+ind = 0
 # base query parameters
 switch = False
 contingency_degr = True
 reward_naive = False
 q = context_trans_prob[ind]
-h = 100
+h = 200
 t = 3
 trials_per_block = 70
 training_blocks = 2
 degradation_blocks = 2
 cue = 0
-dec_temp = 4
+dec_temp = dec_temps[0]
 strs = np.array(['switch_cues==', '& contingency_degradation==', '& learn_rew==', '& q==', '& h<=',\
                  '& training_blocks==', '& degradation_blocks==', '& trials_per_block==', '& dec_temp=='],dtype='str')
 vals = np.array([switch, contingency_degr, reward_naive, q, h,\
@@ -766,33 +783,33 @@ vals = np.array([switch, contingency_degr, reward_naive, q, h,\
 whole_query = np.char.join('', np.char.add(strs, vals))
 base_query = ' '.join(whole_query.tolist())
 base_df = df.query(base_query)
-queries = ['p==0.95','p==0.7']
+queries = ['p==0.9','p==0.7']
 p = queries[0]
 
 context_plot_cue_dependent(p)
 
 # context plot
-
-# base query parameters
-switch = False
+#%%
+# # base query parameters
+# switch = False
 contingency_degr = True
-reward_naive = False
-q = context_trans_prob[ind]
-h = 100
-t = 3
-trials_per_block = 70
-training_blocks = 2
-degradation_blocks = 2
-cue = 0
-dec_temp = 1
-strs = np.array(['switch_cues==', '& contingency_degradation==', '& learn_rew==', '& q==', '& h<=',\
-                 '& training_blocks==', '& degradation_blocks==', '& trials_per_block==', '& dec_temp=='],dtype='str')
-vals = np.array([switch, contingency_degr, reward_naive, q, h,\
-                 training_blocks, degradation_blocks, trials_per_block, dec_temp], dtype='str')
-whole_query = np.char.join('', np.char.add(strs, vals))
-base_query = ' '.join(whole_query.tolist())
-base_df = df.query(base_query)
-queries = ['p==0.95','p==0.7']
-p = queries[0]
+# reward_naive = False
+# q = context_trans_prob[ind]
+# h = 100
+# t = 3
+# trials_per_block = 70
+# training_blocks = 2
+# degradation_blocks = 2
+# cue = 0
+# dec_temp = 1
+# strs = np.array(['switch_cues==', '& contingency_degradation==', '& learn_rew==', '& q==', '& h<=',\
+#                  '& training_blocks==', '& degradation_blocks==', '& trials_per_block==', '& dec_temp=='],dtype='str')
+# vals = np.array([switch, contingency_degr, reward_naive, q, h,\
+#                  training_blocks, degradation_blocks, trials_per_block, dec_temp], dtype='str')
+# whole_query = np.char.join('', np.char.add(strs, vals))
+# base_query = ' '.join(whole_query.tolist())
+# base_df = df.query(base_query)
+# queries = ['p==0.95','p==0.7']
+# p = queries[0]
 
-context_plot_cue_dependent(p)
+# context_plot_cue_dependent(p)

@@ -792,6 +792,7 @@ class AveragedSelector(object):
         control_prob = control_prob/control_prob.sum()
         self.control_probability[tau, t] = control_prob
 
+
 class FittingAveragedSelector(object):
 
     def __init__(self, trials = 1, T = 10, number_of_actions = 2):
@@ -816,7 +817,7 @@ class FittingAveragedSelector(object):
 
         #generate the desired response from action probability
         u = ar.multinomial(self.control_probability[tau, t],num_samples=1, replacement = True)[0]
-        # u = ar.argmax(self.control_probability[tau,t])
+        u = ar.argmax(self.control_probability[tau,t])
         return u
 
     def estimate_action_probability(self, tau, t, posterior_policies, actions, *args):
