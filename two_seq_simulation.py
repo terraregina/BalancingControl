@@ -239,7 +239,7 @@ if __name__ == '__main__':
 
 
     h =  [1, 2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,30,40,50,60,70,80,90,100,200]
-    h = [100]
+    # h = [100]
     cue_ambiguity = [0.9]#, 0.8]                       
     context_trans_prob = [0.9]#, 0.92, 0.93, 0.95, 0.97, 0.99]                
     degradation = [True]
@@ -248,12 +248,12 @@ if __name__ == '__main__':
     training_blocks = [2]
     degradation_blocks=[2]
     trials_per_block=[70]
-    dec_temps = [1]#,2,3,4,5,6]
+    dec_temps = [1,2,3,4,5,6]
     conf_folder = ['ordered']
 
     arrays = [cue_switch, degradation, reward_naive, context_trans_prob, cue_ambiguity,h,\
             training_blocks, degradation_blocks, trials_per_block,dec_temps,conf_folder]
-    use_fitting = True
+    use_fitting = False
 
     repetitions = 1
 
@@ -303,40 +303,40 @@ if __name__ == '__main__':
     ca = [ns, na, npl, nc, nr, T, state_transition_matrix, planet_reward_probs,\
         planet_reward_probs_switched,repetitions,use_fitting]
 
-    if True:
-    # if False:
-        for l in lst:
-            print(names[0])
-            run_single_sim(l,ca[0],\
-                            ca[1],\
-                            ca[2],\
-                            ca[3],\
-                            ca[4],\
-                            ca[5],\
-                            ca[6],\
-                            ca[7],\
-                            ca[8],\
-                            ca[9],\
-                            ca[10])
+    # if True:
+    # # if False:
+    #     for l in lst:
+    #         print(names[0])
+    #         run_single_sim(l,ca[0],\
+    #                         ca[1],\
+    #                         ca[2],\
+    #                         ca[3],\
+    #                         ca[4],\
+    #                         ca[5],\
+    #                         ca[6],\
+    #                         ca[7],\
+    #                         ca[8],\
+    #                         ca[9],\
+    #                         ca[10])
 
     # import plot_fitting
                             
-    # with Pool() as pool:
+    with Pool() as pool:
 
-    #     for _ in tqdm.tqdm(pool.istarmap(run_single_sim, zip(lst,\
-    #                                             repeat(ca[0]),\
-    #                                             repeat(ca[1]),\
-    #                                             repeat(ca[2]),\
-    #                                             repeat(ca[3]),\
-    #                                             repeat(ca[4]),\
-    #                                             repeat(ca[5]),\
-    #                                             repeat(ca[6]),\
-    #                                             repeat(ca[7]),\
-    #                                             repeat(ca[8]),\
-    #                                             repeat(ca[9]),\
-    #                                             repeat(ca[10]))),
-    #                     total=len(lst)):
-    #         pass
+        for _ in tqdm.tqdm(pool.istarmap(run_single_sim, zip(lst,\
+                                                repeat(ca[0]),\
+                                                repeat(ca[1]),\
+                                                repeat(ca[2]),\
+                                                repeat(ca[3]),\
+                                                repeat(ca[4]),\
+                                                repeat(ca[5]),\
+                                                repeat(ca[6]),\
+                                                repeat(ca[7]),\
+                                                repeat(ca[8]),\
+                                                repeat(ca[9]),\
+                                                repeat(ca[10]))),
+                        total=len(lst)):
+            pass
 
 
     

@@ -817,7 +817,7 @@ class FittingAveragedSelector(object):
 
         #generate the desired response from action probability
         u = ar.multinomial(self.control_probability[tau, t],num_samples=1, replacement = True)[0]
-        u = ar.argmax(self.control_probability[tau,t])
+        # u = ar.argmax(self.control_probability[tau,t])
         return u
 
     def estimate_action_probability(self, tau, t, posterior_policies, actions, *args):

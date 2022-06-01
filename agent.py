@@ -152,7 +152,6 @@ class FittingAgent(object):
         #update beliefs about policies
         self.perception.update_beliefs_policies(tau, t) #self.posterior_policies[tau, t], self.likelihood[tau,t]
 
-        # print('\n', tau,t,self.perception.posterior_policies[-1][...,0])
 
         if tau == 0:
             prior_context = self.prior_context[:,None].repeat(1,self.npart)
@@ -174,8 +173,7 @@ class FittingAgent(object):
                                                 # self.perception.posterior_policies[-1], \
                                                 prior_context, \
                                                 context=c_obs)
-        if tau < 180:# and tau < 170:
-            print(tau, t, self.perception.posterior_contexts[-1][...,0])
+
             
         if t == self.T-1 and self.learn_habit:
             self.perception.update_beliefs_dirichlet_pol_params(tau, t)

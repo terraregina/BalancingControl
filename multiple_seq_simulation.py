@@ -176,10 +176,8 @@ def run_single_sim(lst,
     fname = prefix +'p' + str(cue_ambiguity) +'_learn_rew' + str(int(reward_naive == True)) + '_q' + str(context_trans_prob) + '_h' + str(h)+ '_' +\
     str(meta['trials_per_block']) +'_'+str(meta['training_blocks']) + str(meta['degradation_blocks']) + '_dec' + str(dec_temp) +  '_' + config_folder
     
-    if extinguish:
-        fname +=  '_extinguish.json'
-    else:
-        fname += '.json'
+    
+    fname +=  '_extinguish.json'
 
     worlds = [run_agent(par_list, trials, T, ns , na, nr, nc, npl, trial_type=trial_type, use_fitting=use_fitting) for _ in range(repetitions)]
     meta['trial_type'] = task_params['trial_type']
@@ -195,122 +193,123 @@ def run_single_sim(lst,
     return fname
 
 
+if __name__ == '__main__':
 
 
-data_folder = 'temp'
+    data_folder = 'temp'
 
 
-extinguish = True
+    extinguish = True
 
-na = 2                                           # number of unique possible actions
-nc = 4                                           # number of contexts, planning and habit
-nr = 3                                           # number of rewards
-ns = 6                                           # number of unique travel locations
-npl = 3
-steps = 3                                        # numbe of decisions made in an episode
-T = steps + 1                                    # episode length
-
-
-planet_reward_probs = np.array([[0.95, 0   , 0   ],
-                                [0.05, 0.95, 0.05],
-                                [0,    0.05, 0.95]]).T    # npl x nr
-planet_reward_probs_switched = np.array([[0   , 0    , 0.95],
-                                        [0.05, 0.95 , 0.05],
-                                        [0.95, 0.05 , 0.0]]).T 
-state_transition_matrix = np.zeros([ns,ns,na])
-m = [1,2,3,4,5,0]
-for r, row in enumerate(state_transition_matrix[:,:,0]):
-    row[m[r]] = 1
-j = np.array([5,4,5,6,2,2])-1
-for r, row in enumerate(state_transition_matrix[:,:,1]):
-    row[j[r]] = 1
-state_transition_matrix = np.transpose(state_transition_matrix, axes= (1,0,2))
-state_transition_matrix = np.repeat(state_transition_matrix[:,:,:,np.newaxis], repeats=nc, axis=3)
+    na = 2                                           # number of unique possible actions
+    nc = 4                                           # number of contexts, planning and habit
+    nr = 3                                           # number of rewards
+    ns = 6                                           # number of unique travel locations
+    npl = 3
+    steps = 3                                        # numbe of decisions made in an episode
+    T = steps + 1                                    # episode length
 
 
-seed = 5
-np.random.seed(seed)
-ar.manual_seed(seed)
-
-h =  [1, 2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,30,40,50,60,70,80,90,100,200]
-# h = [40]
-cue_ambiguity = [0.8,0.9,0.95]                       
-context_trans_prob = [0.9, 0.95]                
-degradation = [True]
-cue_switch = [False]
-reward_naive = [False]
-training_blocks = [2]
-degradation_blocks=[2]
-trials_per_block=[70]
-dec_temps = [1,2,3,4,5,6]
-conf_folder = ['ordered']
-
-arrays = [cue_switch, degradation, reward_naive, context_trans_prob, cue_ambiguity,h,\
-        training_blocks, degradation_blocks, trials_per_block,dec_temps,conf_folder]
-use_fitting = False
-
-repetitions = 1
+    planet_reward_probs = np.array([[0.95, 0   , 0   ],
+                                    [0.05, 0.95, 0.05],
+                                    [0,    0.05, 0.95]]).T    # npl x nr
+    planet_reward_probs_switched = np.array([[0   , 0    , 0.95],
+                                            [0.05, 0.95 , 0.05],
+                                            [0.95, 0.05 , 0.0]]).T 
+    state_transition_matrix = np.zeros([ns,ns,na])
+    m = [1,2,3,4,5,0]
+    for r, row in enumerate(state_transition_matrix[:,:,0]):
+        row[m[r]] = 1
+    j = np.array([5,4,5,6,2,2])-1
+    for r, row in enumerate(state_transition_matrix[:,:,1]):
+        row[j[r]] = 1
+    state_transition_matrix = np.transpose(state_transition_matrix, axes= (1,0,2))
+    state_transition_matrix = np.repeat(state_transition_matrix[:,:,:,np.newaxis], repeats=nc, axis=3)
 
 
-lst = []
-path = os.path.join(os.getcwd(),'temp')
-existing_files = os.listdir(path)
+    seed = 5
+    np.random.seed(seed)
+    ar.manual_seed(seed)
 
-for i in product(*arrays):
-    lst.append(list(i))
+    h =  [1, 2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,30,40,50,60,70,80,90,100,200]
+    # h = [40]
+    cue_ambiguity = [0.9]                       
+    context_trans_prob = [0.9]                
+    degradation = [True]
+    cue_switch = [False]
+    reward_naive = [False]
+    training_blocks = [2]
+    degradation_blocks=[2]
+    trials_per_block=[70]
+    dec_temps = [1,2,3,4,5,6]
+    conf_folder = ['ordered']
 
+    arrays = [cue_switch, degradation, reward_naive, context_trans_prob, cue_ambiguity,h,\
+            training_blocks, degradation_blocks, trials_per_block,dec_temps,conf_folder]
+    use_fitting = False
 
-names = []
-
-for li, l in enumerate(lst):
-    prefix = 'multiple_'
-    if l[0] == True:
-        prefix += 'switch1_'
-    else:
-        prefix +='switch0_'
-
-    if l[1] == True:
-        prefix += 'degr1_'
-    else:
-        prefix += 'degr0_'
-
-    fname = prefix + 'p' + str(l[4])  +'_learn_rew' + str(int(l[2] == True))+ '_q' + str(l[3]) + '_h' + str(l[5]) + '_' +\
-    str(l[8]) + '_' + str(l[6]) + str(l[7]) + '_dec' + str(l[9]) + '_' + l[10]
-
-    if extinguish:
-        fname += '_extinguish.json'
-    else:
-        fname += '.json'
-    names.append([li, fname])
+    repetitions = 1
 
 
-missing_files = []
-for name in names:
-    if not name[1] in existing_files:
-        print(name)
-        missing_files.append(name[0])
+    lst = []
+    path = os.path.join(os.getcwd(),'temp')
+    existing_files = os.listdir(path)
 
-lst = [lst[i] for i in missing_files]
-print('simulations to run: ' + str(len(lst)))
+    for i in product(*arrays):
+        lst.append(list(i))
 
-ca = [ns, na, npl, nc, nr, T, state_transition_matrix, planet_reward_probs,\
-    planet_reward_probs_switched,repetitions,use_fitting]
 
-if True:
-# if False:
-    for l in [lst[0]]:
-        run_single_sim(l,
-                        ca[0],\
-                        ca[1],\
-                        ca[2],\
-                        ca[3],\
-                        ca[4],\
-                        ca[5],\
-                        ca[6],\
-                        ca[7],\
-                        ca[8],\
-                        ca[9],\
-                        ca[10])
+    names = []
+
+    for li, l in enumerate(lst):
+        prefix = 'multiple_'
+        if l[0] == True:
+            prefix += 'switch1_'
+        else:
+            prefix +='switch0_'
+
+        if l[1] == True:
+            prefix += 'degr1_'
+        else:
+            prefix += 'degr0_'
+
+        fname = prefix + 'p' + str(l[4])  +'_learn_rew' + str(int(l[2] == True))+ '_q' + str(l[3]) + '_h' + str(l[5]) + '_' +\
+        str(l[8]) + '_' + str(l[6]) + str(l[7]) + '_dec' + str(l[9]) + '_' + l[10]
+
+        if extinguish:
+            fname += '_extinguish.json'
+        else:
+            fname += '.json'
+        names.append([li, fname])
+
+
+    missing_files = []
+    for name in names:
+        if not name[1] in existing_files:
+            # print(name)
+            missing_files.append(name[0])
+
+    lst = [lst[i] for i in missing_files]
+    print('simulations to run: ' + str(len(lst)))
+
+    ca = [ns, na, npl, nc, nr, T, state_transition_matrix, planet_reward_probs,\
+        planet_reward_probs_switched,repetitions,use_fitting]
+
+    # if True:
+    if False:
+        for l in [lst[0]]:
+            run_single_sim(l,
+                            ca[0],\
+                            ca[1],\
+                            ca[2],\
+                            ca[3],\
+                            ca[4],\
+                            ca[5],\
+                            ca[6],\
+                            ca[7],\
+                            ca[8],\
+                            ca[9],\
+                            ca[10])
 
     with Pool() as pool:
 
