@@ -87,7 +87,6 @@ def run_single_sim(lst,
     file = open(os.path.join(folder,config))
 
     task_params = js.load(file)                                                                                 
-
     colors = np.asarray(task_params['context'])          # 0/1 as indicator of color
     sequence = np.asarray(task_params['sequence'])       # what is the optimal sequence
     starts = np.asarray(task_params['starts'])           # starting position of agent

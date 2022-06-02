@@ -7,7 +7,7 @@ experiment.
 import numpy as np
 from misc import ln
 import torch as ar
-from misc_sia import *
+# from misc_sia import *
 ar.set_default_dtype(ar.float64)
 ar.set_printoptions(precision=8, threshold=100)
 
@@ -50,15 +50,15 @@ class FittingWorld(object):
                 # print(self.agent.perception.dirichlet_rew_params[-1][...,0])
         # self.convert_to_numpy()
 
-    def convert_to_numpy(self):
-        self.agent.perception = convert(self.agent.perception)
-        self.agent.action_selection = convert(self.agent.action_selection)
-        self.agent = convert(self.agent)
-        self.environment = convert(self.environment)
-        self.rewards = self.rewards.numpy()
-        self.actions = self.actions.numpy()
-        self.observations = self.observations.numpy()
-        self.dec_temp = self.dec_temp.numpy()
+    # def convert_to_numpy(self):
+    #     self.agent.perception = convert(self.agent.perception)
+    #     self.agent.action_selection = convert(self.agent.action_selection)
+    #     self.agent = convert(self.agent)
+    #     self.environment = convert(self.environment)
+    #     self.rewards = self.rewards.numpy()
+    #     self.actions = self.actions.numpy()
+    #     self.observations = self.observations.numpy()
+    #     self.dec_temp = self.dec_temp.numpy()
 
     #this is a private method do not call it outside of the class
     def __update_world(self, tau, t, print_thoughts = False):
@@ -155,7 +155,6 @@ class World(object):
                 if print_thoughts:
                     print("tau", tau, ", t", t)
                 self.__update_world(tau, t, print_thoughts=print_thoughts)
-            
                 # print('tau: ', tau, ' t:', t)
                 # print(self.agent.posterior_dirichlet_rew[tau,t])
 

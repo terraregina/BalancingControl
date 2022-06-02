@@ -792,7 +792,6 @@ class AveragedSelector(object):
         control_prob = control_prob/control_prob.sum()
         self.control_probability[tau, t] = control_prob
 
-
 class FittingAveragedSelector(object):
 
     def __init__(self, trials = 1, T = 10, number_of_actions = 2):

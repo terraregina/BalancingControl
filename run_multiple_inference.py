@@ -166,9 +166,16 @@ for li, l in enumerate(lst[3:]):
     planets = array(world.environment.planet_conf)
     for i, pl in enumerate(planets):
         if i >= tpb*tb and i < tpb*(tb + db) and degr == 1:
-            Rho[i,:,:] = planet_reward_probs_switched[tuple([pl])].T
+            probs = planet_reward_probs_switched
         else:
-            Rho[i,:,:] = planet_reward_probs[tuple([pl])].T
+            probs = planet_reward_probs
+
+            
+        try:
+            Rho[i,:,:] = probs[tuple([pl])].T
+        except:
+            Rho[i,:,:] = probs[tuple([pl.long()])].T
+  # Rho[i,:,:] = planet_reward_probs[tuple([pl])].T
 
     Rho = ar.as_tensor(Rho)
 
@@ -281,8 +288,8 @@ for li, l in enumerate(lst[3:]):
 
 
 
-    num_steps = 1000
-    size_chunk = 50
+    num_steps = 10
+    size_chunk = 3
     converged = False
     max_steps = False
     i = 0

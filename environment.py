@@ -49,7 +49,6 @@ class FittingPlanetWorld(object):
         curr_loc = self.hidden_states[tau,t]           # t+1 because we are still at t but have already moved the rocket
         rp = self.R[tau,:,curr_loc]                    # reward probability at current planet
         ind = ar.multinomial(rp, num_samples=1, replacement=True)
-        # ind = np.argmax(rp)
 
         reward = self.possible_rewards[ind]
         return reward
@@ -98,8 +97,8 @@ class PlanetWorld(object):
         
         curr_loc = self.hidden_states[tau,t]           # t+1 because we are still at t but have already moved the rocket
         rp = self.R[tau,:,curr_loc]                    # reward probability at current planet
-        # reward = np.random.choice(self.possible_rewards, p=rp)
-        reward = self.possible_rewards[np.argmax(rp)]
+        reward = np.random.choice(self.possible_rewards, p=rp)
+        # reward = self.possible_rewards[np.argmax(rp)]
         # print(self.hidden_states[tau,t], curr_loc)
         # print(self.planet_conf[tau,:])
         # print(self.R[tau,:,curr_loc])

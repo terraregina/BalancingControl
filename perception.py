@@ -248,7 +248,7 @@ class FittingPerception(object):
     
     def update_beliefs_policies(self, tau, t):
 
-        likelihood = (self.fwd_norms[-1]).prod(axis=0).to(device)
+        likelihood = (self.fwd_norms[-1]+ 1e-20).prod(axis=0).to(device)
         # print('\n', tau,t,likelihood[...,0])
         norm = likelihood.sum(axis=0)
         likelihood = ar.pow(likelihood/norm,self.dec_temp[None,:]).to(device) #* ar.pow(norm,self.dec_temp)

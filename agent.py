@@ -9,7 +9,8 @@ from misc import ln, softmax
 import scipy.special as scs
 import torch as ar
 
-# ar.set_default_dtype(ar.float64)
+ar.set_default_dtype(ar.float64)
+
 try:
     from inference_two_seqs import device
 except:
@@ -76,11 +77,11 @@ class FittingAgent(object):
         self.actions = ar.zeros((trials, T), dtype = int).to(device)
         self.observations = ar.zeros((trials, T), dtype = int).to(device)
         self.rewards = ar.zeros((trials, T), dtype = int).to(device)
-        # self.posterior_actions = ar.zeros((trials, T-1, self.na)).to(device)
-        # self.posterior_rewards = ar.zeros((trials, T, self.nr)).to(device)
-        # self.posterior_contexts = ar.zeros((trials, T, self.nc)).to(device)
+        self.posterior_actions = ar.zeros((trials, T-1, self.na)).to(device)
+        self.posterior_rewards = ar.zeros((trials, T, self.nr)).to(device)
+        self.posterior_contexts = ar.zeros((trials, T, self.nc)).to(device)
 
-        # self.control_probs  = ar.zeros((trials, T, self.na)).to(device)
+        self.control_probs  = ar.zeros((trials, T, self.na)).to(device)
         self.log_probability = 0
         if hasattr(self.perception, 'generative_model_context'):
             self.context_obs = ar.zeros(trials, dtype=int).to(device)
@@ -91,10 +92,10 @@ class FittingAgent(object):
         self.actions = ar.zeros((self.trials, self.T), dtype = int).to(device)
         self.observations = ar.zeros((self.trials, self.T), dtype = int).to(device)
         self.rewards = ar.zeros((self.trials, self.T), dtype = int).to(device)
-        # self.posterior_actions = ar.zeros((self.trials, self.T-1, self.na)).to(device)
-        # self.posterior_rewards = ar.zeros((self.trials, self.T, self.nr)).to(device)
-        # self.posterior_contexts = ar.zeros((self.trials, self.T, self.nc)).to(device)
-        # self.control_probs  = ar.zeros((self.trials, self.T, self.na)).to(device)
+        self.posterior_actions = ar.zeros((self.trials, self.T-1, self.na)).to(device)
+        self.posterior_rewards = ar.zeros((self.trials, self.T, self.nr)).to(device)
+        self.posterior_contexts = ar.zeros((self.trials, self.T, self.nc)).to(device)
+        self.control_probs  = ar.zeros((self.trials, self.T, self.na)).to(device)
         self.log_probability = 0
         if hasattr(self.perception, 'generative_model_context'):
             self.context_obs = ar.zeros(self.trials, dtype=int).to(device)
@@ -137,9 +138,8 @@ class FittingAgent(object):
             self.prev_pols = self.prev_pols*mask
             self.possible_policies = ar.where(self.prev_pols != 0)[0].to(device)
             self.possible_polcies = self.policies[self.possible_policies,:].to(device)
-            # if t == 3 and self.possible_policies[0] != 3 and self.possible_policies[0] != 6:
-            #     print('suboptimal',tau) 
-        # print(self.possible_policies)
+
+
         self.perception.update_beliefs_states(
                                          tau, t,
                                          observation,
@@ -147,11 +147,9 @@ class FittingAgent(object):
                                          #self.policies,
                                          self.possible_policies)
 
-        # print('\n', tau,t,self.perception.rew_messages[-1][...,0])
 
         #update beliefs about policies
         self.perception.update_beliefs_policies(tau, t) #self.posterior_policies[tau, t], self.likelihood[tau,t]
-
 
         if tau == 0:
             prior_context = self.prior_context[:,None].repeat(1,self.npart)
@@ -174,7 +172,6 @@ class FittingAgent(object):
                                                 prior_context, \
                                                 context=c_obs)
 
-            
         if t == self.T-1 and self.learn_habit:
             self.perception.update_beliefs_dirichlet_pol_params(tau, t)
 
@@ -184,10 +181,6 @@ class FittingAgent(object):
             self.perception.update_beliefs_dirichlet_rew_params(tau, t,\
                                                             self.planets, reward)
 
-
-        # if tau == 6 and t == 3:
-        #     print(tau,t, self.perception.dirichlet_rew_params[-1][...,0])
-            
     def generate_response(self, tau, t):
 
         #get response probability
