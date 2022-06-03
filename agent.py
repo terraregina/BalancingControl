@@ -4,7 +4,7 @@ different modules that govern agent's behavior.
 
 from logging import raiseExceptions
 import numpy as np
-from perception import HierarchicalPerception
+# from perception import HierarchicalPerception
 from misc import ln, softmax
 import scipy.special as scs
 import torch as ar

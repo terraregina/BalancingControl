@@ -44,6 +44,7 @@ ar.set_num_threads(1)
 task = 'multiple_'
 folder = 'temp'
 h =  [1, 2,3,4,5,6,7,8,9,10,20,30,40,50,60] #11,12,13,14,15,16,17,18,19,20,30,40,50,60,70,80,90,100,200]
+h = [100]
 cue_ambiguity = [0.9]#,0.8,0.95]                       
 context_trans_prob = [0.9]#, 0.95]                
 degradation = [True]
@@ -288,8 +289,8 @@ for li, l in enumerate(lst[3:]):
 
 
 
-    num_steps = 10
-    size_chunk = 3
+    num_steps = 1000
+    size_chunk = 50
     converged = False
     max_steps = False
     i = 0

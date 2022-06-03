@@ -13,6 +13,50 @@ import scipy.special as scs
 import matplotlib.pylab as plt
 import seaborn as sns
 
+
+def savefile(obj,fname):
+
+    jsonpickle_numpy.register_handlers()
+    pickled = pickle.encode(obj)
+    with open(fname, 'w') as outfile:
+        json.dump(pickled, outfile)
+
+def loadfile(fname):
+
+    jsonpickle_numpy.register_handlers()
+    with open(fname, 'r') as infile:
+        data = json.load(infile)
+    obj = pickle.decode(data)   
+    return obj
+
+class Dict2Class(object):
+      
+    def __init__(self, my_dict):
+          
+        for key in my_dict:
+            setattr(self, key, my_dict[key])
+
+
+def convert(perception):
+    new_perception = {}
+    dict_perception = perception.__dict__
+    for key in dict_perception:
+        entry = dict_perception[key]
+        is_tensor = tr.is_tensor(entry)
+        is_list = isinstance(entry, list)
+        # print(type(entry),is_tensor, is_list)
+        if is_list:
+            new_perception[key] = [e.numpy() for e in entry]
+        if is_tensor:
+            new_perception[key] = entry.numpy()
+        if not is_tensor and not is_list:
+            new_perception[key] = entry
+    
+    new_perception = Dict2Class(new_perception)
+    return new_perception
+        # print(type(new_perception[key]),is_tensor, is_list)
+
+        
 def evolve_environment(env):
     trials = env.hidden_states.shape[0]
     T = env.hidden_states.shape[1]
