@@ -26,13 +26,13 @@ class FittingAgent(object):
                  learn_rew = False,
                  trials = 1, T = 4, number_of_states = 6,
                  number_of_rewards = 3,
-                 number_of_policies = 8,npart=1):
+                 number_of_policies = 8,npart=1,nsubs=1):
 
         #set the modules of the agent
         self.npart = npart
         self.perception = perception
         self.action_selection = action_selection
-
+        self.nsubs = nsubs
         #set parameters of the agent
         self.nh = number_of_states #number of states
         self.npi = number_of_policies #number of policies
@@ -74,24 +74,29 @@ class FittingAgent(object):
         self.learn_rew = learn_rew
 
         #set various data structures
-        self.actions = ar.zeros((trials, T), dtype = int).to(device)
-        self.observations = ar.zeros((trials, T), dtype = int).to(device)
-        self.rewards = ar.zeros((trials, T), dtype = int).to(device)
+        if nsubs==1:
+            shape = (trials,T)
+            shape_cont = (trials)
+        else: 
+            shape = (trials,T,nsubs)
+            shape_cont = (trials,nsubs)
+        self.actions = ar.zeros(shape, dtype = int).to(device)
+        self.observations = ar.zeros(shape, dtype = int).to(device)
+        self.rewards = ar.zeros(shape, dtype = int).to(device)
+
+        if hasattr(self.perception, 'generative_model_context'):
+            self.context_obs = ar.zeros(shape_cont, dtype=int).to(device)
+
         self.posterior_actions = ar.zeros((trials, T-1, self.na)).to(device)
         self.posterior_rewards = ar.zeros((trials, T, self.nr)).to(device)
         self.posterior_contexts = ar.zeros((trials, T, self.nc)).to(device)
 
         self.control_probs  = ar.zeros((trials, T, self.na)).to(device)
         self.log_probability = 0
-        if hasattr(self.perception, 'generative_model_context'):
-            self.context_obs = ar.zeros(trials, dtype=int).to(device)
 
 
     def reset(self, param_dict):
 
-        self.actions = ar.zeros((self.trials, self.T), dtype = int).to(device)
-        self.observations = ar.zeros((self.trials, self.T), dtype = int).to(device)
-        self.rewards = ar.zeros((self.trials, self.T), dtype = int).to(device)
         self.posterior_actions = ar.zeros((self.trials, self.T-1, self.na)).to(device)
         self.posterior_rewards = ar.zeros((self.trials, self.T, self.nr)).to(device)
         self.posterior_contexts = ar.zeros((self.trials, self.T, self.nc)).to(device)
@@ -101,9 +106,20 @@ class FittingAgent(object):
             self.context_obs = ar.zeros(self.trials, dtype=int).to(device)
 
         self.set_parameters(**param_dict)
-        self.npart = self.perception.alpha_0.shape[0]
         self.perception.reset()
+        self.npart = self.perception.npart
+        self.actions = ar.zeros((self.trials, self.T), dtype = int).to(device)
 
+        if self.nsubs==1:
+            shape = (self.trials, self.T)
+            shape_cont = (self.trials)
+        else:
+            shape = (self.trials,self.T, self.nsubs)
+            shape_cont =(self.trials, self.nsubs)
+
+        self.observations = ar.zeros((shape), dtype = int).to(device)
+        self.rewards = ar.zeros((shape), dtype = int).to(device)
+        self.context_obs = ar.zeros(shape_cont, dtype = int).to(device)
 
     def initiate_planet_rewards(self):
         
@@ -124,46 +140,47 @@ class FittingAgent(object):
             self.perception.planets = self.planets
 
 
-        self.observations[tau,t] = observation
-        self.rewards[tau,t] = reward
+        # self.observations[tau,t] = observation
+        # self.rewards[tau,t] = reward
 
         if context is not None:
             self.context_obs[tau] = context
-
-        if t == 0:
-            self.prev_pols = ar.arange(0,self.npi,1, dtype=ar.long).to(device) + 1
-            self.possible_policies = ar.arange(0,self.npi,1, dtype=ar.long).to(device)
-        else:
-            mask = self.policies[:,t-1]==response
-            self.prev_pols = self.prev_pols*mask
-            self.possible_policies = ar.where(self.prev_pols != 0)[0].to(device)
-            self.possible_polcies = self.policies[self.possible_policies,:].to(device)
-
-
-        self.perception.update_beliefs_states(
-                                         tau, t,
-                                         observation,
-                                         reward,
-                                         #self.policies,
-                                         self.possible_policies)
-
-
-        #update beliefs about policies
-        self.perception.update_beliefs_policies(tau, t) #self.posterior_policies[tau, t], self.likelihood[tau,t]
-
-        if tau == 0:
-            prior_context = self.prior_context[:,None].repeat(1,self.npart)
-
-        else: #elif t == 0:
-            prior_context = ar.einsum('ncp,cp-> np',self.perception.transition_matrix_context[:,:,None],self.perception.posterior_contexts[-t-1])
-
-
+        
         if self.nc>1 and t>=0:
             
             if hasattr(self, 'context_obs'): 
                 c_obs = self.context_obs[tau]
             else:
                 c_obs = None
+
+
+        # if t == 0:
+        #     self.prev_pols = ar.arange(0,self.npi,1, dtype=ar.long).to(device) + 1
+        #     self.possible_policies = ar.arange(0,self.npi,1, dtype=ar.long).to(device)
+        # else:
+        #     mask = self.policies[:,t-1]==response
+        #     self.prev_pols = self.prev_pols*mask
+        #     self.possible_policies = ar.where(self.prev_pols != 0)[0].to(device)
+        #     self.possible_polcies = self.policies[self.possible_policies,:].to(device)
+
+
+        self.perception.update_beliefs_states(
+                                         tau, t,
+                                         observation,
+                                         reward)
+                                         #self.policies,
+                                         #self.possible_policies)
+
+
+        #update beliefs about policies
+        self.perception.update_beliefs_policies(tau, t) #self.posterior_policies[tau, t], self.likelihood[tau,t]
+
+        if tau == 0:
+            prior_context = self.prior_context[:,None,None].repeat(1,self.npart,self.nsubs)
+
+        else: #elif t == 0:
+            prior_context = ar.einsum('ncpk,cpk-> npk',self.perception.transition_matrix_context[:,:,None,None],self.perception.posterior_contexts[-t-1])
+
 
         self.perception.update_beliefs_context(tau, t, \
                                                 reward, \

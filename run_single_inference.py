@@ -42,7 +42,7 @@ import jsonpickle.ext.numpy as jsonpickle_numpy
 ar.set_num_threads(1)
 switch = 0
 degr = 1
-p = 0.8
+p = 0.9
 learn_rew  = 0
 q = 0.9
 h = 10

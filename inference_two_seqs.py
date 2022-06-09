@@ -11,6 +11,7 @@ import numpy as np
 # import distributions as analytical_dists
 
 from tqdm import tqdm
+from torch.distributions import constraints, biject_to
 import pyro
 import pyro.distributions as dist
 import agent as agt
@@ -24,7 +25,7 @@ ar.set_default_dtype(ar.float64)
 ar.set_num_threads(1)
 
 
-class Group2Inference(object):
+class GroupInference(object):
     
     def __init__(self, agent, data):
         
@@ -41,7 +42,7 @@ class Group2Inference(object):
         Generative model of behavior with a NormalGamma
         prior over free model parameters.
         """
-        npar = 3  # number of parameters
+        npar = 2  # number of parameters
 
         # define hyper priors over model parameters
         a = pyro.param('a', ar.ones(npar), constraint=constraints.positive)
@@ -60,14 +61,16 @@ class Group2Inference(object):
         with pyro.plate('subject', self.nsubs) as ind:
             # print(ind)
             
-            
             base_dist = dist.Normal(0., 1.).expand_by([npar]).to_event(1)
             transform = dist.transforms.AffineTransform(mu, sig)
             locs = pyro.sample('locs', dist.TransformedDistribution(base_dist, [transform]))
         
-            param_dict = {"pol_lambda": ar.sigmoid(locs[...,0]), 
-                          "r_lambda": ar.sigmoid(locs[...,1]), "dec_temp": ar.exp(locs[...,2]),}
-                          #"h": ar.sigmoid(locs[...,3])}
+            param_dict = {
+                        #   "pol_lambda": ar.sigmoid(locs[...,0]), 
+                        #   "r_lambda": ar.sigmoid(locs[...,1]), 
+                        "dec_temp": ar.exp(locs[...,0]),
+                        "h": ar.sigmoid(locs[...,1])
+                          }
             # print(param_dict)
             
             self.agent.reset(param_dict)
@@ -88,7 +91,10 @@ class Group2Inference(object):
                     observation = self.data["observations"][tau, t]
             
                     reward = self.data["rewards"][tau, t]
-            
+                    context = self.data['context'][tau]
+
+                    self.agent.planets = self.data["planets"][tau]
+
                     self.agent.update_beliefs(tau, t, observation, reward, prev_response, context)
             
                     if t < self.T-1:
@@ -134,7 +140,7 @@ class Group2Inference(object):
     def guide(self):
         # approximate posterior. assume MF: each param has his own univariate Normal.
         
-        npar = 3
+        npar = 2
         trns = biject_to(constraints.positive)
 
         m_hyp = pyro.param('m_hyp', ar.zeros(2*npar))
@@ -165,9 +171,12 @@ class Group2Inference(object):
         with pyro.plate('subject', self.nsubs):
             locs = pyro.sample("locs", dist.MultivariateNormal(m_locs, scale_tril=st_locs))
 
-        return {'tau': tau, 'mu': mu, 'locs': locs, "pol_lambda": ar.sigmoid(locs[...,0]), 
-                "r_lambda": ar.sigmoid(locs[...,1]), "dec_temp": ar.exp(locs[...,2]), }
-                #"h": ar.sigmoid(locs[...,3])}
+        return {'tau': tau, 'mu': mu, 'locs': locs,
+                # "pol_lambda": ar.sigmoid(locs[...,0]), 
+                # "r_lambda": ar.sigmoid(locs[...,1]), 
+                "dec_temp": ar.exp(locs[...,0]), 
+                "h": ar.sigmoid(locs[...,1])
+                }
 
     def init_svi(self, optim_kwargs={'lr': .01},
                  num_particles=10):
@@ -378,8 +387,7 @@ class Group2Inference(object):
         
     def load_parameters(self, fname):
         
-        pyro.get_param_store().load(fname)
-        
+        pyro.get_param_store().load(fname)        
 
 class SingleInference(object):
 
