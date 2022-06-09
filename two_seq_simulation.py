@@ -30,7 +30,7 @@ from multiprocessing import Pool
 import multiprocessing.pool as mpp
 import tqdm
 from run_exampe_habit_v1 import run_agent
-from misc_sia import *
+# from misc_sia import *
 
 def istarmap(self, func, iterable, chunksize=1):
     """starmap-version of imap
