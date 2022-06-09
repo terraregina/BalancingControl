@@ -321,22 +321,38 @@ if __name__ == '__main__':
 
     # import plot_fitting
                             
+    # with Pool() as pool:
+
+    #     for _ in tqdm.tqdm(pool.istarmap(run_single_sim, zip(lst,\
+    #                                             repeat(ca[0]),\
+    #                                             repeat(ca[1]),\
+    #                                             repeat(ca[2]),\
+    #                                             repeat(ca[3]),\
+    #                                             repeat(ca[4]),\
+    #                                             repeat(ca[5]),\
+    #                                             repeat(ca[6]),\
+    #                                             repeat(ca[7]),\
+    #                                             repeat(ca[8]),\
+    #                                             repeat(ca[9]),\
+    #                                             repeat(ca[10]))),
+    #                     total=len(lst)):
+    #         pass
+
+
+                             
     with Pool() as pool:
 
-        for _ in tqdm.tqdm(pool.istarmap(run_single_sim, zip(lst,\
-                                                repeat(ca[0]),\
-                                                repeat(ca[1]),\
-                                                repeat(ca[2]),\
-                                                repeat(ca[3]),\
-                                                repeat(ca[4]),\
-                                                repeat(ca[5]),\
-                                                repeat(ca[6]),\
-                                                repeat(ca[7]),\
-                                                repeat(ca[8]),\
-                                                repeat(ca[9]),\
-                                                repeat(ca[10]))),
-                        total=len(lst)):
-            pass
+        pool.starmap(run_single_sim, zip(lst,\
+                                        repeat(ca[0]),\
+                                        repeat(ca[1]),\
+                                        repeat(ca[2]),\
+                                        repeat(ca[3]),\
+                                        repeat(ca[4]),\
+                                        repeat(ca[5]),\
+                                        repeat(ca[6]),\
+                                        repeat(ca[7]),\
+                                        repeat(ca[8]),\
+                                        repeat(ca[9]),\
+                                        repeat(ca[10])))
 
-
-    
+   
