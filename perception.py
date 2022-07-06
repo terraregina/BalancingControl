@@ -671,7 +671,7 @@ class FittingPerception(object):
         alpha = self.dirichlet_pol_params[-1]
         if t == self.T-1:
             chosen_pol = ar.argmax(post_policies,axis=0)
-            inf_context = ar.argmax(prior_context)
+            # inf_context = ar.argmax(prior_context)
             alpha_prime = self.dirichlet_pol_params[-1]
             # print(id(alpha_prime))
             alpha_prime = alpha_prime + \
