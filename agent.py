@@ -355,9 +355,24 @@ class BayesianPlanner(object):
 
     # code set up to look at unique planet types
     #this function creates a reward matrix for the given planet constelation
-    def initiate_planet_rewards(self):
-        
+    def initiate_planet_rewards(self):#,tau):
+            
+
         gen_mod_rewards = np.zeros([self.nr, self.nh, self.nc])
+
+        # if tau ==502:
+        #     planet_reward_probs = np.array([[0.95, 0   , 0   ],
+        #                     [0.05, 0.95, 0.05],
+        #                     [0,    0.05, 0.95]])    # npl x nr
+
+        #     planet_reward_probs_switched = np.array([[0   , 0    , 0.95],
+        #                             [0.05, 0.95 , 0.05],
+        #                             [0.95, 0.05 , 0.0]]) 
+        #     self.perception.generative_model_rewards = np.zeros([self.nr, self.npl, self.nc])
+        #     self.perception.generative_model_rewards[:,:,:2] = planet_reward_probs[...,None]
+        #     self.perception.generative_model_rewards[:,:,2:] =  planet_reward_probs_switched[...,None]
+            
+
         for p in range(self.nh):
             gen_mod_rewards[:,p,:] =\
             self.perception.generative_model_rewards[:,self.planets[p],:]
@@ -365,7 +380,10 @@ class BayesianPlanner(object):
         return gen_mod_rewards
 
     def update_beliefs(self, tau, t, observation, reward, response, context=None):
-        
+            
+        # if tau >=502:
+        #     print('trial under consideration')
+
         self.observations[tau,t] = observation
         self.rewards[tau,t] = reward
         self.perception.planets = self.planets
@@ -380,14 +398,13 @@ class BayesianPlanner(object):
             self.log_probability += ln(self.posterior_actions[tau,t-1,response])
             # if t == 3 and self.possible_polcies[0] != 3 and self.possible_polcies[0] != 6:
             #     print('suboptimal',tau) 
-        self.perception.current_gen_model_rewards = self.initiate_planet_rewards()
+        self.perception.current_gen_model_rewards = self.initiate_planet_rewards()#tau)
         self.posterior_states[tau, t] = self.perception.update_beliefs_states(
                                          tau, t,
                                          observation,
                                          reward,
                                          self.policies,
                                          self.possible_polcies)
-            
         self.posterior_policies[tau, t], self.likelihood[tau,t] = self.perception.update_beliefs_policies(tau, t)
         
         if tau == 0:
@@ -415,19 +432,30 @@ class BayesianPlanner(object):
                                                 prior_context, \
                                                 self.policies,\
                                                 context=c_obs)
-            # print(tau,t, self.policy_entropy[tau,t,:])
-        else:
-            self.posterior_context[tau,t] = 1
+
+        # if self.trial_type[tau] == 1 and t==0:
+        #     if c_obs == 0:
+        #         self.posterior_context[tau,t,:] = np.array([0.09,0.005, 0.9, 0.005])
+        #     elif c_obs == 1:
+        #         self.posterior_context[tau,t,:] = np.array([0.005,0.09, 0.005,0.9])            # print(tau,t, self.policy_entropy[tau,t,:])
+        # else:
+        #     self.posterior_context[tau,t] = 1
         
-        # if self.context_obs[tau] == 0 and tau >= 130 and t == self.T-1 and tau <= 150:
-        #     print('\n', tau,t)
+        # if self.context_obs[tau] == 0 and tau >= 280:
+        #     print('\n', tau,t, 'planet: ', self.planets[observation], ' reward: ', reward)
+        #     # print(self.outcome_suprise[tau,:][:,[0,2]].round(3), ' outcome suprise')
+        #     # print(self.policy_entropy[tau,:][:,[0,2]].round(3),' policy entropy')
+        #     # print(self.policy_surprise[tau,:][:,[0,2]].round(3),'  policy surprise')
+        #     # print(self.context_obs_suprise[tau,:][:,[0,2]].round(3), ' context obs suprise')
+        #     # print(self.posterior_context[tau,:][:,[0,2]].round(3), ' posterior_context')
+
         #     print(ln(self.pr_cont).round(3), ' prior context')
-        #     print(self.outcome_suprise[tau,:][:,[0,2]].round(3), ' outcome suprise')
-        #     print(self.policy_entropy[tau,:][:,[0,2]].round(3),' policy entropy')
-        #     print(self.policy_surprise[tau,:][:,[0,2]].round(3),'  policy surprise')
-        #     print(self.context_obs_suprise[tau,:][:,[0,2]].round(3), ' context obs suprise')
-        #     print(self.posterior_context[tau,:][:,[0,2]].round(3), ' posterior_context')
-        
+        #     print(self.outcome_suprise[tau,t].round(3), ' outcome suprise')
+        #     print(self.policy_entropy[tau,t].round(3),' policy entropy')
+        #     print(self.policy_surprise[tau,t].round(3),'  policy surprise')
+        #     print(self.context_obs_suprise[tau,t].round(3), ' context obs suprise')
+        #     print(self.posterior_context[tau,t].round(3), ' posterior_context')
+
         if t < self.T-1:
             post_pol = np.dot(self.posterior_policies[tau, t], self.posterior_context[tau, t])
             self.posterior_actions[tau, t] = self.estimate_action_probability(tau, t, post_pol)
@@ -449,8 +477,42 @@ class BayesianPlanner(object):
                                                     self.posterior_policies[tau, t], \
                                                     self.posterior_context[tau,t])
     
-        # print(self.posterior_dirichlet_rew[tau,t])
+        # if self.trial_type[tau] == 1:
+        #     print('degradation')
+            
+        # if tau == 502:
+        #     print('----------')
+        #     print(tau,t)
+        #     print('cont', context)
+        #     print('obs', observation)
+        #     print('true optimal', self.true_optimal[tau])
+        #     print(self.planets)
+        #     for c in range(4):
+        #         print('\ncontext' + str(c))
+        #         print(self.perception.generative_model_rewards[:,:,c].round(2))
+        #     print('\nposterior context: \n', self.posterior_context[tau,t].round(2))
+        #     # print('\npolicy prior: \n', self.prior_policies[tau-1].round(2).T)
+        #     print('\npolicy likelihood: \n', self.likelihood[tau,t].round(2).T)
+        #     print('\npolicy posterior: \n', self.posterior_policies[tau,t].round(2).T)
+        #     try:
+        #         print('\naveraged:\n', post_pol.round(2))
+        #     except:
+        #         pass
+        #     try:
+        #         # print('\naveraged:\n', post_pol.round(2))
+        #         print('\naction:\n', self.posterior_actions[tau,t].round(2))
+        #     except:
+        #         pass
 
+        # if self.trial_type[tau] == 2:
+        #     executed = self.actions[280:tau,:-1]
+        #     executed_pol = np.array([pol.dot(2**np.arange(pol.size)[::-1]) for pol in executed])
+        #     true = self.true_optimal[280:tau]
+        #     total = (executed_pol == true).sum()/true.size
+        #     print(total)
+
+        #     self.posterior_context[280:tau,]
+        
     def generate_response(self, tau, t):
 
         #get response probability
@@ -503,7 +565,8 @@ class BayesianPlanner_old(object):
 
         #set the modules of the agent
         self.perception = perception
-        self.action_selection = action_selection
+        self.action_selection = action_selecti
+        #     self.rewon
 
         #set parameters of the agent
         self.nh = number_of_states #number of states

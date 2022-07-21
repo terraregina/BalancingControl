@@ -74,7 +74,7 @@ def run_single_sim(lst,
 
 
     switch_cues, contingency_degradation, reward_naive, context_trans_prob, cue_ambiguity, h,\
-    training_blocks, degradation_blocks, trials_per_block, dec_temp,config_folder = lst
+    training_blocks, degradation_blocks, trials_per_block, dec_temp, rew, util, config_folder = lst
     
     config = 'planning_config' + '_degradation_'+ str(int(contingency_degradation)) \
                       + '_switch_' + str(int(switch_cues))                \
@@ -133,13 +133,16 @@ def run_single_sim(lst,
         else:
             Rho[i,:,:] = planet_reward_probs[tuple([pl])].T
 
-    u = 0.99
-    utility = np.array([(1-u)/2,(1-u)/2,u])
+    # u = 0.99
+    # utility = np.array([(1-u)/2,(1-u)/2,u])
+
+    utility = np.array([float(u)/100 for u in util])
+    print(utility)
 
     if reward_naive==True:
         reward_counts = np.ones([nr, npl, nc])
     else:
-        reward_counts = np.tile(planet_reward_probs.T[:,:,np.newaxis]*20,(1,1,nc))+1
+        reward_counts = np.tile(planet_reward_probs.T[:,:,np.newaxis]*5,(1,1,nc))+1
 
     par_list = [h,                        
                 context_trans_prob,
@@ -153,7 +156,8 @@ def run_single_sim(lst,
                 colors,
                 reward_counts,
                 1,
-                dec_temp]
+                dec_temp,
+                rew]
 
     prefix = 'multiple_'
 
@@ -173,13 +177,15 @@ def run_single_sim(lst,
         prefix += 'degr0_'
 
     fname = prefix +'p' + str(cue_ambiguity) +'_learn_rew' + str(int(reward_naive == True)) + '_q' + str(context_trans_prob) + '_h' + str(h)+ '_' +\
-    str(meta['trials_per_block']) +'_'+str(meta['training_blocks']) + str(meta['degradation_blocks']) + '_dec' + str(dec_temp) +  '_' + config_folder
-    
+    str(meta['trials_per_block']) +'_'+str(meta['training_blocks']) + str(meta['degradation_blocks']) + \
+    '_dec' + str(dec_temp)+ '_rew' + str(rew) + '_u' +  '-'.join(util) + '_' + config_folder
     
     fname +=  '_extinguish.json'
 
-    worlds = [run_agent(par_list, trials, T, ns , na, nr, nc, npl, trial_type=trial_type, use_fitting=use_fitting) for _ in range(repetitions)]
+    worlds = [run_agent(par_list, trials, T, ns , na, nr, nc, npl, added=[trial_type,sequence], use_fitting=use_fitting) for _ in range(repetitions)]
     meta['trial_type'] = task_params['trial_type']
+    meta['optimal_sequence'] = task_params['sequence']
+
     worlds.append(meta)
 
    
@@ -188,6 +194,7 @@ def run_single_sim(lst,
     pickled = pickle.encode(worlds)
     with open(fname, 'w') as outfile:
         json.dump(pickled, outfile)
+
 
     return fname
 
@@ -230,21 +237,42 @@ if __name__ == '__main__':
     np.random.seed(seed)
     ar.manual_seed(seed)
 
-    h =  [1, 2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,30,40,50,60,70,80,90,100,200]
+    h =  [1, 2,3,100,200]
     # h = [40]
-    cue_ambiguity = [0.9]                       
-    context_trans_prob = [0.9]                
+    cue_ambiguity = [0.9,0.95, 0.98]                       
+    context_trans_prob = [0.9, 0.95, 0.98]                
     degradation = [True]
     cue_switch = [False]
-    reward_naive = [False]
-    training_blocks = [2]
-    degradation_blocks=[2]
+    reward_naive = [True]
+    training_blocks = [4]
+    degradation_blocks=[6,10]
     trials_per_block=[70]
-    dec_temps = [1,2,3,4,5,6]
-    conf_folder = ['ordered']
+    dec_temps = [1, 2,4,7]
+    rew = [0.1]
+    utility = [[1, 19, 80], [0.5,0.5,99],[5,25,70],[1, 9, 90]]
+    utility = [[1, 9, 90]]
+
+    conf_folder = ['explore']
+
+
+    # h =  [1,100]
+    # # h = [40]
+    # cue_ambiguity = [0.9, 0.98]                       
+    # context_trans_prob = [0.9]#, 0.98]                
+    # degradation = [True]
+    # cue_switch = [False]
+    # reward_naive = [True,False]
+    # training_blocks = [4]
+    # degradation_blocks=[6]
+    # trials_per_block=[70]
+    # dec_temps = [1,4]
+    # utility = [[1, 19, 80], [0.5,0.5,99]]#,[5,25,70],[1, 9, 90]]
+
+
 
     arrays = [cue_switch, degradation, reward_naive, context_trans_prob, cue_ambiguity,h,\
-            training_blocks, degradation_blocks, trials_per_block,dec_temps,conf_folder]
+            training_blocks, degradation_blocks, trials_per_block,dec_temps, rew\
+            , utility,conf_folder]
     use_fitting = False
 
     repetitions = 1
@@ -272,8 +300,10 @@ if __name__ == '__main__':
         else:
             prefix += 'degr0_'
 
+        l[11] = [str(entry) for entry in l[11]]
         fname = prefix + 'p' + str(l[4])  +'_learn_rew' + str(int(l[2] == True))+ '_q' + str(l[3]) + '_h' + str(l[5]) + '_' +\
-        str(l[8]) + '_' + str(l[6]) + str(l[7]) + '_dec' + str(l[9]) + '_' + l[10]
+        str(l[8]) + '_' + str(l[6]) + str(l[7]) + \
+        '_dec' + str(l[9]) +'_rew' + str(l[10]) + '_' + 'u'+  '-'.join(l[11]) + '_' + l[12]
 
         if extinguish:
             fname += '_extinguish.json'
@@ -282,20 +312,21 @@ if __name__ == '__main__':
         names.append([li, fname])
 
 
-    missing_files = []
-    for name in names:
-        if not name[1] in existing_files:
-            # print(name)
-            missing_files.append(name[0])
+    # missing_files = []
+    # for name in names:
+    #     if not name[1] in existing_files:
+    #         # print(name)
+    #         missing_files.append(name[0])
 
-    lst = [lst[i] for i in missing_files]
+    # lst = [lst[i] for i in missing_files]
     print('simulations to run: ' + str(len(lst)))
 
     ca = [ns, na, npl, nc, nr, T, state_transition_matrix, planet_reward_probs,\
         planet_reward_probs_switched,repetitions,use_fitting]
 
     # if True:
-    if False:
+    if True:
+        print(names[0])
         for l in [lst[0]]:
             run_single_sim(l,
                             ca[0],\

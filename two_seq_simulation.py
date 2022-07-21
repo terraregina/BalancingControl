@@ -84,7 +84,6 @@ def run_single_sim(lst,
     file = open(os.path.join(folder,config))
 
     task_params = js.load(file)                                                                                 
-
     colors = np.asarray(task_params['context'])          # 0/1 as indicator of color
     sequence = np.asarray(task_params['sequence'])       # what is the optimal sequence
     starts = np.asarray(task_params['starts'])           # starting position of agent
@@ -215,13 +214,6 @@ if __name__ == '__main__':
                                             [0.05, 0.95 , 0.05],
                                             [0.95, 0.05 , 0.0]]).T 
 
-
-    # planet_reward_probs = np.array([[0.6, 0   , 0   ],
-    #                                 [0.4, 0.6, 0.4],
-    #                                 [0,    0.4, 0.6]]).T    # npl x nr
-    # planet_reward_probs_switched = np.array([[0   , 0    , 0.6],
-    #                                         [0.4, 0.6 , 0.4],
-    #                                         [0.6, 0.4 , 0.0]]).T 
     state_transition_matrix = np.zeros([ns,ns,na])
     m = [1,2,3,4,5,0]
     for r, row in enumerate(state_transition_matrix[:,:,0]):

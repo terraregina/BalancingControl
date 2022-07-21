@@ -45,7 +45,7 @@ import torch as ar
 
 
 
-def run_agent(par_list, trials, T, ns=6, na=2, nr=3, nc=2, npl=2, trial_type=None, use_fitting=False):
+def run_agent(par_list, trials, T, ns=6, na=2, nr=3, nc=2, npl=2, added=None, use_fitting=False):
 
     # learn_pol          = initial concentration parameters for POLICY PRIOR
     # context_trans_prob = probability of staing in a given context, int
@@ -57,7 +57,7 @@ def run_agent(par_list, trials, T, ns=6, na=2, nr=3, nc=2, npl=2, trial_type=Non
     # C_beta           = phi or estimate of p(reward|planet,context) 
     
     learn_pol, context_trans_prob, cue_ambiguity, avg,\
-    Rho, utility, B, planets, starts, colors, rc, learn_rew, dec_temp = par_list
+    Rho, utility, B, planets, starts, colors, rc, learn_rew, dec_temp, rew = par_list
 
 
     """
@@ -262,7 +262,7 @@ def run_agent(par_list, trials, T, ns=6, na=2, nr=3, nc=2, npl=2, trial_type=Non
                                C_alphas,
                                C_beta,
                                generative_model_context = C,
-                               T=T,dec_temp=dec_temp)
+                               T=T,dec_temp=dec_temp, r_lambda=rew)
 
         bayes_pln = agt.BayesianPlanner(bayes_prc,
                                         ac_sel,
@@ -285,9 +285,10 @@ def run_agent(par_list, trials, T, ns=6, na=2, nr=3, nc=2, npl=2, trial_type=Non
 
     bayes_pln.world = w
 
-    if not trial_type is None:
-        bayes_pln.trial_type = trial_type
-        w.trial_type = trial_type
+    if not added is None:
+        bayes_pln.trial_type = added[0]
+        w.trial_type = added[0]
+        bayes_pln.true_optimal = added[1]
     else:
         raise('Agent not extinguishing during reward')
 
