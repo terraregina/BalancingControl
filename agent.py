@@ -931,8 +931,6 @@ class FittingAgent(object):
                                                             self.planets, reward)
 
         
-        if t == 3:
-            bp = 0
 
 
 

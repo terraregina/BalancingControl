@@ -678,8 +678,21 @@ class FittingPerception(object):
             # inf_context = ar.argmax(prior_context)
             alpha_prime = self.dirichlet_pol_params[-1]
             # print(id(alpha_prime))
-            alpha_prime = alpha_prime + \
-                ar.stack([prior_context if p == int(chosen_pol) else ar.zeros(self.nc,self.npart) for p in range(self.npi)])
+            # if (post_policies.size()[1] > 1):
+            #     bp = 0
+            # alpha_prime = alpha_prime + \
+            #     ar.stack([prior_context if p == int(chosen_pol) else ar.zeros(self.nc,self.npart) for p in range(self.npi)])
+
+            # alpha_prime = alpha_prime + \
+            #     ar.stack([[prior_context[:,part] if p == int(chosen_pol) else ar.zeros(self.nc,self.npart) for part in range(self.npart)]])
+
+            alph_prim = []
+            for part in range(self.npart):
+                alph_prim.append(
+                    ar.stack([prior_context[:,part] if p == int(chosen_pol[part]) else ar.zeros(self.nc) for p in range(self.npi)],dim=0)
+                )
+            alpha_prime = alpha_prime + ar.stack(alph_prim, dim=-1)
+            
             # print(alpha_prime.shape)
             #alpha_prime[chosen_pol,inf_context] = self.dirichlet_pol_params[chosen_pol,inf_context] + 1
         else:

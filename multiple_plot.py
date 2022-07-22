@@ -962,10 +962,9 @@ def load_df_reward_dkl(names,data_folder='temp',nc=4):
 nc = 4
 extinguish = True
 
-h =  [1,2,3,4,10,50,100]
 # h = [40]
-cue_ambiguity = [0.65,0.75,0.85,0.9]                       
-context_trans_prob = [0.8,0.85,0.9]
+cue_ambiguity = [0.65]#,0.75,0.85,0.9]                       
+context_trans_prob = [0.75]#0.8,0.85,0.9]
 cue_switch = [False] 
 reward_naive = [True]
 training_blocks = [4]
@@ -979,22 +978,41 @@ utility = [[5,25,70],[1,1,98],[1, 9, 90],[1, 19, 80]]
 conf = ['shuffled', 'shuffled_and_blocked']
 
 
+# hs =  [1,2,3,4,10,50,100]
+# # h = [40]
+# cue_ambiguity = [0.65,0.75,0.85,0.9]                       
+# context_trans_prob = [0.8,0.85,0.9]
+# cue_switch = [False]
+# reward_naive = [True]
+# training_blocks = [4]
+# degradation_blocks=[6]
+# degradation = [True]
+# trials_per_block=[70]
+# dec_temps = [1,7]
+# utility = [[1, 19, 80]]
+# rews = [0]
+# utility = [[5,25,70],[1,1,98],[1, 9, 90],[1, 19, 80]]
+
+
+hs =  [10,20,30,40,50,60,70,80,90, 100]
 hs =  [1,2,3,4,10,50,100]
 # h = [40]
-cue_ambiguity = [0.65,0.75,0.85,0.9]                       
-context_trans_prob = [0.8,0.85,0.9]
+cue_ambiguity = [0.65,0.7]#,0.75,0.8,0.85,0.9]                       
+context_trans_prob = [0.8]#,0.85,0.9]
 cue_switch = [False]
 reward_naive = [True]
 training_blocks = [4]
 degradation_blocks=[6]
 degradation = [True]
 trials_per_block=[70]
-dec_temps = [1,7]
-utility = [[1, 19, 80]]
+dec_temps = [1]
 rews = [0]
-utility = [[5,25,70],[1,1,98],[1, 9, 90],[1, 19, 80]]
+utility = [[5,25,70]]#,[1,1,98],[1, 9, 90],[1, 19, 80]]
+utility = [[1, 19, 80]]
+conf = ['shuffled']
 
-conf = ['shuffled', 'shuffled_and_blocked']
+
+# conf = ['shuffled', 'shuffled_and_blocked']
 
 
 arrays = [cue_switch, degradation, reward_naive, context_trans_prob, cue_ambiguity,\
@@ -1060,7 +1078,7 @@ for l in lst:
               'p', str(l[4]),'dec', str(l[8]),'util', '-'.join([str(u) for u in util])]) + '.png'
         
         fig.savefig(fname, dpi=300)
-        plt.close()
+        # plt.close()
 
     if len(utility) == 1:
         utlty = [utility[0], utility[0]]
@@ -1133,7 +1151,7 @@ for l in lst:
             'p', str(l[4]),'dec', str(l[8]),'util', '-'.join([str(u) for u in util])]) + '.png'
 
     fig.savefig(fname, dpi=300)
-    plt.close()
+    # plt.close()
 
 
 
@@ -1190,7 +1208,7 @@ for l in lst:
                 'p', str(l[4]),'dec', str(l[8]),'util', '-'.join([str(u) for u in util])]) + '.png'
 
         fig.savefig(fname, dpi=300)
-        plt.close()
+        # plt.close()
         
 
 
@@ -1219,197 +1237,199 @@ for l in lst:
 
 #%%
 
-arrays = [cue_switch, degradation, reward_naive, context_trans_prob, cue_ambiguity,h,\
-        training_blocks, degradation_blocks, trials_per_block,dec_temps,rews, utility, conf]
-
-# pooled(arrays)
-data_folder = 'temp/'+conf[0]
-names = load_file_names(arrays)
-df = load_df(names, data_folder=data_folder,extinguish=extinguish)
-df_dkl = load_df_reward_dkl(names, data_folder=data_folder)
-df.head()
 
 
+# arrays = [cue_switch, degradation, reward_naive, context_trans_prob, cue_ambiguity,h,\
+#         training_blocks, degradation_blocks, trials_per_block,dec_temps,rews, utility, conf]
+
+# # pooled(arrays)
+# data_folder = 'temp/'+conf[0]
+# names = load_file_names(arrays)
+# df = load_df(names, data_folder=data_folder,extinguish=extinguish)
+# df_dkl = load_df_reward_dkl(names, data_folder=data_folder)
+# df.head()
 
 
-# ### Context optimality and choice optimality plots
 
 
-switch = False
-contingency_degr = True
-reward_naive = True
+# # ### Context optimality and choice optimality plots
 
-h = 200
-q = context_trans_prob[-1]
-p = cue_ambiguity[2]
-t = 3
-trials_per_block = 70
-training_blocks = 4
-db = degradation_blocks[0]
-degradation_blocks = [6]
-dec_temp = dec_temps[1]
-cue = 0
-one_run = True
-rew = rews[0]
-queries =  ['p==' + str(p)]
 
-# for db in degradation_blocks:
-for util in utility:
+# switch = False
+# contingency_degr = True
+# reward_naive = True
+
+# h = 200
+# q = context_trans_prob[-1]
+# p = cue_ambiguity[2]
+# t = 3
+# trials_per_block = 70
+# training_blocks = 4
+# db = degradation_blocks[0]
+# degradation_blocks = [6]
+# dec_temp = dec_temps[1]
+# cue = 0
+# one_run = True
+# rew = rews[0]
+# queries =  ['p==' + str(p)]
+
+# # for db in degradation_blocks:
+# for util in utility:
     
-    util = [u/100 for u in util]
-    # print(cue_ambiguity[ind], q,util)
-    strs = np.array(['switch_cues==', '& contingency_degradation==', '& learn_rew==', '& q==', '& h<=',\
-                    '& training_blocks==', '& degradation_blocks==', '& trials_per_block==', '& dec_temp ==',\
-                    '& utility_0==', '& utility_1==', '& utility_2==', '& r_lambda=='],dtype='str')
-    vals = np.array([switch, contingency_degr, reward_naive, q, h,\
-                    training_blocks, db, trials_per_block, dec_temp, util[0], util[1], util[2],rew], dtype='str')
-    whole_query = np.char.join('', np.char.add(strs, vals))
-    base_query = ' '.join(whole_query.tolist())
-    if one_run == True:
-        base_query += ' & run == 0'
+#     util = [u/100 for u in util]
+#     # print(cue_ambiguity[ind], q,util)
+#     strs = np.array(['switch_cues==', '& contingency_degradation==', '& learn_rew==', '& q==', '& h<=',\
+#                     '& training_blocks==', '& degradation_blocks==', '& trials_per_block==', '& dec_temp ==',\
+#                     '& utility_0==', '& utility_1==', '& utility_2==', '& r_lambda=='],dtype='str')
+#     vals = np.array([switch, contingency_degr, reward_naive, q, h,\
+#                     training_blocks, db, trials_per_block, dec_temp, util[0], util[1], util[2],rew], dtype='str')
+#     whole_query = np.char.join('', np.char.add(strs, vals))
+#     base_query = ' '.join(whole_query.tolist())
+#     if one_run == True:
+#         base_query += ' & run == 0'
 
-    base_df = df.query(base_query)
+#     base_df = df.query(base_query)
     
-    # print(base_df.size) # base_df_dkl = df_dkl.query(base_query)
-    # queries = ['p==0.95','p==0.7']
-    p = queries[0]
-    # print(base_query)
-    sns.set_style("whitegrid")
-    context_plot_cue_dependent(p,util = str(util))
+#     # print(base_df.size) # base_df_dkl = df_dkl.query(base_query)
+#     # queries = ['p==0.95','p==0.7']
+#     p = queries[0]
+#     # print(base_query)
+#     sns.set_style("whitegrid")
+#     context_plot_cue_dependent(p,util = str(util))
 
 
 
-print(base_query)
+# print(base_query)
 
-################################## optimality reward
-
-
-if len(utility) == 1:
-    utlty = [utility[0], utility[0]]
-else:
-    utlty = utility
-# print(utlty)
-
-sns.set_style('whitegrid')
-# for p in cue_ambiguity:
-fig, axes = plt.subplots(nrows=2, ncols=len(utlty), figsize = (len(utlty)*5,7))
-fig.suptitle('p=' + str(p))
-plt.tight_layout()
+# ################################## optimality reward
 
 
-# for di, db in enumerate(degradation_blocks):
-for ui, util in enumerate(utlty):
-    db = degradation_blocks[0]
-    util = [u/100 for u in util]
-    # print(util)
-    strs = np.array(['switch_cues==', '& contingency_degradation==', '& learn_rew==', '& q==', '& h<=', '& p==',\
-                    '& training_blocks==', '& degradation_blocks==', '& trials_per_block==', '& dec_temp ==',\
-                    '& utility_0==', '& utility_1==', '& utility_2==', '& r_lambda=='],dtype='str')
+# if len(utility) == 1:
+#     utlty = [utility[0], utility[0]]
+# else:
+#     utlty = utility
+# # print(utlty)
+
+# sns.set_style('whitegrid')
+# # for p in cue_ambiguity:
+# fig, axes = plt.subplots(nrows=2, ncols=len(utlty), figsize = (len(utlty)*5,7))
+# fig.suptitle('p=' + str(p))
+# plt.tight_layout()
+
+
+# # for di, db in enumerate(degradation_blocks):
+# for ui, util in enumerate(utlty):
+#     db = degradation_blocks[0]
+#     util = [u/100 for u in util]
+#     # print(util)
+#     strs = np.array(['switch_cues==', '& contingency_degradation==', '& learn_rew==', '& q==', '& h<=', '& p==',\
+#                     '& training_blocks==', '& degradation_blocks==', '& trials_per_block==', '& dec_temp ==',\
+#                     '& utility_0==', '& utility_1==', '& utility_2==', '& r_lambda=='],dtype='str')
                     
-    vals = np.array([switch, contingency_degr, reward_naive, q, h, p, \
-                    training_blocks, db, trials_per_block, dec_temp, util[0], util[1], util[2],rew], dtype='str')
-    whole_query = np.char.join('', np.char.add(strs, vals))
+#     vals = np.array([switch, contingency_degr, reward_naive, q, h, p, \
+#                     training_blocks, db, trials_per_block, dec_temp, util[0], util[1], util[2],rew], dtype='str')
+#     whole_query = np.char.join('', np.char.add(strs, vals))
 
-    # strs = np.array(['switch_cues==', '& contingency_degradation==', '& learn_rew==', '& q==', '& h<=',\
-    #                 '& training_blocks==', '& degradation_blocks==', '& trials_per_block==', '& dec_temp =='],dtype='str')
-    # vals = np.array([switch, contingency_degr, reward_naive, q, h,\
-    #                 training_blocks, db, trials_per_block, dec_temp], dtype='str')
-    # whole_query = np.char.join('', np.char.add(strs, vals))
-    base_query = ' '.join(whole_query.tolist())
-    # print(base_query)
-    if one_run == True:
-        base_query += ' & run == 0'
+#     # strs = np.array(['switch_cues==', '& contingency_degradation==', '& learn_rew==', '& q==', '& h<=',\
+#     #                 '& training_blocks==', '& degradation_blocks==', '& trials_per_block==', '& dec_temp =='],dtype='str')
+#     # vals = np.array([switch, contingency_degr, reward_naive, q, h,\
+#     #                 training_blocks, db, trials_per_block, dec_temp], dtype='str')
+#     # whole_query = np.char.join('', np.char.add(strs, vals))
+#     base_query = ' '.join(whole_query.tolist())
+#     # print(base_query)
+#     if one_run == True:
+#         base_query += ' & run == 0'
 
-    base_df = df.query(base_query)
-    base_df = base_df.astype({'h': 'category'})
-    plot_df = base_df.query('trial_type == 1  & t==0 & degradation_blocks == ' + str(db))
-    grouped = plot_df.groupby(by=['agent', 'run','h','cue'])
-    plot_df['policy_optimality_subset'] = grouped['chose_optimal'].transform('cumsum')
-    plot_df['offset'] = grouped['ith_cue_trial'].transform('min')
-    plot_df['policy_optimality_subset'] = plot_df['policy_optimality_subset'] / (plot_df['ith_cue_trial'] - plot_df['offset']+1)
-
-
-
-    for cue in [0,1]:
-        sns.lineplot(ax = axes[cue,ui], data=plot_df.query('cue ==' + str(cue)),\
-                    x = 'trial',y='policy_optimality_subset', hue='h', legend=False,\
-                    palette=sns.color_palette('Blues_r',n_colors=np.unique(plot_df['h']).size))
-        axes[cue,ui].set_title('cue=' + str(cue) + ', ' + str(util))
+#     base_df = df.query(base_query)
+#     base_df = base_df.astype({'h': 'category'})
+#     plot_df = base_df.query('trial_type == 1  & t==0 & degradation_blocks == ' + str(db))
+#     grouped = plot_df.groupby(by=['agent', 'run','h','cue'])
+#     plot_df['policy_optimality_subset'] = grouped['chose_optimal'].transform('cumsum')
+#     plot_df['offset'] = grouped['ith_cue_trial'].transform('min')
+#     plot_df['policy_optimality_subset'] = plot_df['policy_optimality_subset'] / (plot_df['ith_cue_trial'] - plot_df['offset']+1)
 
 
-    ranges = plot_df.groupby('trial_type')['trial'].agg(['min', 'max'])
-    cols = [[1,1,1], [0,0,0],[1,1,1]] 
-    for ax in axes.flatten():
-        ax.set_ylim([0,1])
-        for i, row in ranges.iterrows():
-            ax.axvspan(xmin=row['min'], xmax=row['max'], facecolor=cols[i], alpha=0.05)
 
-    ax.legend(bbox_to_anchor=(-2,-0.3), loc='upper left', borderaxespad=0,title='h',ncol=np.unique(plot_df['h'].size))
+#     for cue in [0,1]:
+#         sns.lineplot(ax = axes[cue,ui], data=plot_df.query('cue ==' + str(cue)),\
+#                     x = 'trial',y='policy_optimality_subset', hue='h', legend=False,\
+#                     palette=sns.color_palette('Blues_r',n_colors=np.unique(plot_df['h']).size))
+#         axes[cue,ui].set_title('cue=' + str(cue) + ', ' + str(util))
 
 
-        # fig.suptitle(ttls[f] + ' and cue_degradation: ' + str(cue_degradation[ci]) , fontsize=15, y=1.08)   
-    # plot_df.to_excel(str(db) + '.xlsx')
+#     ranges = plot_df.groupby('trial_type')['trial'].agg(['min', 'max'])
+#     cols = [[1,1,1], [0,0,0],[1,1,1]] 
+#     for ax in axes.flatten():
+#         ax.set_ylim([0,1])
+#         for i, row in ranges.iterrows():
+#             ax.axvspan(xmin=row['min'], xmax=row['max'], facecolor=cols[i], alpha=0.05)
+
+#     ax.legend(bbox_to_anchor=(-2,-0.3), loc='upper left', borderaxespad=0,title='h',ncol=np.unique(plot_df['h'].size))
+
+
+#         # fig.suptitle(ttls[f] + ' and cue_degradation: ' + str(cue_degradation[ci]) , fontsize=15, y=1.08)   
+#     # plot_df.to_excel(str(db) + '.xlsx')
     
 
 
-################################## DKL
+# ################################## DKL
 
-one_run = True
-# util = utility[-1]
-# util = [u/100 for u in util]
+# one_run = True
+# # util = utility[-1]
+# # util = [u/100 for u in util]
 
-# strs = np.array(['switch_cues==', '& contingency_degradation==', '& learn_rew==', '& q==', '& h<=',\
-#                 '& training_blocks==', '& degradation_blocks<=10', '& trials_per_block==', '& dec_temp =='],dtype='str')
+# # strs = np.array(['switch_cues==', '& contingency_degradation==', '& learn_rew==', '& q==', '& h<=',\
+# #                 '& training_blocks==', '& degradation_blocks<=10', '& trials_per_block==', '& dec_temp =='],dtype='str')
 
-# vals = np.array([switch, contingency_degr, reward_naive, q, h,\
-#                 training_blocks, degradation_blocks, trials_per_block, dec_temp], dtype='str')
+# # vals = np.array([switch, contingency_degr, reward_naive, q, h,\
+# #                 training_blocks, degradation_blocks, trials_per_block, dec_temp], dtype='str')
 
 
-# for di, db in enumerate(degradation_blocks):
+# # for di, db in enumerate(degradation_blocks):
 
-for ui, util in enumerate(utility):
-    util = [u/100 for u in util]
-    # print(db)
-    strs = np.array(['switch_cues==', '& contingency_degradation==', '& learn_rew==', '& q==', '& h<=', '& p==', \
-                    '& training_blocks==', '& degradation_blocks==', '& trials_per_block==', '& dec_temp ==',\
-                    '& utility_0==', '& utility_1==', '& utility_2==', '& r_lambda=='],dtype='str')
-    vals = np.array([switch, contingency_degr, reward_naive, q, h, p,\
-                    training_blocks, db, trials_per_block, dec_temp, util[0], util[1], util[2], rew], dtype='str')
-    whole_query = np.char.join('', np.char.add(strs, vals))
-    base_query = ' '.join(whole_query.tolist())
+# for ui, util in enumerate(utility):
+#     util = [u/100 for u in util]
+#     # print(db)
+#     strs = np.array(['switch_cues==', '& contingency_degradation==', '& learn_rew==', '& q==', '& h<=', '& p==', \
+#                     '& training_blocks==', '& degradation_blocks==', '& trials_per_block==', '& dec_temp ==',\
+#                     '& utility_0==', '& utility_1==', '& utility_2==', '& r_lambda=='],dtype='str')
+#     vals = np.array([switch, contingency_degr, reward_naive, q, h, p,\
+#                     training_blocks, db, trials_per_block, dec_temp, util[0], util[1], util[2], rew], dtype='str')
+#     whole_query = np.char.join('', np.char.add(strs, vals))
+#     base_query = ' '.join(whole_query.tolist())
 
-    base_df_dkl = df_dkl.query(base_query)
+#     base_df_dkl = df_dkl.query(base_query)
 
-    plot_df = base_df_dkl.query('t==3' + ' & degradation_blocks ==' + str(db))
-    # print(plot_df.shape)
-    fig, axes = plt.subplots(ncols=4, nrows=1, figsize=(20,3))
-    for cont in range(4):
+#     plot_df = base_df_dkl.query('t==3' + ' & degradation_blocks ==' + str(db))
+#     # print(plot_df.shape)
+#     fig, axes = plt.subplots(ncols=4, nrows=1, figsize=(20,3))
+#     for cont in range(4):
 
-        # print('context_cues == ' + str(cue) + ' & context== ' + str(cont))
-        if one_run == True:
-            quer = 'context== ' + str(cont) + ' & run == 0'
-        else:
-            quer = 'context== ' + str(cont)
-        if cont == 3:
-            sns.lineplot(ax=axes[cont], data=plot_df.query(quer),
-                        x='trial', y='avg_dkl', hue='h', legend=True, \
-                        palette=sns.color_palette('Reds_r',n_colors=np.unique(plot_df['h']).size))
-            # print(np.unique(plot_df['h']))
-            axes[cont].legend(ncol = np.unique(plot_df['h']).size, bbox_to_anchor=(-3.3, -0.3), loc='upper left',\
-                borderaxespad=0,title='h')
-        else:
+#         # print('context_cues == ' + str(cue) + ' & context== ' + str(cont))
+#         if one_run == True:
+#             quer = 'context== ' + str(cont) + ' & run == 0'
+#         else:
+#             quer = 'context== ' + str(cont)
+#         if cont == 3:
+#             sns.lineplot(ax=axes[cont], data=plot_df.query(quer),
+#                         x='trial', y='avg_dkl', hue='h', legend=True, \
+#                         palette=sns.color_palette('Reds_r',n_colors=np.unique(plot_df['h']).size))
+#             # print(np.unique(plot_df['h']))
+#             axes[cont].legend(ncol = np.unique(plot_df['h']).size, bbox_to_anchor=(-3.3, -0.3), loc='upper left',\
+#                 borderaxespad=0,title='h')
+#         else:
             
-            sns.lineplot(ax=axes[cont], data=plot_df.query(quer),
-                        x='trial', y='avg_dkl', hue='h',legend=False,\
-                            palette=sns.color_palette('Reds_r',n_colors=np.unique(plot_df['h']).size))
-        axes[cont].set_title('context: ' + str(cont))
+#             sns.lineplot(ax=axes[cont], data=plot_df.query(quer),
+#                         x='trial', y='avg_dkl', hue='h',legend=False,\
+#                             palette=sns.color_palette('Reds_r',n_colors=np.unique(plot_df['h']).size))
+#         axes[cont].set_title('context: ' + str(cont))
 
-    ranges = plot_df.groupby('trial_type')['trial'].agg(['min', 'max'])
-    cols = [[1,1,1], [0,0,0],[1,1,1]] 
-    for ax in axes.flatten():    
-        for i, row in ranges.iterrows():
-            ax.axvspan(xmin=row['min'], xmax=row['max'], facecolor=cols[i], alpha=0.05)
-    plt.suptitle(str(util))
-plt.figure()
+#     ranges = plot_df.groupby('trial_type')['trial'].agg(['min', 'max'])
+#     cols = [[1,1,1], [0,0,0],[1,1,1]] 
+#     for ax in axes.flatten():    
+#         for i, row in ranges.iterrows():
+#             ax.axvspan(xmin=row['min'], xmax=row['max'], facecolor=cols[i], alpha=0.05)
+#     plt.suptitle(str(util))
+# plt.figure()
 
-# %%
+# # %%

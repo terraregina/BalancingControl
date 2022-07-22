@@ -131,12 +131,7 @@ def create_trials_planning(data, habit_seq = 3, contingency_degradation = True,\
             for i in range(nblocks):
                 np.random.shuffle(trials[(2*i)*half_block:(2*i+2)*half_block,:])
                 
-        trials = trials.astype('int32')
-        trial_type = trial_type.astype('int32')
 
-        path = os.path.join(os.getcwd(),'config')
-        fname = os.path.join(path, fname)
-    
     elif blocked:
         miniblocks = half_block//block
         
@@ -176,12 +171,15 @@ def create_trials_planning(data, habit_seq = 3, contingency_degradation = True,\
             blocks[(2*i)*half_block:(2*i+2)*half_block] = i
             
 
-        trials = trials.astype('int32')
-        trial_type = trial_type.astype('int32')
+    trials = trials.astype('int32')
+    trial_type = trial_type.astype('int32')
 
-        path = os.path.join(os.getcwd(),'config')
-        fname = os.path.join(path, fname)
-    
+    if shuffle and blocked:
+        subfolder = '/shuffled_and_blocked'
+    else:
+        subfolder ='/shuffled'
+    path = os.path.join(os.getcwd(),'config'+subfolder)
+    fname = os.path.join(path, fname)
 
     if export:
         config = {
@@ -363,7 +361,11 @@ def create_trials_two_seqs(data, export=True,
     trials = trials.astype('int32')
     trial_type = trial_type.astype('int32')
 
-    path = os.path.join(os.getcwd(),'config')
+    if shuffle and blocked:
+        subfolder = '/shuffled_and_blocked'
+    else:
+        subfolder ='/shuffled'
+    path = os.path.join(os.getcwd(),'config'+subfolder)
     fname = os.path.join(path, fname)
 
     if export:
@@ -526,11 +528,27 @@ def create_config_files_context_dependent_degradation(training_blocks, degradati
                             training_blocks=l[3], trials_per_block=l[4],export=True)
  
 
-# ONLY DONE FOR PLANNING, not consecutive
-# create_config_files_planning([4],[2,4,6],[70])
-# create_config_files([2], [2], [70])
-# create_config_files_planning([4],[2,4,6,10],[70],shuffle=True, blocked=True, block =5)
-# create_config_files_context_dependent_degradation([4],[2,4,6],[70])
+
+
+
+
+conf = ['shuffled', 'shuffled_and_blocked']
+data_folder='config'
+
+
+for con in conf:
+    path = os.path.join(data_folder, con)
+
+    if not os.path.exists(path):
+        os.makedirs(path)
+
+
+
+
+combinations = []
+# create_config_files([4], [24,6], [70])
+create_config_files_planning([4],[2,4,6],[70],shuffle=True  )
+
 
 
 
@@ -540,7 +558,7 @@ def create_config_files_context_dependent_degradation(training_blocks, degradati
 
 
 # create_config_files_planning([4],[10],[70],shuffle=True)
-# create_config_files([4], [10], [70],shuffle=True,blocked=True, block=5)
+create_config_files([4], [2,4,6], [70],shuffle=True)
 
 
 
