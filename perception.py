@@ -553,11 +553,13 @@ class FittingPerception(object):
         #       for i in range(self.npart)], dim=-1).to(device)
 
         rew_messages = ar.stack(\
-            [ar.stack([self.curr_gen_mod_rewards[ti][self.reward_ind[int(self.rewards[ti])],:,:,i].to(device) for ti in range(-t-1,0,1)] \
-            + [ar.matmul(
-                ar.moveaxis(self.curr_gen_mod_rewards[-t-1][:,:,:,i],(0,1,2),(2,0,1)).to(device), self.prior_rewards
-                ).to(device)]*(self.T-t-1),dim=-2).to(device)\
-              for i in range(self.npart)], dim=-1).to(device)
+            [
+                ar.stack(
+                    [self.curr_gen_mod_rewards[ti][self.reward_ind[int(self.rewards[ti])],:,:,i].to(device) for ti in range(-t-1,0,1)] \
+                    + 
+                    [ar.matmul(ar.moveaxis(self.curr_gen_mod_rewards[-t-1][:,:,:,i],(0,1,2),(2,0,1)).to(device), self.prior_rewards).to(device)]*(self.T-t-1)\
+                ,dim=-2).to(device)\
+            for i in range(self.npart)], dim=-1).to(device)
 
         
         # for i in range(t):
@@ -568,10 +570,11 @@ class FittingPerception(object):
             # reward = self.rewards[tp]
             # rew_messages[:,i] = generative_model_rewards[reward]
         
+        rew_messages[:,0,:,:] = 1/self.possible_rewards.size()[0]
         self.obs_messages.append(obs_messages)
         self.rew_messages.append(rew_messages)
 
-    def update_messages(self, tau, t, possible_policies):
+    def update_messages(self, tau, t):
         
         # bwd_messages = ar.zeros((self.nh, self.T,self.npi)) #+ 1./self.nh
         # bwd_messages[:,-1,:] = 1./self.nh
@@ -586,7 +589,8 @@ class FittingPerception(object):
         self.make_current_messages(tau,t)
         
         obs_messages = self.obs_messages[-1]
-        rew_messages = self.rew_messages[-1]    
+        rew_messages = self.rew_messages[-1]
+
         for i in range(self.T-2,-1,-1):
             tmp = ar.einsum('hpcn,shpc,hcn,hcn->spcn',bwd[-1],self.big_trans_matrix[...,i],obs_messages[:,i+1,:],rew_messages[:,i+1,:]).to(device)
             # tmp = ar.einsum('hpn,shp,hn,hn->spn',bwd[-1],self.big_trans_matrix[...,i],obs_messages[:,i+1],rew_messages[:,i+1]).to(device)
@@ -634,14 +638,14 @@ class FittingPerception(object):
         
         # return posterior
 
-    def update_beliefs_states(self, tau, t, observation, reward, possible_policies):
+    def update_beliefs_states(self, tau, t, observation, reward):
         #estimate expected state distribution
         # if t == 0:
         #     self.instantiate_messages(policies)
         self.observations.append(observation.to(device))
         self.rewards.append(reward.to(device))
             
-        self.update_messages(tau, t, possible_policies)
+        self.update_messages(tau, t)
         
         #return posterior#ar.nan_to_num(posterior)
     
