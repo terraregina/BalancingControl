@@ -380,10 +380,7 @@ class BayesianPlanner(object):
         return gen_mod_rewards
 
     def update_beliefs(self, tau, t, observation, reward, response, context=None):
-            
-        # if tau >=502:
-        #     print('trial under consideration')
-
+        
         self.observations[tau,t] = observation
         self.rewards[tau,t] = reward
         self.perception.planets = self.planets
@@ -441,7 +438,7 @@ class BayesianPlanner(object):
         # else:
         #     self.posterior_context[tau,t] = 1
         
-        # if self.context_obs[tau] == 0 and tau >= 280:
+        # if self.trial_type[tau] == 2:
         #     print('\n', tau,t, 'planet: ', self.planets[observation], ' reward: ', reward)
         #     # print(self.outcome_suprise[tau,:][:,[0,2]].round(3), ' outcome suprise')
         #     # print(self.policy_entropy[tau,:][:,[0,2]].round(3),' policy entropy')
@@ -454,6 +451,7 @@ class BayesianPlanner(object):
         #     print(self.policy_entropy[tau,t].round(3),' policy entropy')
         #     print(self.policy_surprise[tau,t].round(3),'  policy surprise')
         #     print(self.context_obs_suprise[tau,t].round(3), ' context obs suprise')
+        #     print(self.pr_cont + self.outcome_suprise[tau,t] + self.policy_entropy[tau,t] + self.policy_surprise[tau,t] + self.context_obs_suprise[tau,t])
         #     print(self.posterior_context[tau,t].round(3), ' posterior_context')
 
         if t < self.T-1:

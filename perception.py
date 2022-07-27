@@ -6,7 +6,7 @@ import torch as ar
 from sys import exit
 
 try:
-    from inference_two_seqs import device
+    from inference_habit import device
 except:
     device = ar.device("cpu")
 ar.set_default_dtype(ar.float64)
@@ -654,7 +654,7 @@ class FittingPerception(object):
         likelihood = (self.fwd_norms[-1]+ 1e-20).prod(axis=0).to(device)
         # print('\n', tau,t,likelihood[...,0])
         norm = likelihood.sum(axis=0)
-        likelihood = ar.pow(likelihood/norm,self.dec_temp[None,:]).to(device) #* ar.pow(norm,self.dec_temp)
+        likelihood = ar.pow(likelihood/norm[None,:,:],self.dec_temp[None,None,:]).to(device) #* ar.pow(norm,self.dec_temp)
         # likelihood /= likelihood.sum(axis=0)
 
         posterior= likelihood * self.prior_policies[-1]
@@ -674,17 +674,9 @@ class FittingPerception(object):
 
         alpha = self.dirichlet_pol_params[-1]
         if t == self.T-1:
-            chosen_pol = ar.argmax(post_policies,axis=0)
-            # inf_context = ar.argmax(prior_context)
-            alpha_prime = self.dirichlet_pol_params[-1]
-            # print(id(alpha_prime))
-            # if (post_policies.size()[1] > 1):
-            #     bp = 0
-            # alpha_prime = alpha_prime + \
-            #     ar.stack([prior_context if p == int(chosen_pol) else ar.zeros(self.nc,self.npart) for p in range(self.npi)])
 
-            # alpha_prime = alpha_prime + \
-            #     ar.stack([[prior_context[:,part] if p == int(chosen_pol) else ar.zeros(self.nc,self.npart) for part in range(self.npart)]])
+            chosen_pol = ar.argmax(post_policies,axis=0)
+            alpha_prime = self.dirichlet_pol_params[-1]
 
             alph_prim = []
             for part in range(self.npart):
@@ -693,8 +685,6 @@ class FittingPerception(object):
                 )
             alpha_prime = alpha_prime + ar.stack(alph_prim, dim=-1)
             
-            # print(alpha_prime.shape)
-            #alpha_prime[chosen_pol,inf_context] = self.dirichlet_pol_params[chosen_pol,inf_context] + 1
         else:
             alpha_prime = alpha
 

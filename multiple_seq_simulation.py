@@ -190,7 +190,7 @@ def run_single_sim(lst,
 
     return fname
 
-def pooled(arrays,seed=521312,repetitions=1, data_folder='temp'):
+def pooled(arrays,seed=521312,repetitions=1, data_folder='temp',check_missing = True):
 
     use_fitting = False
     np.random.seed(seed)
@@ -241,18 +241,34 @@ def pooled(arrays,seed=521312,repetitions=1, data_folder='temp'):
             fname += '.json'
         names.append([li, fname])
 
-    missing_files = []
-    for name in names:
-        if not name[1] in existing_files:
-            # print(name)
-            missing_files.append(name[0])
+    if check_missing:
+        missing_files = []
+        for name in names:
+            if not name[1] in existing_files:
+                # print(name)
+                missing_files.append(name[0])
 
-    lst = [lst[i] for i in missing_files]
+        lst = [lst[i] for i in missing_files]
+
     print('simulations to run: ' + str(len(lst)))
 
     ca = [ns, na, npl, nc, nr, T, state_transition_matrix, planet_reward_probs,\
         planet_reward_probs_switched,repetitions,use_fitting]
 
+    for l in [lst[0]]:
+        run_single_sim(l,\
+                       ca[0],\
+                       ca[1],\
+                       ca[2],\
+                       ca[3],\
+                       ca[4],\
+                       ca[5],\
+                       ca[6],\
+                       ca[7],\
+                       ca[8],\
+                       ca[9],\
+                       ca[10])
+                       
     with Pool() as pool:
 
         for _ in tqdm.tqdm(pool.istarmap(run_single_sim, zip(lst,\
@@ -302,21 +318,37 @@ if __name__ == '__main__':
     state_transition_matrix = np.repeat(state_transition_matrix[:,:,:,np.newaxis], repeats=nc, axis=3)
 
     nc = 4
+    # h =  [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]
+    # # h = [40]
+    # cue_ambiguity = [0.6,0.65,0.7,0.75,0.8,0.85,0.9]                       
+    # context_trans_prob = [0.7,0.75,0.8,0.85,0.9]
+    # cue_switch = [False]
+    # reward_naive = [True]
+    # training_blocks = [4]
+    # degradation_blocks=[2]
+    # degradation = [True]
+    # trials_per_block=[70]
+    # dec_temps = [1,2,3,4,5,6]
+    # utility = [[1, 1, 98]]
+    # rews = [0]
+    # utility = [[1,1,98],[1, 9, 90],[1, 19, 80],[5,25,70]]
+    # conf = ['shuffled','shuffled_and_blocked']
+
+
     h =  [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]
     # h = [40]
-    cue_ambiguity = [0.6,0.65,0.7,0.75,0.8,0.85,0.9]                       
-    context_trans_prob = [0.7,0.75,0.8,0.85,0.9]
+    cue_ambiguity = [0.65]#,0.75,0.8,0.85,0.9]                       
+    context_trans_prob = [0.8]#,0.85,0.9]
     cue_switch = [False]
     reward_naive = [True]
     training_blocks = [4]
     degradation_blocks=[2]
     degradation = [True]
     trials_per_block=[70]
-    dec_temps = [1,2,3,4,5,6]
-    utility = [[1, 1, 98]]
+    dec_temps = [1]
     rews = [0]
-    utility = [[1,1,98],[1, 9, 90],[1, 19, 80],[5,25,70]]
-    conf = ['shuffled','shuffled_and_blocked']
+    utility = [[1, 9 , 90]]#, [5,25,70],[1,1,98],[1, 9, 90]]
+    conf = ['shuffled']
 
     data_folder = 'temp'
     
@@ -328,4 +360,5 @@ if __name__ == '__main__':
     arrays = [cue_switch, degradation, reward_naive, context_trans_prob, cue_ambiguity,h,\
             training_blocks, degradation_blocks, trials_per_block,dec_temps,rews, utility, conf]
 
-    pooled(arrays)
+    pooled(arrays,repetitions = 1,check_missing=False)
+

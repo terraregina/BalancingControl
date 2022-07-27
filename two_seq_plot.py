@@ -370,6 +370,7 @@ def load_file_names(arrays, use_fitting=False):
 
 
     return names
+
 def load_df(names,data_folder='data', extinguish=None):
     if extinguish is None:
         raise('did not specify if rewarded during extinction')
@@ -941,12 +942,12 @@ extinguish = True
 
 hs =  [1,2,3,4,10,50,100]
 # h = [40]
-cue_ambiguity = [0.65,0.75,0.85,0.9]                       
-context_trans_prob = [0.8,0.85,0.9]
+cue_ambiguity = [0.6]#,0.75,0.85,0.9]                       
+context_trans_prob = [0.8]#,0.85,0.9]
 cue_switch = [False]
 reward_naive = [True]
 training_blocks = [4]
-degradation_blocks=[6]
+degradation_blocks=[2]
 degradation = [True]
 trials_per_block=[70]
 dec_temps = [1,7]
@@ -954,7 +955,6 @@ utility = [[1, 19, 80]]
 rews = [0]
 utility = [[5,25,70],[1,1,98],[1, 9, 90],[1, 19, 80]]
 conf = ['shuffled', 'shuffled_and_blocked']
-
 
 
 arrays = [cue_switch, degradation, reward_naive, context_trans_prob, cue_ambiguity,\
@@ -1021,7 +1021,7 @@ for l in lst:
         
         fig.savefig(fname, dpi=300)
         plt.close()
-
+        
     if len(utility) == 1:
         utlty = [utility[0], utility[0]]
     else:
@@ -1092,6 +1092,8 @@ for l in lst:
 
     fig.savefig(fname, dpi=300)
     plt.close()
+    
+    
 
 
 

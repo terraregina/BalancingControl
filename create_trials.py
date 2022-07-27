@@ -12,7 +12,7 @@ from planet_sequences import generate_trials_df
 
 
 def all_possible_trials_planning(habit_seq=3, shuffle=False):
-    
+    np.random.seed(1)
     ns=6
     all_rewards = [[-1,1,1], [1,1,-1]]
     sequences  = np.arange(8)
@@ -67,10 +67,10 @@ def create_trials_planning(data, habit_seq = 3, contingency_degradation = True,\
                         degradation_blocks = 1,\
                         interlace = True,\
                         block = None,\
-                        trials_per_block = 28, export = True,blocked=False,shuffle=False):
+                        trials_per_block = 28, export = True,blocked=False,shuffle=False,seed=1):
 
     sequences = np.arange(8)
-    np.random.seed(1)
+    np.random.seed(seed)
     if trials_per_block % 2 != 0:
         raise Exception('Give even number of trials per block!')
 
@@ -197,7 +197,8 @@ def create_trials_planning(data, habit_seq = 3, contingency_degradation = True,\
                   'trials_per_block': trials_per_block,
                   'blocked': blocked,
                   'shuffle': shuffle, 
-                  'block' : block
+                  'miniblock_size' : block,
+                  'seed':seed
                 }
 
         with open(fname, "w") as file:
@@ -275,18 +276,21 @@ def all_possible_trials_two_seqs(shuffle=False):
 function that actually creates the trials for a given experimental version
 '''
 
+
+
+
 def create_trials_two_seqs(data, export=True,
                            contingency_degradation = False,
                            switch_cues = True,
                            training_blocks=4,
                            degradation_blocks = 2,
-                           trials_per_block=60, interlace = True,blocked=False, shuffle=False, block=2):
+                           trials_per_block=60, interlace = True,blocked=False, shuffle=False, block=2, seed=23432):
  
 
 
 
     sequences = np.arange(8)
-    np.random.seed(1)
+    np.random.seed(seed)
 
     if trials_per_block % 2 != 0:
         raise Exception('Give even number of trials per block!')
@@ -322,6 +326,10 @@ def create_trials_two_seqs(data, export=True,
 
             trial_type[(2*i)*half_block:(2*i+2)*half_block] = tt
             blocks[(2*i)*half_block:(2*i+2)*half_block] = i
+
+        if interlace:
+            for i in range(nblocks):
+                np.random.shuffle(trials[(2*i)*half_block:(2*i+2)*half_block,:])
             
     elif blocked:
         miniblocks = half_block//block
@@ -384,11 +392,146 @@ def create_trials_two_seqs(data, export=True,
                   'trials_per_block': trials_per_block,
                   'blocked': blocked,
                   'shuffle': shuffle, 
-                  'block_size' : block
+                  'miniblock_size' : block,
+                  'seed': seed,
                 }
 
         with open(fname, "w") as file:
             js.dump(config, file)
+
+
+# other version with cues switched
+# def create_trials_two_seqs(data, export=True,
+#                            contingency_degradation = False,
+#                            switch_cues = True,
+#                            training_blocks=4,
+#                            degradation_blocks = 2,
+#                            trials_per_block=60, interlace = True,blocked=False, shuffle=False, block=2):
+ 
+
+
+
+#     sequences = np.arange(8)
+#     np.random.seed(1)
+
+#     if trials_per_block % 2 != 0:
+#         raise Exception('Give even number of trials per block!')
+
+#     fname = 'config_'+'degradation_'+ str(int(contingency_degradation))+ '_switch_' + str(int(switch_cues))\
+#              + '_train' + str(training_blocks) + '_degr' + str(degradation_blocks) + '_n' + str(trials_per_block)+'.json'
+
+
+#     nblocks = training_blocks + degradation_blocks + 2
+#     half_block = trials_per_block//2
+    
+#     ncols = data[0][0].shape[1]
+#     trials = np.zeros([nblocks*trials_per_block, ncols])
+#     trial_type = np.zeros(nblocks*trials_per_block)
+#     blocks = np.zeros(nblocks*trials_per_block)
+#     tt=0
+
+
+#     if not blocked:
+#         for i in range(nblocks):
+#             if i >= training_blocks and i < training_blocks + degradation_blocks:
+#                 if contingency_degradation:
+#                     r_ind = 1
+#                 else:
+#                     r_ind = 0
+#                     h_ind_1 = 6
+#                     h_ind_2 = 3
+#                 tt = 1
+#             else: 
+#                 tt = 0
+#                 h_ind_1 = 3
+#                 h_ind_2 = 6
+#                 r_ind = 0
+
+#             if i >= (nblocks -2):                   # if now populating extinction block
+#                 tt = 2
+    
+#             trials[(2*i)*half_block : (2*i+1)*half_block , :] = data[h_ind_1][r_ind][i*half_block : (i+1)*half_block,:]
+#             trials[(2*i+1)*half_block : (2*i+2)*half_block , :] = data[h_ind_2][r_ind][i*half_block : (i+1)*half_block,:]
+
+#             trial_type[(2*i)*half_block:(2*i+2)*half_block] = tt
+#             blocks[(2*i)*half_block:(2*i+2)*half_block] = i
+#             np.random.shuffle(trials[(2*i)*half_block:(2*i+2)*half_block,:])
+
+#     elif blocked:
+#         miniblocks = half_block//block
+        
+#             # populate training blocks and extinction block
+#         for i in range(nblocks):
+#             if i >= training_blocks and i < training_blocks + degradation_blocks:
+#                 if contingency_degradation:
+#                     r_ind = 1
+#                 else:
+#                     r_ind = 0
+#                     h_ind_1 = 6
+#                     h_ind_2 = 3
+#                 tt = 1
+#             else: 
+#                 tt = 0
+#                 h_ind_1 = 3
+#                 h_ind_2 = 6
+#                 r_ind = 0
+
+#             if i >= (nblocks -2):                   # if now populating extinction block
+#                 tt = 2
+
+
+#             h1 = data[h_ind_1][r_ind][i*half_block:(i+1)*half_block]
+#             h2 = data[h_ind_2][r_ind][i*half_block:(i+1)*half_block]
+
+            
+#             for mb in range(miniblocks):
+#                 start_habit1 = i*trials_per_block + (2*mb)*block
+#                 stop_habit1 =  i*trials_per_block + (2*mb+1)*block
+#                 stop_habit2 =  i*trials_per_block + (2*mb+2)*block
+
+
+#                 trials[start_habit1 : stop_habit1 , :] = h1[mb*block : (mb+1)*block,:]
+#                 trials[stop_habit1 : stop_habit2 , :] = h2[mb*block : (mb+1)*block,:]
+
+#             trial_type[(2*i)*half_block:(2*i+2)*half_block] = tt
+#             blocks[(2*i)*half_block:(2*i+2)*half_block] = i
+            
+            
+#     if not contingency_degradation:
+#         trials[training_blocks*trials_per_block:(training_blocks+degradation_blocks)*trials_per_block,0] = \
+#         (trials[training_blocks*trials_per_block:(training_blocks+degradation_blocks)*trials_per_block,0] == 0).astype('int')
+
+#     trials = trials.astype('int32')
+#     trial_type = trial_type.astype('int32')
+
+#     if shuffle and blocked:
+#         subfolder = '/shuffled_and_blocked'
+#     else:
+#         subfolder ='/shuffled'
+#     path = os.path.join(os.getcwd(),'config'+subfolder)
+#     fname = os.path.join(path, fname)
+
+#     if export:
+#         config = {
+#                   'context' : trials[:,0].tolist(),
+#                   'sequence': trials[:,1].tolist(),
+#                   'starts': trials[:,2].tolist(),
+#                   'planets': trials[:,3:].tolist(),
+#                   'trial_type': trial_type.tolist(),
+#                   'block': blocks.tolist(),
+#                   'degradation_blocks': degradation_blocks,
+#                   'training_blocks': training_blocks,
+#                   'interlace': interlace,
+#                   'contingency_degradation': contingency_degradation,
+#                   'switch_cues': switch_cues,
+#                   'trials_per_block': trials_per_block,
+#                   'blocked': blocked,
+#                   'shuffle': shuffle, 
+#                   'miniblock_size' : block
+#                 }
+
+#         with open(fname, "w") as file:
+#             js.dump(config, file)
 
 
 '''
@@ -547,7 +690,8 @@ for con in conf:
 
 combinations = []
 # create_config_files([4], [24,6], [70])
-create_config_files_planning([4],[2,4,6],[70],shuffle=True  )
+# create_config_files_planning([4],[2,4,6],[70],shuffle=True)
+# create_config_files_planning([4],[2,4,6],[70],shuffle=True,blocked=True, block=5)
 
 
 
@@ -557,9 +701,10 @@ create_config_files_planning([4],[2,4,6],[70],shuffle=True  )
 # trials_shuffled = all_possible_trials_two_seqs(shuffle=True)
 
 
-# create_config_files_planning([4],[10],[70],shuffle=True)
-create_config_files([4], [2,4,6], [70],shuffle=True)
-
+create_config_files_planning([4],[2],[70],shuffle=True)
+create_config_files_planning([4],[2],[70],shuffle=True, blocked=True, block=5)
+create_config_files([4],[2],[70],shuffle=True)
+create_config_files([4],[2],[70],shuffle=True, blocked = True, block = 5)
 
 
 # fname = 'config/' + 'config_degradation_1_switch_0_train4_degr2_n70.json' 
@@ -571,17 +716,19 @@ create_config_files([4], [2,4,6], [70],shuffle=True)
 # df.query('trial_type == 2').tail(30)
 
 
+# %%
+import json 
+import pandas as pd
 
-# import json 
-# import pandas as pd
+
+f = open('config/shuffled/config_degradation_0_switch_0_train1_degr1_n20.json')
+data = json.load(f)
+df = pd.DataFrame.from_dict(data)
+df.head(50)
 
 
-# f = open('config/shuffled_and_blocked/planning_config_degradation_1_switch_0_train2_degr2_n70.json')
-# data = json.load(f)
+#%%
 
-# #%%
-
-# df = pd.DataFrame.from_dict(data)
-# # %%
+# %%
 
 # %%
