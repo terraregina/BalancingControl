@@ -335,20 +335,111 @@ if __name__ == '__main__':
     # conf = ['shuffled','shuffled_and_blocked']
 
 
-    h =  [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]
+    # h =  [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]
+    # # h = [40]
+    # cue_ambiguity = [0.65,0.75,0.8,0.85,0.9]                       
+    # context_trans_prob = [0.75,0.8,0.85,0.9]
+    # cue_switch = [False]
+    # reward_naive = [True]
+    # training_blocks = [4]
+    # degradation_blocks=[2]
+    # degradation = [True]
+    # trials_per_block=[70]
+    # dec_temps = [1]
+    # rews = [0]
+    # utility = [[1, 19 , 80], [5,25,70],[1,1,98],[1, 9, 90]]
+    # conf = ['shuffled','shuffled_and_blocked']
+
+
+
+    # h =  [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]
+    # # h = [40]
+    # cue_ambiguity = [0.75,0.8,0.85]                       
+    # context_trans_prob = [0.8,0.85,0.9]
+    # cue_switch = [False]
+    # reward_naive = [True]
+    # training_blocks = [2]
+    # degradation_blocks=[1]
+    # degradation = [True]
+    # trials_per_block=[70]
+    # dec_temps = [1,2,4]
+    # rews = [0]
+
+    # utility = [[1, 19 , 80], [5,25,70],[1,1,98]]
+    # conf = ['shuffled','shuffled_and_blocked']
+
+    # h =  [1,2,3,4,5,6,10,30,60,90,100]
+    # # h = [40]
+    # cue_ambiguity = [0.75,0.8,0.85]                       
+    # context_trans_prob = [0.8,0.85,0.9]
+    # cue_switch = [False]
+    # reward_naive = [True]
+    # training_blocks = [4]
+    # degradation_blocks=[2]
+    # degradation = [True]
+    # trials_per_block=[70]
+    # dec_temps = [1]
+    # rews = [0]
+    # utility = [[1, 9 , 90], [5,25,70],[1,1,98],[1, 19, 80]]
+    # utility = [[1, 19, 80]]
+    # conf = ['shuffled','shuffled_and_blocked']
+
+    h =  [1]#,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]
     # h = [40]
-    cue_ambiguity = [0.65]#,0.75,0.8,0.85,0.9]                       
-    context_trans_prob = [0.8]#,0.85,0.9]
+    cue_ambiguity = [0.8]                       
+    context_trans_prob = [0.85]
     cue_switch = [False]
     reward_naive = [True]
     training_blocks = [4]
-    degradation_blocks=[2]
+    degradation_blocks=[6]
+    degradation = [True]
+    trials_per_block=[70]
+    dec_temps = [1]#,2,4]
+    rews = [0]
+
+    utility = [[1, 9 , 90]]
+    conf = ['shuffled']
+
+
+    h =  [1,2]#,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]
+    # h = [40]
+    cue_ambiguity = [0.8]                       
+    context_trans_prob = [0.85]
+    cue_switch = [False]
+    reward_naive = [True]
+    training_blocks = [3]
+    degradation_blocks=[1]
+    degradation = [True]
+    trials_per_block=[70]
+    dec_temps = [1]#,2,4]
+    rews = [0]
+    utility = [[1, 9 , 90]]
+    conf = ['shuffled']
+
+
+
+
+
+    h =  [100,1]
+    # h = [40]
+    cue_ambiguity = [0.8]                       
+    context_trans_prob = [0.85]
+    cue_switch = [False]
+    reward_naive = [True]
+    training_blocks = [4]
+    degradation_blocks=[6]
     degradation = [True]
     trials_per_block=[70]
     dec_temps = [1]
     rews = [0]
-    utility = [[1, 9 , 90]]#, [5,25,70],[1,1,98],[1, 9, 90]]
+
+    utility = [[1, 9 , 90]]
+
+
     conf = ['shuffled']
+
+
+
 
     data_folder = 'temp'
     
@@ -361,4 +452,3 @@ if __name__ == '__main__':
             training_blocks, degradation_blocks, trials_per_block,dec_temps,rews, utility, conf]
 
     pooled(arrays,repetitions = 1,check_missing=False)
-

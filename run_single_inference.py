@@ -14,7 +14,7 @@ import pyro.distributions as dist
 import agent as agt
 import perception as prc
 import action_selection as asl
-import inference_two_seqs as inf
+import inference_habit as inf
 import action_selection as asl
 import numpy as np
 import itertools
@@ -42,16 +42,16 @@ import jsonpickle.ext.numpy as jsonpickle_numpy
 ar.set_num_threads(1)
 switch = 0
 degr = 1
-p = 0.9
+p = 0.65
 learn_rew  = 0
-q = 0.9
+q = 0.8
 h = 10
 db = 2
-tb = 2
+tb = 4
 tpb = 70
 n_part = 1
 iss = 600
-dec_temp = 4 
+dec_temp = 1
 config = 'ordered'
 folder = "temp"
 
@@ -59,7 +59,7 @@ infer_h = False
 infer_dec = True
 infer_both = infer_h and infer_dec
 
-prefix = 'multiple_'
+prefix = 'shuffled/multiple_'
 run_name = prefix+"hier_switch"+str(switch) +"_degr"+str(degr) +"_p"+str(p)+ "_learn_rew"+str(learn_rew)+\
            "_q"+str(q) + "_h"+str(h)  + "_" + str(tpb) +  "_" + str(tb) + str(db) + '_dec' + str(dec_temp) + '_' + config + "_extinguish.json"
 fname = os.path.join(folder, run_name)

@@ -369,10 +369,22 @@ def create_trials_two_seqs(data, export=True,
     trials = trials.astype('int32')
     trial_type = trial_type.astype('int32')
 
+
+
     if shuffle and blocked:
         subfolder = '/shuffled_and_blocked'
-    else:
+    elif shuffle and not blocked:
         subfolder ='/shuffled'
+    elif not shuffle and blocked:
+        subfolder ='/blocked'
+    elif not shuffle and not blocked:
+        subfolder ='/original'
+
+
+    # if shuffle and blocked:
+    #     subfolder = '/shuffled_and_blocked'
+    # else:
+    #     subfolder ='/shuffled'
     path = os.path.join(os.getcwd(),'config'+subfolder)
     fname = os.path.join(path, fname)
 
@@ -675,7 +687,7 @@ def create_config_files_context_dependent_degradation(training_blocks, degradati
 
 
 
-conf = ['shuffled', 'shuffled_and_blocked']
+conf = ['shuffled', 'shuffled_and_blocked', 'blocked','original']
 data_folder='config'
 
 
@@ -690,8 +702,8 @@ for con in conf:
 
 combinations = []
 # create_config_files([4], [24,6], [70])
-# create_config_files_planning([4],[2,4,6],[70],shuffle=True)
-# create_config_files_planning([4],[2,4,6],[70],shuffle=True,blocked=True, block=5)
+# create_config_files_planning([4],[1],[70],shuffle=True)
+# create_config_files_planning([4],[6],[70],shuffle=True,blocked=True, block=7)
 
 
 
@@ -701,10 +713,10 @@ combinations = []
 # trials_shuffled = all_possible_trials_two_seqs(shuffle=True)
 
 
-create_config_files_planning([4],[2],[70],shuffle=True)
-create_config_files_planning([4],[2],[70],shuffle=True, blocked=True, block=5)
-create_config_files([4],[2],[70],shuffle=True)
-create_config_files([4],[2],[70],shuffle=True, blocked = True, block = 5)
+create_config_files_planning([3],[1],[70],shuffle=True)
+# create_config_files_planning([2],[1],[70],shuffle=True, blocked=True, block=5)
+# create_config_files([3],[1],[70],shuffle=False,blocked=False)
+# create_config_files([2],[1],[70],shuffle=True, blocked = True, block = 5)
 
 
 # fname = 'config/' + 'config_degradation_1_switch_0_train4_degr2_n70.json' 

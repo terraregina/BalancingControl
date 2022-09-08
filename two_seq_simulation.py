@@ -26,6 +26,9 @@ from agent import BayesianPlanner
 from world import World
 from planet_sequences import generate_trials_df
 import time
+import matplotlib.gridspec as gridspec
+import string
+
 from multiprocessing import Pool
 import multiprocessing.pool as mpp
 import tqdm
@@ -78,7 +81,6 @@ def run_single_sim(lst,
                       + '_degr' + str(degradation_blocks)                 \
                       + '_n' + str(trials_per_block)+'.json'
 
-
     folder = os.path.join(os.getcwd(),'config/' + config_folder)
     file = open(os.path.join(folder,config))
 
@@ -89,6 +91,7 @@ def run_single_sim(lst,
     planets = np.asarray(task_params['planets'])         # planet positions 
     trial_type = np.asarray(task_params['trial_type'])
     blocks = np.asarray(task_params['block'])
+    print(task_params['shuffle'])
 
 
     nblocks = int(blocks.max()+1)         # number of blocks
@@ -250,18 +253,15 @@ def pooled(arrays,seed=521312,repetitions=1, data_folder='temp', check_missing=F
 
         lst = [lst[i] for i in missing_files]
 
-    lsts = []
-    for r in range(repetitions):
-        lsts += lst
         
-    print('simulations to run: ' + str(len(lsts)))
+    print('simulations to run: ' + str(len(lst)))
 
     ca = [ns, na, npl, nc, nr, T, state_transition_matrix, planet_reward_probs,\
-        planet_reward_probs_switched,1,use_fitting]
+        planet_reward_probs_switched,repetitions,use_fitting]
 
     with Pool() as pool:
 
-        for _ in tqdm.tqdm(pool.istarmap(run_single_sim, zip(lsts,\
+        for _ in tqdm.tqdm(pool.istarmap(run_single_sim, zip(lst,\
                                                 repeat(ca[0]),\
                                                 repeat(ca[1]),\
                                                 repeat(ca[2]),\
@@ -273,7 +273,7 @@ def pooled(arrays,seed=521312,repetitions=1, data_folder='temp', check_missing=F
                                                 repeat(ca[8]),\
                                                 repeat(ca[9]),\
                                                 repeat(ca[10]))),
-                        total=len(lsts)):
+                        total=len(lst)):
             pass
 
 
@@ -309,8 +309,8 @@ if __name__ == '__main__':
 
     h =  [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]
     # h = [40]
-    cue_ambiguity = [0.7]                       
-    context_trans_prob = [0.8]
+    cue_ambiguity = [0.65,0.75,0.8,0.85,0.9]                       
+    context_trans_prob = [0.75,0.8,0.85,0.9]
     cue_switch = [False]
     reward_naive = [True]
     training_blocks = [4]
@@ -319,10 +319,74 @@ if __name__ == '__main__':
     trials_per_block=[70]
     dec_temps = [1]
     rews = [0]
-    utility = [[1,1,98],[1, 9, 90],[1, 19, 80],[5,25,70]]
-    utility = [[1, 9, 90]]
+    utility = [[1, 19 , 80], [5,25,70],[1,1,98],[1, 9, 90]]
     conf = ['shuffled','shuffled_and_blocked']
+
+    h = [1,10,100]
+    # h = [40]
+    cue_ambiguity = [0.85,0.9,0.95]                       
+    context_trans_prob = [0.8,0.9,0.95]
+    cue_switch = [False]
+    reward_naive = [True]
+    training_blocks = [4]
+    degradation_blocks=[6]
+    degradation = [True]
+    trials_per_block=[70]
+    dec_temps = [1]
+    rews = [0]
+    utility = [[1,9, 90], [5,25,70],[1,1,98],[1, 19, 80]]
+    # utility = [[5,25,70]]
+    conf = ['shuffled']
+
+
+    h =  [1]#,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]
+    # h = [40]
+    cue_ambiguity = [0.85]#,0.9,0.95]                       
+    context_trans_prob = [0.95]#,0.9,0.95]
+    cue_switch = [False]
+    reward_naive = [True]
+    training_blocks = [3]
+    degradation_blocks=[1]
+    degradation = [True]
+    trials_per_block=[70]
+    dec_temps = [1]
+    rews = [0]
+    utility = [[1,9, 90]]#, [5,25,70],[1,1,98],[1, 19, 80]]
+    # utility = [[5,25,70]]
+    conf = ['original']
+
+    h =  [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]
+    # h = [40]
+    cue_ambiguity = [0.85]                       
+    context_trans_prob = [0.95]
+    cue_switch = [False]
+    reward_naive = [True]
+    training_blocks = [3]
+    degradation_blocks=[1]
+    degradation = [True]
+    trials_per_block=[70]
+    dec_temps = [1,2,4]
+    rews = [0]
+    utility = [[1,9, 90]]
+    # utility = [[5,25,70]]
+    conf = ['original']
     
+    h =  [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]
+    # h = [40]
+    cue_ambiguity = [0.85]#,0.9,0.95]                       
+    context_trans_prob = [0.95]#,0.9,0.95]
+    cue_switch = [False]
+    reward_naive = [True]
+    training_blocks = [4]
+    degradation_blocks=[6]
+    degradation = [True]
+    trials_per_block=[70]
+    dec_temps = [1]
+    rews = [0]
+    utility = [[1,9, 90]]#, [5,25,70],[1,1,98],[1, 19, 80]]
+    # utility = [[5,25,70]]
+    conf = ['original']
+
     data_folder = 'temp'
     for con in conf:
         path = os.path.join(data_folder, con)
@@ -332,4 +396,32 @@ if __name__ == '__main__':
     arrays = [cue_switch, degradation, reward_naive, context_trans_prob, cue_ambiguity,h,\
             training_blocks, degradation_blocks, trials_per_block,dec_temps,rews, utility, conf]
 
-    pooled(arrays,seed=7402893, repetitions=1)
+    pooled(arrays,seed=7402893, repetitions=10, check_missing = False)
+
+
+    # h =  [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]
+    # # h = [40]
+    # cue_ambiguity = [0.85]#,0.9,0.95]                       
+    # context_trans_prob = [0.95]#,0.9,0.95]
+    # cue_switch = [False]
+    # reward_naive = [True]
+    # training_blocks = [3,1]
+    # degradation_blocks=[6]
+    # degradation = [True]
+    # trials_per_block=[70]
+    # dec_temps = [1]
+    # rews = [0]
+    # utility = [[1,9, 90]]#, [5,25,70],[1,1,98],[1, 19, 80]]
+    # # utility = [[5,25,70]]
+    # conf = ['original']
+
+    # data_folder = 'temp'
+    # for con in conf:
+    #     path = os.path.join(data_folder, con)
+    #     if not os.path.exists(path):
+    #         os.makedirs(path)
+
+    # arrays = [cue_switch, degradation, reward_naive, context_trans_prob, cue_ambiguity,h,\
+    #         training_blocks, degradation_blocks, trials_per_block,dec_temps,rews, utility, conf]
+
+    # pooled(arrays,seed=7402893, repetitions=2, check_missing = False)
