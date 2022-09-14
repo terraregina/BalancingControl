@@ -160,10 +160,6 @@ def generate_trials_df(planet_rewards, sequences):
     data['expected_reward'] = data['expected_reward'].astype(float).round(3)
 
 
-    # check rounding was sucessfull cause apparently it is a fucking nightmare to round > _ >
-    print(data[data['conf_ind'] == 93]['max_reward'].tolist())
-    print(data[data['conf_ind'] == 93]['expected_reward'].tolist())
-
     # define optimal sequnces
     data['optimal'] = data['max_reward'] == data['expected_reward']
     # count optimal sequences
@@ -200,9 +196,10 @@ def generate_trials_df(planet_rewards, sequences):
 
     for si, s in enumerate(sequences):
         slice = data.loc[( data['optimal'] == True) & ( data['sequence'] == s)]
-        datatype = {'conf_ind':int, 'start':int, 'planet_conf':int, 'sequence':int}
+        datatype = {'conf_ind':int, 'start':int, 'planet_conf':int, 'sequence':int, 'exp_reward':float}
         slice = slice.astype(datatype)
         slices[si] = slice
+        print(slice)
 
     return slices, planet_confs
 
@@ -244,6 +241,6 @@ def generate_trials_df(planet_rewards, sequences):
     #     json.dump(config, file)
 
 # %%
-
+generate_trials()
 
 # generate_trials_df([-1,1,1],[3,6])

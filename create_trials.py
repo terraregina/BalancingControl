@@ -8,16 +8,195 @@ import pickle
 import jsonpickle as pickle
 import jsonpickle.ext.numpy as jsonpickle_numpy
 import json
-from planet_sequences import generate_trials_df
+# from planet_sequences import generate_trials_df
+
+#%%
+
+#%%
+import pandas as pd
+import numpy as np
+from itertools import combinations, combinations_with_replacement, permutations, product
+import json
+import pandas as pd 
+
+#%%
+
+''' 
+creates all permutations of a vector r which holds possible digits
+for r = [0,1] and length of sequence n = 3
+000 001 010 011 100 101 etc 
+'''
+def sequence_of_length_n(r,n):
+    r = [r]*n
+    return np.asarray(list(product(*r)))
+
+'''
+function calculating the expected reward for a given planet constelation and action sequence
+
+p = reward probabilities for the planets
+conf = planet configuration
+stm = state transition matrix
+sequence = action sequence such as jump jump move
+rewards = possible rewards a planet can bring
+'''
+def create_path(conf, p, stm, sequence, r):
+
+    probs = np.array([[ p[planet] for planet in conf]])           # extract reward probabilities for planets
+    probs = np.repeat(probs, repeats = stm.shape[0], axis=0)
+
+    
+    rewards = np.array([[ r[planet] for planet in conf]])           # extract reward probabilities for planets
+    rewards = np.repeat(rewards, repeats = stm.shape[0], axis=0)
+
+    # path holds position of rocket at each time step
+    # different rows correspond to different starting positions
+    path = np.zeros([stm.shape[0], stm.shape[1], 3])
+    path[:,:,0] = stm[:,:,sequence[0]]
+    
+    for step in range(2):
+        path[:,:,step+1] = path[:,:,step].dot(stm[:,:,sequence[step+1]])
+
+    expectation = np.zeros([stm.shape[0], stm.shape[1]])
+    for step in range(3):
+        expectation += path[:,:,step]*probs            
+    
+    expectation = expectation*rewards
+    expectation = expectation.sum(axis=1)
+
+    return expectation
 
 
-def all_possible_trials_planning(habit_seq=3, shuffle=False):
+
+def generate_trials_df(planet_rewards, sequences):
+
+    # create state transition matrices
+    nplanets = 6
+    state_transition_matrix = np.zeros([6,6,2])
+
+    m = [1,2,3,4,5,0]
+    for r, row in enumerate(state_transition_matrix[:,:,0]):
+        row[m[r]] = 1
+
+    j = np.array([5,4,5,6,2,2])-1
+    for r, row in enumerate(state_transition_matrix[:,:,1]):
+        row[j[r]] = 1
+
+
+
+    # reward probabiltiy vector
+    p = [0.95, 0.05, 0.95]
+    # planet_rewards = [-1,1,1]
+    moves = sequence_of_length_n([0,1],3)
+    planet_confs = sequence_of_length_n([0,1,2],6)
+
+    # generate all planet constelations
+    planet_confs = np.delete(planet_confs,[0,planet_confs.shape[0]-1], 0)
+    starts = np.tile(np.arange(nplanets), planet_confs.shape[0])
+
+
+    expectations = np.zeros([planet_confs.shape[1], moves.shape[0],  planet_confs.shape[0]])
+
+
+    row_data = {
+
+        'conf_ind': 0,
+        'planet_conf':0,
+        'start': 0,
+        'sequence': 0,
+        'p0': 0,
+        'p1': 0,
+        'p2': 0,
+        'p3': 0,
+        'p4': 0,
+        'p5': 0,
+        'expected_reward': 0
+    }
+
+    data = pd.DataFrame(columns = row_data.keys(), index = np.arange(planet_confs.shape[0]*nplanets*moves.shape[0]))
+
+
+    for ci, conf in enumerate(planet_confs):
+        for m, move in enumerate(moves):
+            expectations[:, m, ci] = create_path(conf, p, state_transition_matrix, move, planet_rewards)
+
+    s = 0
+    i = 0
+    for ci, conf in enumerate(planet_confs):
+        for st in np.arange(nplanets):
+            for m, move in enumerate(moves):
+                rd = [s, ci, st, m, conf[0], conf[1], conf[2], conf[3], conf[4], conf[5], expectations[st,m,ci]]
+                k = 0
+                for key in row_data:
+                    row_data[key] = rd[k]
+                    k += 1
+                k = 0
+                data.loc[i] = pd.Series(row_data)
+                i += 1
+            s += 1
+
+
+    # # define max reward for a given conformation and starting point
+    data['max_reward'] = data.groupby('conf_ind')[['expected_reward']].transform('max')
+
+    # round respected entries
+    data['max_reward'] = data['max_reward'].astype(float).round(3)
+    data['expected_reward'] = data['expected_reward'].astype(float).round(3)
+
+
+    # define optimal sequnces
+    data['optimal'] = data['max_reward'] == data['expected_reward']
+    # count optimal sequences
+    data['total_optimal'] = data.groupby(['conf_ind'])[['optimal']].transform('sum')
+
+    # drop all configurations that have more than 1 optimal sequence
+    data = data.drop(data[data.total_optimal != 1].index)
+
+
+    '''
+    IF ONE WANTS TO DISCARD TRIALS WITH NEXT 
+    BEST SEQUENCE GIVING EXPECTED REWARD LOWER
+    THAN CUT OFF LEVEL X
+    '''
+    # x = 1
+    # nseqs = moves.shape[0]
+    # data['diff'] = data['max_reward'] - data['expected_reward']
+    # data = data.sort_values(by = ['conf_ind', 'diff'])
+    # data['diff_order'] = np.tile(np.arange(nseqs),np.int32(data.shape[0]/nseqs))
+    # small_difference = data.loc[(data['diff_order'] == 1) & (data['diff'] < x)]
+    # inds = np.unique(small_difference['conf_ind'])
+    # data = data[~data.conf_ind.isin(inds)]
+    # data.head(20)
+
+
+
+
+    '''
+    Generate trials for the actual experiment
+    '''
+
+    slices = np.empty(len(sequences), dtype=object)
+
+    for si, s in enumerate(sequences):
+        slice = data.loc[( data['optimal'] == True) & ( data['sequence'] == s)]
+        datatype = {'conf_ind':int, 'start':int, 'planet_conf':int, 'sequence':int, 'expected_reward':float}
+        slice = slice.astype(datatype)
+        # print(slice.columns)
+        slices[si] = slice
+        # print(slices[0][0])
+    return slices, planet_confs
+
+
+def all_possible_trials(habit_seq=3, shuffle=False):
+    
     np.random.seed(1)
     ns=6
     all_rewards = [[-1,1,1], [1,1,-1]]
     sequences  = np.arange(8)
-    slices = [None]*2
-    planet_confs = [None]*2
+    
+    slices = [None for nn in range(2)]
+    
+    planet_confs = [None for nn in range(2)]
+    
     for ri, rewards in enumerate(all_rewards):
         slices[ri], planet_confs[ri] = generate_trials_df(rewards, sequences)
 
@@ -29,35 +208,35 @@ def all_possible_trials_planning(habit_seq=3, shuffle=False):
             slice = trials_for_given_contingency[s]
             planet_conf = planet_confs[ci]
             ntrials = slice.shape[0]
-            dt = np.zeros([slice.shape[0], 2 + ns])
+            dt = np.zeros([slice.shape[0], 3 + ns])
             plnts = slice.planet_conf                             # configuration indeces for s1 trials
             plnts = planet_conf[[plnts.values.tolist()]].tolist() # actual planet configurations for s1 trials
             strts = slice.start.values.tolist()                   # starting points for s1 trials 
-
+            expected_reward = slice.expected_reward.values.tolist()  
             # dt[:,0] = [0]*ntrials      # context index
             dt[:,0] = [s]*ntrials        # optimal sequence index
             dt[:,1] = strts              # trial starting position
-            dt[:,2:] = plnts             # planets
-            
+            dt[:,2:-1] = plnts           # planets
+            dt[:,-1] = expected_reward   # planets
             if shuffle:
                 np.random.shuffle(dt)
             data[s].append(dt)
 
 
 
-    data_extended = [[] for _ in range(len(data))]
-    reps = 5
+    # data_extended = [[] for _ in range(len(data))]
+    # reps = 5
 
-    for di, dat in enumerate(data):
-        for contingency in range(2):
-            if di == habit_seq:
-                context_cue = np.zeros([dat[contingency].shape[0]*reps,1])
-            else:
-                context_cue = np.ones([dat[contingency].shape[0]*reps,1])
+    # for di, dat in enumerate(data):
+    #     for contingency in range(2):
+    #         if di == habit_seq:
+    #             context_cue = np.zeros([dat[contingency].shape[0]*reps,1])
+    #         else:
+    #             context_cue = np.ones([dat[contingency].shape[0]*reps,1])
 
-            extended =  np.hstack((context_cue, np.tile(dat[contingency], (reps,1))))   
-            data_extended[di].append(extended)
-
+    #         extended =  np.hstack((context_cue, np.tile(dat[contingency], (reps,1))))   
+    #         data_extended[di].append(extended)
+    data_extended = data.copy()
     return data_extended
 
 
@@ -65,20 +244,19 @@ def create_trials_planning(data, habit_seq = 3, contingency_degradation = True,\
                         switch_cues= False,\
                         training_blocks = 2,\
                         degradation_blocks = 1,\
+                        extinction_blocks = 2,\
                         interlace = True,\
                         block = None,\
                         trials_per_block = 28, export = True,blocked=False,shuffle=False,seed=1):
 
-    sequences = np.arange(8)
     np.random.seed(seed)
+
+    sequences = np.arange(8)
+
     if trials_per_block % 2 != 0:
         raise Exception('Give even number of trials per block!')
 
-    fname = 'planning_config_'+'degradation_'+ str(int(contingency_degradation))+ '_switch_' + str(int(switch_cues))\
-             + '_train' + str(training_blocks) + '_degr' + str(degradation_blocks) + '_n' + str(trials_per_block)+'.json'
-
-
-    nblocks = training_blocks + degradation_blocks + 2
+    nblocks = training_blocks + degradation_blocks + extinction_blocks
     half_block = np.int(trials_per_block/2)
     
     ncols = data[0][0].shape[1]
@@ -92,8 +270,10 @@ def create_trials_planning(data, habit_seq = 3, contingency_degradation = True,\
     tt=0
 
 
-    if not blocked:
-    
+    # preprocess data
+
+
+    if not blocked:    
         # populate training blocks and extinction block
         for i in range(nblocks):
             if i == (nblocks -2):                   # if now populating extinction block
@@ -171,8 +351,13 @@ def create_trials_planning(data, habit_seq = 3, contingency_degradation = True,\
             blocks[(2*i)*half_block:(2*i+2)*half_block] = i
             
 
-    trials = trials.astype('int32')
+    # trials[:,:-1] = trials[:,:-1].astype('int32')
     trial_type = trial_type.astype('int32')
+
+    fname = 'planning_config_'+'degradation_'+ str(int(contingency_degradation))+ '_switch_' + str(int(switch_cues))\
+             + '_train' + str(training_blocks) + '_degr' + str(degradation_blocks) + '_n' + str(trials_per_block)+'.json'
+    fname = 'test.json'
+
 
     if shuffle and blocked:
         subfolder = '/shuffled_and_blocked'
@@ -183,10 +368,11 @@ def create_trials_planning(data, habit_seq = 3, contingency_degradation = True,\
 
     if export:
         config = {
-                  'context' : trials[:,0].tolist(),
-                  'sequence': trials[:,1].tolist(),
-                  'starts': trials[:,2].tolist(),
-                  'planets': trials[:,3:].tolist(),
+                  'context' : trials[:,0].astype('int32').tolist(),
+                  'sequence': trials[:,1].astype('int32').tolist(),
+                  'starts': trials[:,2].astype('int32').tolist(),
+                  'planets': trials[:,3:-1].astype('int32').tolist(),
+                  'exp_reward': trials[:,-1].tolist(),
                   'trial_type': trial_type.tolist(),
                   'block': blocks.tolist(),
                   'degradation_blocks': degradation_blocks,
@@ -205,10 +391,9 @@ def create_trials_planning(data, habit_seq = 3, contingency_degradation = True,\
             js.dump(config, file)
 
 
-
 def create_config_files_planning(training_blocks, degradation_blocks, trials_per_block, habit_seq = 3,\
     shuffle=False, blocked=False, block=None):
-    trials = all_possible_trials_planning(habit_seq=habit_seq,shuffle=shuffle)
+    trials = all_possible_trials(habit_seq=habit_seq,shuffle=shuffle)
     degradation = [True]
     cue_switch = [False]
     arrays = [degradation, cue_switch, degradation_blocks, training_blocks, trials_per_block,[blocked]]
@@ -269,13 +454,6 @@ def all_possible_trials_two_seqs(shuffle=False):
         trials.append(dt)
 
     return trials
-
-
-
-'''
-function that actually creates the trials for a given experimental version
-'''
-
 
 
 
@@ -710,7 +888,7 @@ combinations = []
 
 
 # trials = all_possible_trials_two_seqs(shuffle=False)
-# trials_shuffled = all_possible_trials_two_seqs(shuffle=True)
+# trials_shuffled = all_possible_tarials_two_seqs(shuffle=True)
 
 
 create_config_files_planning([3],[1],[70],shuffle=True)
@@ -729,18 +907,17 @@ create_config_files_planning([3],[1],[70],shuffle=True)
 
 
 # %%
-import json 
-import pandas as pd
+# import json 
+# import pandas as pd
 
 
-f = open('config/shuffled/config_degradation_0_switch_0_train1_degr1_n20.json')
-data = json.load(f)
-df = pd.DataFrame.from_dict(data)
-df.head(50)
+# f = open('config/shuffled/config_degradation_0_switch_0_train1_degr1_n20.json')
+# data = json.load(f)
+# df = pd.DataFrame.from_dict(data)
+# df.head(50)
 
 
 #%%
 
-# %%
-
+# trials = all_possible_trials_planning()
 # %%
