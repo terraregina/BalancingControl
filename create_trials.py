@@ -1,5 +1,6 @@
 #%%                     
 import json  as js
+from re import L
 import numpy as np
 from operator import truediv
 import numpy as np
@@ -262,9 +263,9 @@ def create_trials_planning(data, habit_seq = 3, contingency_degradation = True,\
     # block = np.int(trials[0].shape[0]/nblocks)
     trials = np.zeros([nblocks*trials_per_block, ncols])
     trial_type = np.zeros(nblocks*trials_per_block)
+    context = np.zeros(nblocks*trials_per_block)
     blocks = np.zeros(nblocks*trials_per_block)
     n_planning_seqs = sequences.size -1
-    planning_seqs = sequences[sequences != habit_seq]
     shift = half_block//n_planning_seqs
     tt=0
 
@@ -276,156 +277,135 @@ def create_trials_planning(data, habit_seq = 3, contingency_degradation = True,\
     probs = (np.arange(unique.size)+1)/(np.arange(unique.size)+1).sum()
     rewards = np.random.choice(np.arange(unique.size), p=probs, size=ntrials)
     planning_seqs = sequences[sequences != habit_seq]
+    planning_seqs = np.tile(planning_seqs, half_block // planning_seqs.size)
 
     for s in range(len(data)):
         for c in range(len(data[s])):
             print(unique)
             dat = data[s][c]
             split_data[s][c] = [dat[dat[:,-1]==k] for k in unique]
-            np.random.shuffle(split_data[s][c])
+            for k in range(unique.size):
+                np.random.shuffle(split_data[s][c][k])
+                pass
     
+    if block is not None:
+        miniblocks = half_block//block
+
 
     for i in range(nblocks):
-        if i == (nblocks - extinction_blocks):                   # if now populating extinction block
-            tt = 2
 
         if i >= training_blocks and i < training_blocks + degradation_blocks:
             contingency = 1
+            tt = 1
         else: 
-            contingency = 0 
-        pl_seq_ind = -1
-        for t in range(0,trials_per_block,2):
-            print(t)
-            tr_h = i*trials_per_block + t
-            tr_p = i*trials_per_block + t + 1
-            pl_seq_ind += 1
-            data[tr_h,:] = split_data[habit_seq][contingency][0]
-            data[tr_p,:] = split_data[pl_seq_ind][contingency][0]
+            contingency = 0
+            tt = 0 
 
-            if pl_seq_ind == n_planning_seqs - 1:
-                pl_seq_ind = -1
-             
-    # if not blocked:    
-    #     # populate training blocks and extinction block
-    #     for i in range(nblocks):
-    #         if i == (nblocks -2):                   # if now populating extinction block
-    #             tt = 2
+        if i >= (nblocks - extinction_blocks): 
+            tt = 2
 
-    #         trials[(2*i)*half_block : (2*i+1)*half_block , :] = data[habit_seq][0][i*half_block : (i+1)*half_block,:]
-    #         planning_trials = np.zeros([half_block, ncols])
-    #         for si, s in enumerate(planning_seqs):
-    #             planning_trials[si*shift:(si+1)*shift,:] = data[s][0][i*shift:(i+1)*shift,:]           
-    #         trials[(2*i+1)*half_block : (2*i+2)*half_block , :] = planning_trials
+        if not blocked:
 
-    #         trial_type[(2*i)*half_block:(2*i+2)*half_block] = tt
-    #         blocks[(2*i)*half_block:(2*i+2)*half_block] = i
+            # populate habit seq trials
+            for t in range(half_block):
+                tr = int(i*trials_per_block + t)
+                ri = half_block*i + t
+                trials[tr,:] = split_data[habit_seq][contingency][rewards[ri]][0]
+                split_data[habit_seq][contingency][rewards[ri]] = \
+                    np.roll(split_data[habit_seq][contingency][rewards[ri]], -1, axis=0)
+
+            # populate planning trials
+            for t in range(half_block):
+                tr = int(i*trials_per_block + half_block + t)
+                ri = half_block*i + t
+                trials[tr,:] = split_data[planning_seqs[t]][contingency][rewards[ri]][0]
+                split_data[planning_seqs[t]][contingency][rewards[ri]] = \
+                    np.roll(split_data[planning_seqs[t]][contingency][rewards[ri]], -1, axis=0)
+
+            np.random.shuffle(trials[i*trials_per_block:(i+1)*trials_per_block,:])
+
+        if blocked:
+
+            # extract all planning trials and shuffle them
+            habit_trials = np.zeros([half_block, trials.shape[1]])
+            planning_trials = np.zeros([half_block, trials.shape[1]])
+            
+            for t in range(half_block):
+                tr = int(i*trials_per_block + half_block + t)
+                ri = half_block*i + t
+
+                habit_trials[t,:] = split_data[habit_seq][contingency][rewards[ri]][0]
+                split_data[habit_seq][contingency][rewards[ri]] = \
+                    np.roll(split_data[habit_seq][contingency][rewards[ri]], -1, axis=0)
             
 
-    #     # populate the degradation blocks
-    #     for i in range(training_blocks, degradation_blocks + training_blocks):
-    #         trial_type[(2*i)*half_block:(2*i+2)*half_block] = 1
+                planning_trials[t,:] = split_data[planning_seqs[t]][contingency][rewards[ri]][0]
+                split_data[planning_seqs[t]][contingency][rewards[ri]] = \
+                    np.roll(split_data[planning_seqs[t]][contingency][rewards[ri]], -1, axis=0)
+                np.random.shuffle(planning_trials)
 
-    #         if contingency_degradation:
-    #             ind = 1
-    #         else:
-    #             ind = 0
-
-    #         trials[(2*i)*half_block : (2*i+1)*half_block , :] = data[habit_seq][ind][i*half_block:(i+1)*half_block,:]
-    #         planning_trials = np.zeros([half_block, ncols])
-    #         for si, s in enumerate(planning_seqs):
-    #             planning_trials[si*shift:(si+1)*shift,:] = data[s][ind][i*shift:(i+1)*shift,:]
-    #         trials[(2*i+1)*half_block : (2*i+2)*half_block , :] = planning_trials
-
-    #         if switch_cues:
-    #             trials[:,0] = trials[:,0] == 0
-
-    #     if interlace:
-    #         for i in range(nblocks):
-    #             np.random.shuffle(trials[(2*i)*half_block:(2*i+2)*half_block,:])
-                
-
-    # elif blocked:
-    #     miniblocks = half_block//block
-        
-    #         # populate training blocks and extinction block
-    #     for i in range(nblocks):
-
-    #         if i >= training_blocks and i < training_blocks + degradation_blocks:
-    #             ind = 1
-    #             tt = 1
-    #         else: 
-    #             ind = 0
-    #             tt = 0
-
-    #         if i >= (nblocks -2):                   # if now populating extinction block
-    #             tt = 2
-
-    #         planning_trials = np.zeros([half_block, ncols])
-    #         for si, s in enumerate(planning_seqs):
-    #             planning_trials[si*shift:(si+1)*shift,:] = data[s][ind][i*shift:(i+1)*shift,:]
-
-    #         np.random.shuffle(planning_trials)         
-
-    #         for mb in range(miniblocks):
-    #             start_trials_habit = i*trials_per_block + (2*mb)*block
-    #             stop_trials_habit =  i*trials_per_block + (2*mb+1)*block
-    #             stop_trials_planning =  i*trials_per_block + (2*mb+2)*block
-    #             start_data =  i*trials_per_block +  mb*block
-    #             stop_data =  i*trials_per_block +  (mb+1)*block
-
-    #             trials[start_trials_habit : stop_trials_habit , :] = data[habit_seq][ind][start_data : stop_data,:]
-    #             trials[stop_trials_habit : stop_trials_planning , :] = planning_trials[mb*block : (mb+1)*block,:]
-
-    #             # trials[(2*mb)*block : (2*mb+1)*block , :] = data[habit_seq][0][mb*block : (mb+1)*block,:]
-    #             # trials[(2*mb+1)*block : (2*mb+2)*block , :] = planning_trials[mb*block : (mb+1)*block,:]
-
-    #         trial_type[(2*i)*half_block:(2*i+2)*half_block] = tt
-    #         blocks[(2*i)*half_block:(2*i+2)*half_block] = i
+            for mb in range(miniblocks):
+                tr = int(i*trials_per_block)
+                trials[tr+2*mb*block:tr+(2*mb+1)*block] = habit_trials[mb*block:(mb+1)*block,:]
+                trials[tr+(2*mb+1)*block:tr+(2*mb+2)*block] = planning_trials[mb*block:(mb+1)*block,:]
             
 
-    # # trials[:,:-1] = trials[:,:-1].astype('int32')
-    # trial_type = trial_type.astype('int32')
-
-    # fname = 'planning_config_'+'degradation_'+ str(int(contingency_degradation))+ '_switch_' + str(int(switch_cues))\
-    #          + '_train' + str(training_blocks) + '_degr' + str(degradation_blocks) + '_n' + str(trials_per_block)+'.json'
-    # fname = 'test.json'
+        trial_type[i*trials_per_block:(i+1)*trials_per_block] = int(tt)
+        blocks[i*trials_per_block:(i+1)*trials_per_block] = int(i)
+        context[i*trials_per_block:(i+1)*trials_per_block] = trials[i*trials_per_block:(i+1)*trials_per_block,0] != habit_seq
 
 
-    # if shuffle and blocked:
-    #     subfolder = '/shuffled_and_blocked'
-    # else:
-    #     subfolder ='/shuffled'
-    # path = os.path.join(os.getcwd(),'config'+subfolder)
-    # fname = os.path.join(path, fname)
+    trial_type = trial_type.astype('int32')
 
-    # if export:
-    #     config = {
-    #               'context' : trials[:,0].astype('int32').tolist(),
-    #               'sequence': trials[:,1].astype('int32').tolist(),
-    #               'starts': trials[:,2].astype('int32').tolist(),
-    #               'planets': trials[:,3:-1].astype('int32').tolist(),
-    #               'exp_reward': trials[:,-1].tolist(),
-    #               'trial_type': trial_type.tolist(),
-    #               'block': blocks.tolist(),
-    #               'degradation_blocks': degradation_blocks,
-    #               'training_blocks': training_blocks,
-    #               'interlace': interlace,
-    #               'contingency_degradation': contingency_degradation,
-    #               'switch_cues': switch_cues,
-    #               'trials_per_block': trials_per_block,
-    #               'blocked': blocked,
-    #               'shuffle': shuffle, 
-    #               'miniblock_size' : block,
-    #               'seed':seed
-    #             }
+    fname = 'planning_config_'+'degradation_'+ str(int(contingency_degradation))+ '_switch_' + str(int(switch_cues))\
+             + '_train' + str(training_blocks) + '_degr' + str(degradation_blocks) + '_n' + str(trials_per_block)+'.json'
 
-    #     with open(fname, "w") as file:
-    #         js.dump(config, file)
+    fname = 'test.json'
+
+    if shuffle and blocked:
+        subfolder = '/shuffled_and_blocked'
+    elif shuffle and not blocked:
+        subfolder ='/shuffled'
+    elif not shuffle and blocked:
+        subfolder ='/blocked'
+    elif not shuffle and not blocked:
+        subfolder ='/original'
+
+    path = os.path.join(os.getcwd(),'config'+subfolder)
+    fname = os.path.join(path, fname)
+
+
+    if export:
+        config = {
+                  'context' : context.astype('int32').tolist(),
+                  'sequence': trials[:,0].astype('int32').tolist(),
+                  'starts': trials[:,1].astype('int32').tolist(),
+                  'planets': trials[:,2:-1].astype('int32').tolist(),
+                  'exp_reward': trials[:,-1].tolist(),
+                  'trial_type': trial_type.tolist(),
+                  'block': blocks.astype('int32').tolist(),
+                  'degradation_blocks': degradation_blocks,
+                  'training_blocks': training_blocks,
+                  'interlace': interlace,
+                  'contingency_degradation': contingency_degradation,
+                  'switch_cues': switch_cues,
+                  'trials_per_block': trials_per_block,
+                  'blocked': blocked,
+                  'shuffle': shuffle, 
+                  'miniblock_size' : block,
+                  'seed':seed
+                }
+
+        with open(fname, "w") as file:
+            js.dump(config, file)
 
 
 def create_config_files_planning(training_blocks, degradation_blocks, trials_per_block, habit_seq = 3,\
-    shuffle=False, blocked=False, block=None):
-    trials = all_possible_trials(habit_seq=habit_seq,shuffle=shuffle)
+    shuffle=False, blocked=False, block=None, trials=None):
+
+    if trials is None:
+        trials = all_possible_trials(habit_seq=habit_seq,shuffle=shuffle)
+
     degradation = [True]
     cue_switch = [False]
     arrays = [degradation, cue_switch, degradation_blocks, training_blocks, trials_per_block,[blocked]]
@@ -442,7 +422,178 @@ def create_config_files_planning(training_blocks, degradation_blocks, trials_per
 
 
 
+def create_trials_two(data, 
+                      switch_cues= False,\
+                      h1 = 3, h2 = 6,
+                      contingency_degradation = True,\
+                      training_blocks = 2,\
+                      degradation_blocks = 1,\
+                      extinction_blocks = 2,\
+                      interlace = True,\
+                      block = None,\
+                     trials_per_block = 28, export = True,blocked=False,shuffle=False,seed=1):
 
+    np.random.seed(seed)
+
+    sequences = np.arange(8,dtype=int)
+
+    if trials_per_block % 2 != 0:
+        raise Exception('Give even number of trials per block!')
+
+    nblocks = training_blocks + degradation_blocks + extinction_blocks
+    half_block = np.int(trials_per_block/2)
+    ntrials = nblocks*trials_per_block//2
+    ncols = data[0][0].shape[1]
+    trials = np.zeros([nblocks*trials_per_block, ncols])
+    trial_type = np.zeros(nblocks*trials_per_block)
+    context = np.zeros(nblocks*trials_per_block)
+    blocks = np.zeros(nblocks*trials_per_block)
+
+    tt=0
+
+    split_data = [[None for c in range(2)] for s in sequences]
+
+    # I am takign this one as a reference since this occurs in all of them
+    # sequence 4 and 6 have actually combinations with expected rewards of -1.85 and -0.95
+    unique = np.unique(data[0][0][:,-1])
+    probs = (np.arange(unique.size)+1)/(np.arange(unique.size)+1).sum()
+    rewards = np.random.choice(np.arange(unique.size), p=probs, size=ntrials)
+
+
+    for s in range(len(data)):
+        for c in range(len(data[s])):
+            print(unique)
+            dat = data[s][c]
+            split_data[s][c] = [dat[dat[:,-1]==k] for k in unique]
+            for k in range(unique.size):
+                np.random.shuffle(split_data[s][c][k])
+    
+    if block is not None:
+        miniblocks = half_block//block
+
+    for i in range(nblocks):
+
+        if i >= training_blocks and i < training_blocks + degradation_blocks:
+            contingency = 1
+            tt = 1
+        else: 
+            contingency = 0
+            tt = 0 
+
+        if i >= (nblocks - extinction_blocks): 
+            tt = 2
+
+        if not blocked:
+
+            # populate habit seq trials
+            for t in range(half_block):
+                ri = half_block*i + t
+
+                tr1 = int(i*trials_per_block + t)
+                trials[tr1,:] = split_data[h1][contingency][rewards[ri]][0]
+                split_data[h1][contingency][rewards[ri]] = \
+                    np.roll(split_data[h1][contingency][rewards[ri]], -1, axis=0)
+
+                tr2 = int(i*trials_per_block + half_block + t)
+                trials[tr2,:] = split_data[h2][contingency][rewards[ri]][0]
+                split_data[h2][contingency][rewards[ri]] = \
+                    np.roll(split_data[h2][contingency][rewards[ri]], -1, axis=0)
+
+            np.random.shuffle(trials[i*trials_per_block:(i+1)*trials_per_block,:])
+
+        if blocked:
+            
+            # extract all planning trials and shuffle them
+            h1_trials = np.zeros([half_block, trials.shape[1]])
+            h2_trials = np.zeros([half_block, trials.shape[1]])
+            
+            for t in range(half_block):
+                tr = int(i*trials_per_block + half_block + t)
+                ri = half_block*i + t
+
+                h1_trials[t,:] = split_data[h1][contingency][rewards[ri]][0]
+                split_data[h1][contingency][rewards[ri]] = \
+                    np.roll(split_data[h1][contingency][rewards[ri]], -1, axis=0)
+            
+
+                h2_trials[t,:] = split_data[h2][contingency][rewards[ri]][0]
+                split_data[h2][contingency][rewards[ri]] = \
+                    np.roll(split_data[h2][contingency][rewards[ri]], -1, axis=0)
+
+            for mb in range(miniblocks):
+                tr = int(i*trials_per_block)
+                trials[tr+2*mb*block:tr+(2*mb+1)*block] = h1_trials[mb*block:(mb+1)*block,:]
+                trials[tr+(2*mb+1)*block:tr+(2*mb+2)*block] = h2_trials[mb*block:(mb+1)*block,:]
+            
+        trial_type[i*trials_per_block:(i+1)*trials_per_block] = int(tt)
+        blocks[i*trials_per_block:(i+1)*trials_per_block] = int(i)
+        context[i*trials_per_block:(i+1)*trials_per_block] = trials[i*trials_per_block:(i+1)*trials_per_block,0] != h1
+
+
+    trial_type = trial_type.astype('int32')
+
+    fname = 'config_'+'degradation_'+ str(int(contingency_degradation))+ '_switch_' + str(int(switch_cues))\
+             + '_train' + str(training_blocks) + '_degr' + str(degradation_blocks) + '_n' + str(trials_per_block)+'.json'
+
+    if shuffle and blocked:
+        subfolder = '/shuffled_and_blocked'
+    elif shuffle and not blocked:
+        subfolder ='/shuffled'
+    elif not shuffle and blocked:
+        subfolder ='/blocked'
+    elif not shuffle and not blocked:
+        subfolder ='/original'
+
+    path = os.path.join(os.getcwd(),'config'+subfolder)
+    fname = os.path.join(path, fname)
+
+
+
+    if export:
+        config = {
+                  'context' : context.astype('int32').tolist(),
+                  'sequence': trials[:,0].astype('int32').tolist(),
+                  'starts': trials[:,1].astype('int32').tolist(),
+                  'planets': trials[:,2:-1].astype('int32').tolist(),
+                  'exp_reward': trials[:,-1].tolist(),
+                  'trial_type': trial_type.tolist(),
+                  'block': blocks.astype('int32').tolist(),
+                  'degradation_blocks': degradation_blocks,
+                  'training_blocks': training_blocks,
+                  'interlace': interlace,
+                  'contingency_degradation': contingency_degradation,
+                  'switch_cues': switch_cues,
+                  'trials_per_block': trials_per_block,
+                  'blocked': blocked,
+                  'shuffle': shuffle, 
+                  'miniblock_size' : block,
+                  'seed':seed
+                }
+
+        with open(fname, "w") as file:
+            js.dump(config, file)
+
+
+def create_config_files(training_blocks, degradation_blocks, trials_per_block,\
+                        trials=None, shuffle=False, blocked=False, block=None):
+
+    if trials is None:
+        trials = all_possible_trials(habit_seq=3, shuffle=shuffle)
+    
+    degradation = [True]
+    cue_switch = [False]
+
+    arrays = [degradation, cue_switch, degradation_blocks, training_blocks, trials_per_block]
+
+    lst = []
+    for i in product(*arrays):
+        lst.append(list(i))
+
+    for l in lst:
+
+        create_trials_two(trials, contingency_degradation=l[0],switch_cues=l[1],\
+            degradation_blocks=l[2], training_blocks=l[3], trials_per_block=l[4],\
+            shuffle=shuffle, blocked=blocked,block=block)
 
 conf = ['shuffled', 'shuffled_and_blocked', 'blocked','original']
 data_folder='config'
@@ -457,12 +608,10 @@ for con in conf:
 
 
 
+
 combinations = []
-create_config_files_planning([3],[1],[70],shuffle=True)
-
-print(np.array[(1,2,3)])
-
-
+create_config_files([3],[1],[70],shuffle=True,blocked=True,block=5)
+create_config_files([3],[1],[70],shuffle=True)
 
 
 
@@ -518,15 +667,15 @@ print(np.array[(1,2,3)])
 # df.query('trial_type == 2').tail(30)
 
 
-# %%
-# import json 
-# import pandas as pd
+#%%
+import json 
+import pandas as pd
+import numpy as np
 
-
-# f = open('config/shuffled/config_degradation_0_switch_0_train1_degr1_n20.json')
-# data = json.load(f)
-# df = pd.DataFrame.from_dict(data)
-# df.head(50)
+f = open('test.json')
+data = json.load(f)
+df = pd.DataFrame.from_dict(data)
+df.head(50)
 
 
 #%%

@@ -1,14 +1,14 @@
 #%%
 
 
-import matplotlib.pyplot as plt
-import matplotlib.patheffects as path_effects
-plt.figure(figsize=(12, 3),dpi=150)
-t = plt.text(0.02, 0.5, 'official account', fontsize=50, weight=1000, va='center')
-t.set_path_effects([path_effects.PathPatchEffect(offset=(4, -4),
-                                                  facecolor='black'),
-                    path_effects.PathPatchEffect(facecolor='gray')])
-plt.show()
+# import matplotlib.pyplot as plt
+# import matplotlib.patheffects as path_effects
+# plt.figure(figsize=(12, 3),dpi=150)
+# t = plt.text(0.02, 0.5, 'official account', fontsize=50, weight=1000, va='center')
+# t.set_path_effects([path_effects.PathPatchEffect(offset=(4, -4),
+#                                                   facecolor='black'),
+#                     path_effects.PathPatchEffect(facecolor='gray')])
+# plt.show()
 
 #%%
 import pickle
@@ -1239,7 +1239,7 @@ def plot_all(lst,hs=[[1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]],utility
             print(fnames)
 
             fig.savefig(fnames, dpi=300)  
-            return fig
+            # return fig
 
 
 
@@ -1250,25 +1250,21 @@ extinguish = True
 
 testing = False
 
-
-
-# OVERTRAINED
-######################################################################################
 hs =  [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]
 # h = [40]
-cue_ambiguity = [0.85]                       
-context_trans_prob = [0.95]
+cue_ambiguity = [0.85]#,0.9,0.95]                       
+context_trans_prob = [0.95]#,0.9,0.95]
 cue_switch = [False]
 reward_naive = [True]
-training_blocks = [4]
-degradation_blocks=[6]
+training_blocks = [3]
+degradation_blocks=[1]
 degradation = [True]
 trials_per_block=[70]
-dec_temps = [1]#,2,4]
+dec_temps = [1,2,4]
 rews = [0]
-utility = [[1,9, 90]]
+utility = [[1,9, 90]]#, [5,25,70],[1,1,98],[1, 19, 80]]
 # utility = [[5,25,70]]
-conf = ['original']
+conf = ['shuffled','shuffled_and_blocked']
 
 
 arrays = [cue_switch, degradation, reward_naive, context_trans_prob, cue_ambiguity,\
@@ -1276,39 +1272,69 @@ arrays = [cue_switch, degradation, reward_naive, context_trans_prob, cue_ambigui
 
 lst = []
 for i in product(*arrays):
+    print(list(i))
     lst.append(list(i))
 
-
+# print(lst)
 plot_all(lst,hs=hs)
 
-#OVERTRAINED AND BLOCKED
-######################################################################################
-hs =  [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]
-# h = [40]
-cue_ambiguity = [0.85]                       
-context_trans_prob = [0.95]
-cue_switch = [False]
-reward_naive = [True]
-training_blocks = [4]
-degradation_blocks=[6]
-degradation = [True]
-trials_per_block=[70]
-dec_temps = [1]#,2,4]
-rews = [0]
-utility = [[1,9, 90]]
-# utility = [[5,25,70]]
-conf = ['blocked']
+# # OVERTRAINED
+# ######################################################################################
+# hs =  [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]
+# # h = [40]
+# cue_ambiguity = [0.85]                       
+# context_trans_prob = [0.95]
+# cue_switch = [False]
+# reward_naive = [True]
+# training_blocks = [4]
+# degradation_blocks=[6]
+# degradation = [True]
+# trials_per_block=[70]
+# dec_temps = [1]#,2,4]
+# rews = [0]
+# utility = [[1,9, 90]]
+# # utility = [[5,25,70]]
+# conf = ['original']
 
 
-arrays = [cue_switch, degradation, reward_naive, context_trans_prob, cue_ambiguity,\
-        training_blocks, degradation_blocks, trials_per_block,dec_temps,rews, conf]
+# arrays = [cue_switch, degradation, reward_naive, context_trans_prob, cue_ambiguity,\
+#         training_blocks, degradation_blocks, trials_per_block,dec_temps,rews, conf]
 
-lst = []
-for i in product(*arrays):
-    lst.append(list(i))
+# lst = []
+# for i in product(*arrays):
+#     lst.append(list(i))
 
 
-plot_all(lst,hs=hs)
+# plot_all(lst,hs=hs)
+
+# #OVERTRAINED AND BLOCKED
+# ######################################################################################
+# hs =  [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]
+# # h = [40]
+# cue_ambiguity = [0.85]                       
+# context_trans_prob = [0.95]
+# cue_switch = [False]
+# reward_naive = [True]
+# training_blocks = [4]
+# degradation_blocks=[6]
+# degradation = [True]
+# trials_per_block=[70]
+# dec_temps = [1]#,2,4]
+# rews = [0]
+# utility = [[1,9, 90]]
+# # utility = [[5,25,70]]
+# conf = ['blocked']
+
+
+# arrays = [cue_switch, degradation, reward_naive, context_trans_prob, cue_ambiguity,\
+#         training_blocks, degradation_blocks, trials_per_block,dec_temps,rews, conf]
+
+# lst = []
+# for i in product(*arrays):
+#     lst.append(list(i))
+
+
+# plot_all(lst,hs=hs)
 
 # # FITTING
 # ######################################################################################

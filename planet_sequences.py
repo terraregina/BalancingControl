@@ -241,6 +241,6 @@ def generate_trials_df(planet_rewards, sequences):
     #     json.dump(config, file)
 
 # %%
-generate_trials()
+# generate_trials()
 
 # generate_trials_df([-1,1,1],[3,6])

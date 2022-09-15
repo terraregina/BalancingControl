@@ -24,7 +24,7 @@ import agent as agt
 from environment import PlanetWorld
 from agent import BayesianPlanner
 from world import World
-from planet_sequences import generate_trials_df
+# from planet_sequences import generate_trials_df
 import time
 import matplotlib.gridspec as gridspec
 import string
@@ -91,7 +91,7 @@ def run_single_sim(lst,
     planets = np.asarray(task_params['planets'])         # planet positions 
     trial_type = np.asarray(task_params['trial_type'])
     blocks = np.asarray(task_params['block'])
-    print(task_params['shuffle'])
+    # print(task_params['shuffle'])
 
 
     nblocks = int(blocks.max()+1)         # number of blocks
@@ -377,15 +377,15 @@ if __name__ == '__main__':
     context_trans_prob = [0.95]#,0.9,0.95]
     cue_switch = [False]
     reward_naive = [True]
-    training_blocks = [4]
-    degradation_blocks=[6]
+    training_blocks = [3]
+    degradation_blocks=[1]
     degradation = [True]
     trials_per_block=[70]
-    dec_temps = [1]
+    dec_temps = [1,2,4]
     rews = [0]
     utility = [[1,9, 90]]#, [5,25,70],[1,1,98],[1, 19, 80]]
     # utility = [[5,25,70]]
-    conf = ['original']
+    conf = ['shuffled','shuffled_and_blocked']
 
     data_folder = 'temp'
     for con in conf:
