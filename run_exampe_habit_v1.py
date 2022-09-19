@@ -57,7 +57,7 @@ def run_agent(par_list, trials, T, ns=6, na=2, nr=3, nc=2, npl=2, added=None, us
     # C_beta           = phi or estimate of p(reward|planet,context) 
     
     learn_pol, context_trans_prob, cue_ambiguity, avg,\
-    Rho, utility, B, planets, starts, colors, rc, learn_rew, dec_temp, rew = par_list
+    Rho, utility, B, planets, starts, colors, rc, learn_rew, dec_temp, dec_temp_cont, rew = par_list
 
 
     """
@@ -186,6 +186,7 @@ def run_agent(par_list, trials, T, ns=6, na=2, nr=3, nc=2, npl=2, added=None, us
         prior_context = ar.tensor(prior_context)
         alpha_0 = ar.tensor([alpha_0])
         dec_temp = ar.tensor([dec_temp])
+        dec_temp_cont = ar.tensor([dec_temp])
 
 
     if use_fitting ==True:
@@ -217,7 +218,7 @@ def run_agent(par_list, trials, T, ns=6, na=2, nr=3, nc=2, npl=2, added=None, us
                                alpha_0,
                                C_beta,
                                generative_model_context = C,
-                               T=T,dec_temp=dec_temp, trials=trials)
+                               T=T,dec_temp=dec_temp, dec_temp_cont=dec_temp_cont, trials=trials)
     
         bayes_pln = agt.FittingAgent(bayes_prc,
                                     ac_sel,
@@ -262,7 +263,7 @@ def run_agent(par_list, trials, T, ns=6, na=2, nr=3, nc=2, npl=2, added=None, us
                                C_alphas,
                                C_beta,
                                generative_model_context = C,
-                               T=T,dec_temp=dec_temp, r_lambda=rew)
+                               T=T,dec_temp=dec_temp, dec_temp_cont=dec_temp_cont, r_lambda=rew)
 
         bayes_pln = agt.BayesianPlanner(bayes_prc,
                                         ac_sel,

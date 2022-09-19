@@ -807,6 +807,7 @@ class HierarchicalPerception(object):
                  T=4,
                  possible_rewards = [-1,0,1],
                  dec_temp = 1,
+                 dec_temp_cont = 1,
                  r_lambda = 0,
                  reward_index_mapping = {}):
 
@@ -825,6 +826,7 @@ class HierarchicalPerception(object):
         self.npi = prior_policies.shape[0]
         self.T = T
         self.dec_temp = dec_temp
+        self.dec_temp_cont = dec_temp_cont
         self.nh = prior_states.shape[0]
         self.npl = generative_model_rewards.shape[1]
         self.possible_rewards = possible_rewards
@@ -853,7 +855,7 @@ class HierarchicalPerception(object):
                 for planet_type in range(self.npl):
                     self.generative_model_rewards[:,planet_type,c] = \
                         self.dirichlet_rew_params[:,planet_type,c] / self.dirichlet_rew_params[:,planet_type,c].sum()
-
+        print('decision_temp context', self.dec_temp_cont)
     def reset(self, params, fixed):
 
         alphas = np.zeros((self.npi, self.nc)) + params
@@ -1001,7 +1003,7 @@ class HierarchicalPerception(object):
                                 posterior_policies,\
                                 prior_context,\
                                 policies,\
-                                context=None):
+                                context=None,argmax = True):
 
 
         post_policies = (prior_context[np.newaxis,:] * posterior_policies).sum(axis=1)
@@ -1048,18 +1050,23 @@ class HierarchicalPerception(object):
                 context_obs_suprise = ln(self.generative_model_context[context]+1e-10)
             else:
                 context_obs_suprise = 0
+
             posterior = outcome_surprise + policy_surprise + entropy + context_obs_suprise
-            
-            # if (tau >= 130 and t == self.T-1 and tau <= 150):
-            #     print('\n', tau,t)
-            #     print(posterior.round(3), ' summed posterior')
-
-                        #+ np.nan_to_num((posterior_policies * ln(self.fwd_norms).sum(axis = 0))).sum(axis=0)#\
-
             posterior = np.nan_to_num(softmax(posterior+ln(prior_context)))
 
-
-            # print('\n',tau,t)
+            if argmax:
+                # print('argmax context')
+                mode = np.argmax(posterior)
+                posterior = np.zeros(posterior.shape)
+                const = 0.999999
+                for pi,p in enumerate(posterior):
+                    if pi == mode:
+                        posterior[pi] = 0.99999
+                    else: 
+                        posterior[pi] = (1 - 0.99999)/(posterior.size - 1)
+            else:
+                posterior = np.power(posterior,self.dec_temp_cont)
+                posterior /= posterior.sum()
             return [posterior, outcome_surprise, entropy, policy_surprise, context_obs_suprise]
 
     def update_beliefs_dirichlet_pol_params(self, tau, t, posterior_policies, posterior_context = [1]):
@@ -1083,7 +1090,6 @@ class HierarchicalPerception(object):
         
         # a = self.dirichlet_rew_params.copy()
         self.dirichlet_rew_params[self.reward_ind[reward],:,:] += planets * posterior_context[np.newaxis,:]
-        
         # old = self.dirichlet_rew_params[self.reward_ind[reward],self.planets[st],np.arange(self.nc)]
         # new = (1-l)*old + l*posterior_context
         
@@ -1091,6 +1097,10 @@ class HierarchicalPerception(object):
         
         # DEBUG CHECK IF IT WORKS IN A SIMULATION
         self.generative_model_rewards = self.dirichlet_rew_params / self.dirichlet_rew_params.sum(axis=0)[None,...]
+        # mode = np.argmax(posterior_context)
+        # print(tau,t,reward,mode)
+        # print(self.generative_model_rewards[:,:,2])
+        # print(self.generative_model_rewards[:,:,3])
         
         # self.dirichlet_rew_params.append(dirichlet_rew_params.to(device))
         # self.generative_model_rewards.append(generative_model_rewards.to(device))

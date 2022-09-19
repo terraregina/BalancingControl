@@ -12,7 +12,7 @@ import torch as ar
 ar.set_default_dtype(ar.float64)
 
 try:
-    from inference_two_seqs import device
+    from inference_habit import device
 except:
     device = ar.device("cpu")
 
@@ -478,29 +478,31 @@ class BayesianPlanner(object):
         # if self.trial_type[tau] == 1:
         #     print('degradation')
             
-        # if tau == 502:
-        #     print('----------')
-        #     print(tau,t)
-        #     print('cont', context)
-        #     print('obs', observation)
-        #     print('true optimal', self.true_optimal[tau])
-        #     print(self.planets)
-        #     for c in range(4):
-        #         print('\ncontext' + str(c))
-        #         print(self.perception.generative_model_rewards[:,:,c].round(2))
-        #     print('\nposterior context: \n', self.posterior_context[tau,t].round(2))
-        #     # print('\npolicy prior: \n', self.prior_policies[tau-1].round(2).T)
-        #     print('\npolicy likelihood: \n', self.likelihood[tau,t].round(2).T)
-        #     print('\npolicy posterior: \n', self.posterior_policies[tau,t].round(2).T)
-        #     try:
-        #         print('\naveraged:\n', post_pol.round(2))
-        #     except:
-        #         pass
-        #     try:
-        #         # print('\naveraged:\n', post_pol.round(2))
-        #         print('\naction:\n', self.posterior_actions[tau,t].round(2))
-        #     except:
-        #         pass
+        # if self.trial_type[tau] == 1:
+            # print('----------')
+            # print(tau,t)
+            # print('cont', context)
+            # print('obs', observation)
+            # print('true optimal', self.true_optimal[tau])
+            # print(self.planets)
+            # for c in range(4):
+                # print('\ncontext' + str(c))
+                # print(self.perception.generative_model_rewards[:,:,c].round(2))
+            # print('\nposterior context: \n', self.posterior_context[tau,t].round(2))
+            # print('\npolicy prior: \n', self.prior_policies[tau-1].round(2).T)
+            # print('\npolicy likelihood: \n', self.likelihood[tau,t].round(2).T)
+            # print('\npolicy posterior: \n', self.posterior_policies[tau,t].round(2).T)
+            # try:
+                # print('\naveraged:\n', post_pol.round(2))
+            # except:
+                # pass
+        if t == 0:
+            print(tau,t)
+            try:
+                # print('\naveraged:\n', post_pol.round(2))
+                print('\naction:\n', self.posterior_actions[tau,t].round(2))
+            except:
+                pass
 
         # if self.trial_type[tau] == 2:
         #     executed = self.actions[280:tau,:-1]

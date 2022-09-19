@@ -360,7 +360,7 @@ def create_trials_planning(data, habit_seq = 3, contingency_degradation = True,\
     fname = 'planning_config_'+'degradation_'+ str(int(contingency_degradation))+ '_switch_' + str(int(switch_cues))\
              + '_train' + str(training_blocks) + '_degr' + str(degradation_blocks) + '_n' + str(trials_per_block)+'.json'
 
-    fname = 'test.json'
+    # fname = 'test.json'
 
     if shuffle and blocked:
         subfolder = '/shuffled_and_blocked'
@@ -610,11 +610,12 @@ for con in conf:
 
 
 combinations = []
-create_config_files([3],[1],[70],shuffle=True,blocked=True,block=5)
-create_config_files([3],[1],[70],shuffle=True)
+create_config_files_planning([4],[6],[70],shuffle=True,blocked=True,block=5)
+create_config_files_planning([4],[6],[70],shuffle=True)
 
 
-
+# create_config_files([3],[1],[70],shuffle=True,blocked=True,block=5)
+# create_config_files([3],[1],[70],shuffle=True)
 
 
 
@@ -672,7 +673,7 @@ import json
 import pandas as pd
 import numpy as np
 
-f = open('test.json')
+f = open('config/shuffled/planning_config_degradation_1_switch_0_train3_degr1_n70.json')
 data = json.load(f)
 df = pd.DataFrame.from_dict(data)
 df.head(50)
@@ -680,5 +681,6 @@ df.head(50)
 
 #%%
 
-# trials = all_possible_trials_planning()
-# %%
+# df = df[['block','sequence','context','starts','planets','exp_reward']]
+
+df.barplot()

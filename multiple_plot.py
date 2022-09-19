@@ -360,14 +360,11 @@ def load_file_names(arrays, use_fitting=False,plotting_gammas=False):
         # fname = prefix + 'p' + str(l[4])  +'_learn_rew' + str(int(l[2] == True))+ '_q' + str(l[3]) + '_h' + str(l[5]) + '_' +\
         # str(l[8]) + '_' + str(l[6]) + str(l[7])+ '_dec' + str(l[9])
         
-        l[11] = [str(entry) for entry in l[11]]
+        l[12] = [str(entry) for entry in l[12]]
         fname = prefix + 'p' + str(l[4])  +'_learn_rew' + str(int(l[2] == True))+ '_q' + str(l[3]) + '_h' + str(l[5]) + '_' +\
         str(l[8]) + '_' + str(l[6]) + str(l[7]) + \
-        '_dec' + str(l[9]) +'_rew' + str(l[10]) + '_' + 'u'+  '-'.join(l[11]) + '_' + l[12]
+        '_decp' + str(l[9]) +'_decc' + str(l[10]) + '_rew' + str(l[11]) + '_' + 'u'+  '-'.join(l[12]) + '_' + l[13]
 
-        # # print(len(l))
-        # if len(l) > 10:
-        #     fname += '_' + l[-1]
 
         fname +=  '_extinguish.json'
 
@@ -479,6 +476,7 @@ def load_df(names,data_folder='data', extinguish=None):
         q = np.repeat(meta['context_trans_prob'], ntrials*nw*nt)
         p = np.repeat(meta['cue_ambiguity'], ntrials*nw*nt)
         h = np.repeat(meta['h'], ntrials*nw*nt)
+        dec_temp_cont = np.repeat(worlds[0].agent.perception.dec_temp_cont,ntrials*nw*nt)
         dec_temp = np.repeat(worlds[0].dec_temp,ntrials*nw*nt)
         switch_cues = np.repeat(meta['switch_cues'], ntrials*nw*nt)
         learn_rew = np.repeat(meta['learn_rew'], ntrials*nw*nt)
@@ -535,7 +533,7 @@ def load_df(names,data_folder='data', extinguish=None):
                             'switch_cues':switch_cues, 'contingency_degradation': contingency_degradation,\
                             'degradation_blocks': ndb, 'training_blocks':ntb, 'trials_per_block': tr_per_block,\
                             'true_context': true_context, 'dec_temp':dec_temp, 'utility_0': utility_0, 'utility_1': utility_1, 'utility_2': utility_2,
-                            'r_lambda': r_lambda} 
+                            'r_lambda': r_lambda,'dec_temp_cont': dec_temp_cont} 
 
         # for key in d.keys():
         #     print(key, np.unique(d[key].shape))
@@ -935,6 +933,8 @@ def load_df_reward_dkl(names,data_folder='temp',nc=4):
             df['q'] = np.repeat(meta['context_trans_prob'], factor)
             df['p'] = np.repeat(meta['cue_ambiguity'], factor)
             df['dec_temp'] = np.repeat(worlds[0].dec_temp,factor)
+            df['dec_temp_cont'] = np.repeat(worlds[0].agent.perception.dec_temp_cont,factor)
+
             df['h'] = np.repeat(meta['h'], factor)
             df['run'] = np.repeat(w,factor)
             df['trial_type'] = np.repeat(meta['trial_type'], nc*nt)
@@ -1200,9 +1200,9 @@ def plot_all(lst,hs=[[1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]],utility
 
     for l in lst:
         names_arrays = [[l[0]], [l[1]], [l[2]], [l[3]], [l[4]], hs,\
-                [l[5]], [l[6]], [l[7]],[l[8]],[l[9]], utility, [l[10]]] 
+                [l[5]], [l[6]], [l[7]],[l[8]],[l[9]],[l[10]], utility, [l[11]]] 
         print(names_arrays)
-        data_folder = 'temp/'+l[10]
+        data_folder = 'temp/'+l[11]
         names = load_file_names(names_arrays)
         df = load_df(names, data_folder=data_folder,extinguish=extinguish)
         df_dkl = load_df_reward_dkl(names, data_folder=data_folder)
@@ -1222,9 +1222,10 @@ def plot_all(lst,hs=[[1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]],utility
         db = l[6]
         degradation_blocks = l[6]
         dec_temp = l[8]
+        dec_temp_cont = l[9]
         cue = 0
         one_run = False
-        rew = l[9]
+        rew = l[10]
         queries =  ['p==' + str(p)]
         sns.set_style("darkgrid")
 
@@ -1255,10 +1256,11 @@ def plot_all(lst,hs=[[1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]],utility
 
             strs = np.array(['switch_cues==', '& contingency_degradation==', '& learn_rew==', '& q==', '& h<=', '& p==',\
                             '& training_blocks==', '& degradation_blocks==', '& trials_per_block==', '& dec_temp ==',\
-                            '& utility_0==', '& utility_1==', '& utility_2==', '& r_lambda=='],dtype='str')
+                            '& dec_temp_cont ==', '& utility_0==', '& utility_1==', '& utility_2==', '& r_lambda=='],dtype='str')
                             
             vals = np.array([switch, contingency_degr, reward_naive, q, h, p, \
-                            training_blocks, db, trials_per_block, dec_temp, util[0], util[1], util[2],rew], dtype='str')
+                            training_blocks, db, trials_per_block, dec_temp, dec_temp_cont,\
+                             util[0], util[1], util[2],rew], dtype='str')
             whole_query = np.char.join('', np.char.add(strs, vals))
 
             base_query = ' '.join(whole_query.tolist())
@@ -1332,11 +1334,15 @@ def plot_all(lst,hs=[[1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]],utility
             gs00 = gs0[1].subgridspec(1, 2,wspace=0.3)
             axes = np.array([fig.add_subplot(gs00[:, 0]), fig.add_subplot(gs00[:, 1])])
             ax1 = axes[0]
+
             strs = np.array(['switch_cues==', '& contingency_degradation==', '& learn_rew==', '& q==', '& h<=',\
-                            '& training_blocks==', '& degradation_blocks==', '& trials_per_block==', '& dec_temp ==',\
-                            '& utility_0==', '& utility_1==', '& utility_2==', '& r_lambda=='],dtype='str')
-            vals = np.array([switch, contingency_degr, reward_naive, q, h,\
-                            training_blocks, db, trials_per_block, dec_temp, util[0], util[1], util[2],rew], dtype='str')
+                             '& training_blocks==', '& degradation_blocks==', '& trials_per_block==', '& dec_temp ==',\
+                             '& dec_temp_cont ==', '& utility_0==', '& utility_1==', '& utility_2==', '& r_lambda=='],dtype='str')
+                            
+            vals = np.array([switch, contingency_degr, reward_naive, q, h, \
+                            training_blocks, db, trials_per_block, dec_temp, dec_temp_cont,\
+                             util[0], util[1], util[2],rew], dtype='str')
+
             whole_query = np.char.join('', np.char.add(strs, vals))
             base_query = ' '.join(whole_query.tolist())
 
@@ -1400,11 +1406,14 @@ def plot_all(lst,hs=[[1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]],utility
                              fig.add_subplot(gs02[0,2]), fig.add_subplot(gs02[0,3])])
             ax2 = axes[0]
 
-            strs = np.array(['switch_cues==', '& contingency_degradation==', '& learn_rew==', '& q==', '& h<=', '& p==', \
-                            '& training_blocks==', '& degradation_blocks==', '& trials_per_block==', '& dec_temp ==',\
-                            '& utility_0==', '& utility_1==', '& utility_2==', '& r_lambda=='],dtype='str')
-            vals = np.array([switch, contingency_degr, reward_naive, q, h, p,\
-                            training_blocks, db, trials_per_block, dec_temp, util[0], util[1], util[2], rew], dtype='str')
+            strs = np.array(['switch_cues==', '& contingency_degradation==', '& learn_rew==', '& q==', '& h<=',\
+                             '& training_blocks==', '& degradation_blocks==', '& trials_per_block==', '& dec_temp ==',\
+                             '& dec_temp_cont ==', '& utility_0==', '& utility_1==', '& utility_2==', '& r_lambda=='],dtype='str')
+                            
+            vals = np.array([switch, contingency_degr, reward_naive, q, h, \
+                            training_blocks, db, trials_per_block, dec_temp, dec_temp_cont,\
+                             util[0], util[1], util[2],rew], dtype='str')
+
             whole_query = np.char.join('', np.char.add(strs, vals))
             base_query = ' '.join(whole_query.tolist())
             base_df_dkl = df_dkl.query(base_query)
@@ -1466,7 +1475,8 @@ def plot_all(lst,hs=[[1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]],utility
             else:
                 fname += '_'.join(['multiple_all','switch', str(int(l[0])), 'degr', str(int(l[1])),\
                         'learn', str(int(l[2])), 'q', str(l[3]),\
-                        'p', str(l[4]),'dec', str(l[8]),str(training_blocks) + str(degradation_blocks), 'util', '-'.join([str(u) for u in util])]) + '.pdf'
+                        'p', str(l[4]),'decp', str(l[8]),'decc', str(l[9]),\
+                        str(training_blocks) + str(degradation_blocks), 'util', '-'.join([str(u) for u in util])]) + '.pdf'
             
             
             #            fnames = os.path.join(os.getcwd(), fname)
@@ -1480,172 +1490,16 @@ def plot_all(lst,hs=[[1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]],utility
             
   
             fig.savefig(fnames, dpi=300)    
-            return fig
 
 
 # %%
 nc = 4
 extinguish = True
 
-# hs =  [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]
-# # h = [40]
-# cue_ambiguity = [0.65,0.75,0.8,0.85,0.9]                       
-# context_trans_prob = [0.75,0.8,0.85,0.9]
-# cue_switch = [False]
-# reward_naive = [True]
-# training_blocks = [2]
-# degradation_blocks=[1]
-# degradation = [True]
-# trials_per_block=[70]
-# dec_temps = [1,2,4]
-# rews = [0]
-# utility = [[1, 9 , 90]]#, [5,25,70],[1,1,98],[1, 9, 90]]
-# conf = ['shuffled','shuffled_and_blocked']
 
 
-
-# hs =  [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]
-# # h = [40]
-# cue_ambiguity = [0.75,0.8,0.85]                       
-# context_trans_prob = [0.8,0.85,0.9]
-# cue_switch = [False]
-# reward_naive = [True]
-# training_blocks = [4]
-# degradation_blocks=[6]
-# degradation = [True]
-# trials_per_block=[70]
-# dec_temps = [1]
-# rews = [0]
-# utility = [[1, 9 , 90], [5,25,70],[1,1,98],[1, 19, 80]]
-# conf = ['shuffled','shuffled_and_blocked']
-
-
-# hs =  [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]
-# # h = [40]
-# cue_ambiguity = [0.8]                       
-# context_trans_prob = [0.85]
-# cue_switch = [False]
-# reward_naive = [True]
-# training_blocks = [3]
-# degradation_blocks=[1]
-# degradation = [True]
-# trials_per_block=[70]
-# dec_temps = [1,2,4]
-# rews = [0]
-# utility = [[1, 9 , 90]]
-# conf = ['shuffled']
-
-
-
-
-# UNDERTRAINEED
-#####################################################################################
 hs =  [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]
-cue_ambiguity = [0.8]                       
-context_trans_prob = [0.85]
-cue_switch = [False]
-reward_naive = [True]
-training_blocks = [4]
-degradation_blocks=[2]
-degradation = [True]
-trials_per_block=[70]
-dec_temps = [1]#,2,4]
-rews = [0]
-utility = [[1, 9 , 90]]
-conf = ['shuffled']
-
-arrays = [cue_switch, degradation, reward_naive, context_trans_prob, cue_ambiguity,\
-        training_blocks, degradation_blocks, trials_per_block,dec_temps,rews, conf]
-
-lst = []
-for i in product(*arrays):
-    lst.append(list(i))
-
-fig = plot_all(lst, hs=hs,utility=utility,testing=False)
-
-
-# OVERTRAINED
-######################################################################################
-hs =  [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]
-cue_ambiguity = [0.8]                       
-context_trans_prob = [0.85]
-cue_switch = [False]
-reward_naive = [True]
-training_blocks = [4]
-degradation_blocks=[6]
-degradation = [True]
-trials_per_block=[70]
-dec_temps = [1]#,2,4]
-rews = [0]
-utility = [[1, 9 , 90]]
-conf = ['shuffled']
-
-arrays = [cue_switch, degradation, reward_naive, context_trans_prob, cue_ambiguity,\
-        training_blocks, degradation_blocks, trials_per_block,dec_temps,rews, conf]
-
-lst = []
-for i in product(*arrays):
-    lst.append(list(i))
-
-fig = plot_all(lst, hs=hs,utility=utility,testing=False)
-
-
-
-# OVERTRAINED AND BLOCKED
-#######################################################################################
-hs =  [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]
-cue_ambiguity = [0.8]                       
-context_trans_prob = [0.85]
-cue_switch = [False]
-reward_naive = [True]
-training_blocks = [4]
-degradation_blocks=[6]
-degradation = [True]
-trials_per_block=[70]
-dec_temps = [1]#,2,4]
-rews = [0]
-utility = [[1, 9 , 90]]
-conf = ['shuffled_and_blocked']
-
-arrays = [cue_switch, degradation, reward_naive, context_trans_prob, cue_ambiguity,\
-        training_blocks, degradation_blocks, trials_per_block,dec_temps,rews, conf]
-
-lst = []
-for i in product(*arrays):
-    lst.append(list(i))
-
-fig = plot_all(lst, hs=hs,utility=utility,testing=False)
-
-
-######################################################################################
-hs =  [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]
-cue_ambiguity = [0.8]                       
-context_trans_prob = [0.85]
-cue_switch = [False]
-reward_naive = [True]
-training_blocks = [3]
-degradation_blocks=[1]
-degradation = [True]
-trials_per_block=[70]
-dec_temps = [2]
-rews = [0]
-utility = [[1, 9 , 90]]
-conf = ['shuffled']
-
-arrays = [cue_switch, degradation, reward_naive, context_trans_prob, cue_ambiguity,\
-        training_blocks, degradation_blocks, trials_per_block,dec_temps,rews, conf]
-
-lst = []
-for i in product(*arrays):
-    lst.append(list(i))
-
-fig = plot_all(lst, hs=hs,utility=utility,testing=False)
-
-
-# OVERTRAINED AND BLOCKED
-# #######################################################################################
-hs =  [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]
-# hs = [1,100]
+# h = [40]
 cue_ambiguity = [0.8]                       
 context_trans_prob = [0.85]
 cue_switch = [False]
@@ -1656,11 +1510,13 @@ degradation = [True]
 trials_per_block=[70]
 dec_temps = [1]
 rews = [0]
+dec_temp_cont = [10]
 utility = [[1, 9 , 90]]
-conf = ['shuffled']
+conf = ['shuffled_and_blocked']
+
 
 arrays = [cue_switch, degradation, reward_naive, context_trans_prob, cue_ambiguity,\
-        training_blocks, degradation_blocks, trials_per_block,dec_temps,rews, conf]
+        training_blocks, degradation_blocks, trials_per_block,dec_temps, dec_temp_cont, rews, conf]
 
 lst = []
 for i in product(*arrays):
@@ -1670,7 +1526,86 @@ fig = plot_all(lst, hs=hs,utility=utility,testing=False)
 
 
 
-#######################################################################################
+# # UNDERTRAINEED
+# #####################################################################################
+# hs =  [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]
+# cue_ambiguity = [0.8]                       
+# context_trans_prob = [0.85]
+# cue_switch = [False]
+# reward_naive = [True]
+# training_blocks = [4]
+# degradation_blocks=[2]
+# degradation = [True]
+# trials_per_block=[70]
+# dec_temps = [1]#,2,4]
+# rews = [0]
+# utility = [[1, 9 , 90]]
+# conf = ['shuffled']
+
+# arrays = [cue_switch, degradation, reward_naive, context_trans_prob, cue_ambiguity,\
+#         training_blocks, degradation_blocks, trials_per_block,dec_temps,rews, conf]
+
+# lst = []
+# for i in product(*arrays):
+#     lst.append(list(i))
+
+# fig = plot_all(lst, hs=hs,utility=utility,testing=False)
+
+
+# # OVERTRAINED
+# ######################################################################################
+# hs =  [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]
+# cue_ambiguity = [0.8]                       
+# context_trans_prob = [0.85]
+# cue_switch = [False]
+# reward_naive = [True]
+# training_blocks = [4]
+# degradation_blocks=[6]
+# degradation = [True]
+# trials_per_block=[70]
+# dec_temps = [1]#,2,4]
+# rews = [0]
+# utility = [[1, 9 , 90]]
+# conf = ['shuffled']
+
+# arrays = [cue_switch, degradation, reward_naive, context_trans_prob, cue_ambiguity,\
+#         training_blocks, degradation_blocks, trials_per_block,dec_temps,rews, conf]
+
+# lst = []
+# for i in product(*arrays):
+#     lst.append(list(i))
+
+# fig = plot_all(lst, hs=hs,utility=utility,testing=False)
+
+
+
+# # OVERTRAINED AND BLOCKED
+# #######################################################################################
+# hs =  [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]
+# cue_ambiguity = [0.8]                       
+# context_trans_prob = [0.85]
+# cue_switch = [False]
+# reward_naive = [True]
+# training_blocks = [4]
+# degradation_blocks=[6]
+# degradation = [True]
+# trials_per_block=[70]
+# dec_temps = [1]#,2,4]
+# rews = [0]
+# utility = [[1, 9 , 90]]
+# conf = ['shuffled_and_blocked']
+
+# arrays = [cue_switch, degradation, reward_naive, context_trans_prob, cue_ambiguity,\
+#         training_blocks, degradation_blocks, trials_per_block,dec_temps,rews, conf]
+
+# lst = []
+# for i in product(*arrays):
+#     lst.append(list(i))
+
+# fig = plot_all(lst, hs=hs,utility=utility,testing=False)
+
+
+# ######################################################################################
 # hs =  [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]
 # cue_ambiguity = [0.8]                       
 # context_trans_prob = [0.85]
@@ -1680,13 +1615,66 @@ fig = plot_all(lst, hs=hs,utility=utility,testing=False)
 # degradation_blocks=[1]
 # degradation = [True]
 # trials_per_block=[70]
-# dec_temps = [2,4]
+# dec_temps = [2]
 # rews = [0]
 # utility = [[1, 9 , 90]]
 # conf = ['shuffled']
 
+# arrays = [cue_switch, degradation, reward_naive, context_trans_prob, cue_ambiguity,\
+#         training_blocks, degradation_blocks, trials_per_block,dec_temps,rews, conf]
 
-# arrays = [cue_switch, degradation, reward_naive, context_trans_prob, cue_ambiguity,hs,\
-#         training_blocks, degradation_blocks, trials_per_block,dec_temps,rews, utility, conf]
+# lst = []
+# for i in product(*arrays):
+#     lst.append(list(i))
 
-# fig = plot_gammas(arrays, hs=hs,utility=utility,testing=False)
+# fig = plot_all(lst, hs=hs,utility=utility,testing=False)
+
+
+# # OVERTRAINED AND BLOCKED
+# # #######################################################################################
+# hs =  [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]
+# # hs = [1,100]
+# cue_ambiguity = [0.8]                       
+# context_trans_prob = [0.85]
+# cue_switch = [False]
+# reward_naive = [True]
+# training_blocks = [4]
+# degradation_blocks=[6]
+# degradation = [True]
+# trials_per_block=[70]
+# dec_temps = [1]
+# rews = [0]
+# utility = [[1, 9 , 90]]
+# conf = ['shuffled']
+
+# arrays = [cue_switch, degradation, reward_naive, context_trans_prob, cue_ambiguity,\
+#         training_blocks, degradation_blocks, trials_per_block,dec_temps,rews, conf]
+
+# lst = []
+# for i in product(*arrays):
+#     lst.append(list(i))
+
+# fig = plot_all(lst, hs=hs,utility=utility,testing=False)
+
+
+
+# #######################################################################################
+# # hs =  [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]
+# # cue_ambiguity = [0.8]                       
+# # context_trans_prob = [0.85]
+# # cue_switch = [False]
+# # reward_naive = [True]
+# # training_blocks = [3]
+# # degradation_blocks=[1]
+# # degradation = [True]
+# # trials_per_block=[70]
+# # dec_temps = [2,4]
+# # rews = [0]
+# # utility = [[1, 9 , 90]]
+# # conf = ['shuffled']
+
+
+# # arrays = [cue_switch, degradation, reward_naive, context_trans_prob, cue_ambiguity,hs,\
+# #         training_blocks, degradation_blocks, trials_per_block,dec_temps,rews, utility, conf]
+
+# # fig = plot_gammas(arrays, hs=hs,utility=utility,testing=False)

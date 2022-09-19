@@ -31,6 +31,8 @@ import multiprocessing.pool as mpp
 import tqdm
 from run_exampe_habit_v1 import run_agent
 
+import gc
+gc.enable()
 def istarmap(self, func, iterable, chunksize=1):
     """starmap-version of imap
     """
@@ -69,7 +71,8 @@ def run_single_sim(lst,
 
 
     switch_cues, contingency_degradation, reward_naive, context_trans_prob, cue_ambiguity, h,\
-    training_blocks, degradation_blocks, trials_per_block, dec_temp, rew, util, config_folder = lst
+    training_blocks, degradation_blocks, trials_per_block, dec_temp, dec_temp_cont,\
+    rew, util, config_folder = lst
     
     config = 'planning_config' + '_degradation_'+ str(int(contingency_degradation)) \
                       + '_switch_' + str(int(switch_cues))                \
@@ -152,6 +155,7 @@ def run_single_sim(lst,
                 reward_counts,
                 1,
                 dec_temp,
+                dec_temp_cont,
                 rew]
 
     prefix = 'multiple_'
@@ -173,7 +177,8 @@ def run_single_sim(lst,
 
     fname = prefix +'p' + str(cue_ambiguity) +'_learn_rew' + str(int(reward_naive == True)) + '_q' + str(context_trans_prob) + '_h' + str(h)+ '_' +\
     str(meta['trials_per_block']) +'_'+str(meta['training_blocks']) + str(meta['degradation_blocks']) +\
-    '_dec' + str(dec_temp)+ '_rew' + str(rew) + '_u' +  '-'.join(util) + '_' + config_folder
+    '_decp' + str(dec_temp)+ '_decc' + str(dec_temp_cont)+ '_rew' + str(rew) + \
+    '_u' +  '-'.join(util) + '_' + config_folder
  
     fname +=  '_extinguish.json'
 
@@ -190,7 +195,7 @@ def run_single_sim(lst,
 
     return fname
 
-def pooled(arrays,seed=521312,repetitions=1, data_folder='temp',check_missing = True):
+def pooled(arrays,seed=521312,repetitions=1, data_folder='temp',check_missing = True,debugging=False):
 
     use_fitting = False
     np.random.seed(seed)
@@ -230,10 +235,10 @@ def pooled(arrays,seed=521312,repetitions=1, data_folder='temp',check_missing = 
             prefix += 'degr0_'
 
 
-        l[11] = [str(entry) for entry in l[11]]
+        l[12] = [str(entry) for entry in l[12]]
         fname = prefix + 'p' + str(l[4])  +'_learn_rew' + str(int(l[2] == True))+ '_q' + str(l[3]) + '_h' + str(l[5]) + '_' +\
         str(l[8]) + '_' + str(l[6]) + str(l[7]) + \
-        '_dec' + str(l[9]) +'_rew' + str(l[10]) + '_' + 'u'+  '-'.join(l[11]) + '_' + l[12]
+        '_decp' + str(l[9]) + '_decc' + str(l[10]) +'_rew' + str(l[11]) + '_' + 'u'+  '-'.join(l[12]) + '_' + l[13]
 
         if extinguish:
             fname += '_extinguish.json'
@@ -255,20 +260,21 @@ def pooled(arrays,seed=521312,repetitions=1, data_folder='temp',check_missing = 
     ca = [ns, na, npl, nc, nr, T, state_transition_matrix, planet_reward_probs,\
         planet_reward_probs_switched,repetitions,use_fitting]
 
-    for l in [lst[0]]:
-        run_single_sim(l,\
-                       ca[0],\
-                       ca[1],\
-                       ca[2],\
-                       ca[3],\
-                       ca[4],\
-                       ca[5],\
-                       ca[6],\
-                       ca[7],\
-                       ca[8],\
-                       ca[9],\
-                       ca[10])
-                       
+    if debugging:
+        for l in [lst[0]]:
+            run_single_sim(l,\
+                        ca[0],\
+                        ca[1],\
+                        ca[2],\
+                        ca[3],\
+                        ca[4],\
+                        ca[5],\
+                        ca[6],\
+                        ca[7],\
+                        ca[8],\
+                        ca[9],\
+                        ca[10])
+                        
     with Pool() as pool:
 
         for _ in tqdm.tqdm(pool.istarmap(run_single_sim, zip(lst,\
@@ -318,71 +324,6 @@ if __name__ == '__main__':
     state_transition_matrix = np.repeat(state_transition_matrix[:,:,:,np.newaxis], repeats=nc, axis=3)
 
     nc = 4
-    # h =  [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]
-    # # h = [40]
-    # cue_ambiguity = [0.6,0.65,0.7,0.75,0.8,0.85,0.9]                       
-    # context_trans_prob = [0.7,0.75,0.8,0.85,0.9]
-    # cue_switch = [False]
-    # reward_naive = [True]
-    # training_blocks = [4]
-    # degradation_blocks=[2]
-    # degradation = [True]
-    # trials_per_block=[70]
-    # dec_temps = [1,2,3,4,5,6]
-    # utility = [[1, 1, 98]]
-    # rews = [0]
-    # utility = [[1,1,98],[1, 9, 90],[1, 19, 80],[5,25,70]]
-    # conf = ['shuffled','shuffled_and_blocked']
-
-
-    # h =  [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]
-    # # h = [40]
-    # cue_ambiguity = [0.65,0.75,0.8,0.85,0.9]                       
-    # context_trans_prob = [0.75,0.8,0.85,0.9]
-    # cue_switch = [False]
-    # reward_naive = [True]
-    # training_blocks = [4]
-    # degradation_blocks=[2]
-    # degradation = [True]
-    # trials_per_block=[70]
-    # dec_temps = [1]
-    # rews = [0]
-    # utility = [[1, 19 , 80], [5,25,70],[1,1,98],[1, 9, 90]]
-    # conf = ['shuffled','shuffled_and_blocked']
-
-
-
-    # h =  [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]
-    # # h = [40]
-    # cue_ambiguity = [0.75,0.8,0.85]                       
-    # context_trans_prob = [0.8,0.85,0.9]
-    # cue_switch = [False]
-    # reward_naive = [True]
-    # training_blocks = [2]
-    # degradation_blocks=[1]
-    # degradation = [True]
-    # trials_per_block=[70]
-    # dec_temps = [1,2,4]
-    # rews = [0]
-
-    # utility = [[1, 19 , 80], [5,25,70],[1,1,98]]
-    # conf = ['shuffled','shuffled_and_blocked']
-
-    # h =  [1,2,3,4,5,6,10,30,60,90,100]
-    # # h = [40]
-    # cue_ambiguity = [0.75,0.8,0.85]                       
-    # context_trans_prob = [0.8,0.85,0.9]
-    # cue_switch = [False]
-    # reward_naive = [True]
-    # training_blocks = [4]
-    # degradation_blocks=[2]
-    # degradation = [True]
-    # trials_per_block=[70]
-    # dec_temps = [1]
-    # rews = [0]
-    # utility = [[1, 9 , 90], [5,25,70],[1,1,98],[1, 19, 80]]
-    # utility = [[1, 19, 80]]
-    # conf = ['shuffled','shuffled_and_blocked']
 
     h =  [1]#,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]
     # h = [40]
@@ -401,7 +342,7 @@ if __name__ == '__main__':
     conf = ['shuffled']
 
 
-    h =  [1,2]#,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]
+    h =  [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]
     # h = [40]
     cue_ambiguity = [0.8]                       
     context_trans_prob = [0.85]
@@ -420,8 +361,9 @@ if __name__ == '__main__':
 
 
 
-    h =  [100,1]
-    # h = [40]
+
+    h =  [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]
+    h = [100]
     cue_ambiguity = [0.8]                       
     context_trans_prob = [0.85]
     cue_switch = [False]
@@ -432,6 +374,7 @@ if __name__ == '__main__':
     trials_per_block=[70]
     dec_temps = [1]
     rews = [0]
+    dec_context = [10]
 
     utility = [[1, 9 , 90]]
 
@@ -449,6 +392,7 @@ if __name__ == '__main__':
             os.makedirs(path)
 
     arrays = [cue_switch, degradation, reward_naive, context_trans_prob, cue_ambiguity,h,\
-            training_blocks, degradation_blocks, trials_per_block,dec_temps,rews, utility, conf]
+            training_blocks, degradation_blocks, trials_per_block,dec_temps, dec_context, rews, utility, conf]
 
-    pooled(arrays,repetitions = 1,check_missing=False)
+
+    pooled(arrays,repetitions = 10,check_missing=False,debugging=True)
