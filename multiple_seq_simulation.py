@@ -30,6 +30,7 @@ from multiprocessing import Pool
 import multiprocessing.pool as mpp
 import tqdm
 from run_exampe_habit_v1 import run_agent
+import sys
 
 import gc
 gc.enable()
@@ -82,6 +83,12 @@ def run_single_sim(lst,
 
 
     folder = os.path.join(os.getcwd(),'config/' + config_folder)
+
+    # windows
+    if sys.platform == "win32":
+        folder = folder.replace('/','\\')
+
+
     file = open(os.path.join(folder,config))
 
     task_params = js.load(file)                                                                                 
@@ -274,23 +281,23 @@ def pooled(arrays,seed=521312,repetitions=1, data_folder='temp',check_missing = 
                         ca[8],\
                         ca[9],\
                         ca[10])
-                        
-    with Pool() as pool:
+    else: 
+        with Pool() as pool:
 
-        for _ in tqdm.tqdm(pool.istarmap(run_single_sim, zip(lst,\
-                                                repeat(ca[0]),\
-                                                repeat(ca[1]),\
-                                                repeat(ca[2]),\
-                                                repeat(ca[3]),\
-                                                repeat(ca[4]),\
-                                                repeat(ca[5]),\
-                                                repeat(ca[6]),\
-                                                repeat(ca[7]),\
-                                                repeat(ca[8]),\
-                                                repeat(ca[9]),\
-                                                repeat(ca[10]))),
-                        total=len(lst)):
-            pass
+            for _ in tqdm.tqdm(pool.istarmap(run_single_sim, zip(lst,\
+                                                    repeat(ca[0]),\
+                                                    repeat(ca[1]),\
+                                                    repeat(ca[2]),\
+                                                    repeat(ca[3]),\
+                                                    repeat(ca[4]),\
+                                                    repeat(ca[5]),\
+                                                    repeat(ca[6]),\
+                                                    repeat(ca[7]),\
+                                                    repeat(ca[8]),\
+                                                    repeat(ca[9]),\
+                                                    repeat(ca[10]))),
+                            total=len(lst)):
+                pass
     
     
 
@@ -325,45 +332,8 @@ if __name__ == '__main__':
 
     nc = 4
 
-    h =  [1]#,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]
-    # h = [40]
-    cue_ambiguity = [0.8]                       
-    context_trans_prob = [0.85]
-    cue_switch = [False]
-    reward_naive = [True]
-    training_blocks = [4]
-    degradation_blocks=[6]
-    degradation = [True]
-    trials_per_block=[70]
-    dec_temps = [1]#,2,4]
-    rews = [0]
-
-    utility = [[1, 9 , 90]]
-    conf = ['shuffled']
-
-
     h =  [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]
-    # h = [40]
-    cue_ambiguity = [0.8]                       
-    context_trans_prob = [0.85]
-    cue_switch = [False]
-    reward_naive = [True]
-    training_blocks = [3]
-    degradation_blocks=[1]
-    degradation = [True]
-    trials_per_block=[70]
-    dec_temps = [1]#,2,4]
-    rews = [0]
-    utility = [[1, 9 , 90]]
-    conf = ['shuffled']
-
-
-
-
-
-
-    h =  [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]
-    h = [100]
+    # h = [1,100]
     cue_ambiguity = [0.8]                       
     context_trans_prob = [0.85]
     cue_switch = [False]
@@ -374,7 +344,7 @@ if __name__ == '__main__':
     trials_per_block=[70]
     dec_temps = [1]
     rews = [0]
-    dec_context = [10]
+    dec_context = [1]
 
     utility = [[1, 9 , 90]]
 
@@ -395,4 +365,4 @@ if __name__ == '__main__':
             training_blocks, degradation_blocks, trials_per_block,dec_temps, dec_context, rews, utility, conf]
 
 
-    pooled(arrays,repetitions = 10,check_missing=False,debugging=True)
+    pooled(arrays,repetitions = 10,check_missing=False,debugging=False)

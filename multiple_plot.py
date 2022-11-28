@@ -1,5 +1,6 @@
 
 # %%
+import sys
 import pickle
 import seaborn as sns
 import pandas as pd
@@ -387,6 +388,10 @@ def load_df(names,data_folder='data', extinguish=None):
     dfs = [None]*len(names)
 
     for f,fname in enumerate(names):
+
+        # windows
+        if sys.platform == "win32":
+            fname = fname.replace('/','\\')
         jsonpickle_numpy.register_handlers()
         with open(fname, 'r') as infile:
             data = json.load(infile)
@@ -1466,7 +1471,7 @@ def plot_all(lst,hs=[[1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]],utility
                     ax.set_ylabel('Average DKL',fontsize=y_fs, labelpad=5)
                     ax.set_xlabel('Trial', fontsize=x_fs, labelpad = x_pad)
 
-            fname = '/figs_paper/multiple/'+ l[-1] + '_'
+            fname = 'figs/'+ l[-1] + '_'
 
             if testing:
                 fname += '_'.join(['multiple_all','switch', str(int(l[0])), 'degr', str(int(l[1])),\
@@ -1481,7 +1486,11 @@ def plot_all(lst,hs=[[1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]],utility
             
             #            fnames = os.path.join(os.getcwd(), fname)
             fnames = os.getcwd() + '/' + fname
+            # windows
+            if sys.platform == 'win32':
+                fnames = fnames.replace('/','\\')
             print(fname)
+
             ratio = [0.333, 0.5, 0.22]
 
             for n, ax in enumerate([ax0, ax1, ax2]):
@@ -1499,7 +1508,7 @@ extinguish = True
 
 
 hs =  [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]
-# h = [40]
+# h = [1,100]
 cue_ambiguity = [0.8]                       
 context_trans_prob = [0.85]
 cue_switch = [False]
@@ -1510,10 +1519,11 @@ degradation = [True]
 trials_per_block=[70]
 dec_temps = [1]
 rews = [0]
-dec_temp_cont = [10]
-utility = [[1, 9 , 90]]
-conf = ['shuffled_and_blocked']
+dec_temp_cont = [1]
 
+utility = [[1, 9 , 90]]
+
+conf = ['shuffled']
 
 arrays = [cue_switch, degradation, reward_naive, context_trans_prob, cue_ambiguity,\
         training_blocks, degradation_blocks, trials_per_block,dec_temps, dec_temp_cont, rews, conf]

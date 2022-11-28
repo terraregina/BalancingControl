@@ -496,13 +496,13 @@ class BayesianPlanner(object):
                 # print('\naveraged:\n', post_pol.round(2))
             # except:
                 # pass
-        if t == 0:
-            print(tau,t)
-            try:
-                # print('\naveraged:\n', post_pol.round(2))
-                print('\naction:\n', self.posterior_actions[tau,t].round(2))
-            except:
-                pass
+        # if t == 0:
+        #     print(tau,t)
+        #     try:
+        #         # print('\naveraged:\n', post_pol.round(2))
+        #         print('\naction:\n', self.posterior_actions[tau,t].round(2))
+        #     except:
+        #         pass
 
         # if self.trial_type[tau] == 2:
         #     executed = self.actions[280:tau,:-1]

@@ -610,8 +610,8 @@ for con in conf:
 
 
 combinations = []
-create_config_files_planning([4],[6],[70],shuffle=True,blocked=True,block=5)
-create_config_files_planning([4],[6],[70],shuffle=True)
+# create_config_files_planning([4],[2],[42],shuffle=True,blocked=True,block=5)
+create_config_files_planning([4],[6],[70],shuffle=True,blocked=False)
 
 
 # create_config_files([3],[1],[70],shuffle=True,blocked=True,block=5)
