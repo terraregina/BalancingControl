@@ -856,6 +856,7 @@ class HierarchicalPerception(object):
                     self.generative_model_rewards[:,planet_type,c] = \
                         self.dirichlet_rew_params[:,planet_type,c] / self.dirichlet_rew_params[:,planet_type,c].sum()
         print('decision_temp context', self.dec_temp_cont)
+        
     def reset(self, params, fixed):
 
         alphas = np.zeros((self.npi, self.nc)) + params
@@ -971,7 +972,7 @@ class HierarchicalPerception(object):
                 else:
                     self.fwd_messages[:,:,pi,c] = 0#1./self.nh
                     self.fwd_norms[t+1:,pi,c] = 0
-        #estimate posterior state distribution
+
         posterior = self.fwd_messages*self.bwd_messages*self.obs_messages[:,:,np.newaxis,:]*self.rew_messages[:,:,np.newaxis,:]
         norm = posterior.sum(axis = 0)
         self.fwd_norms[-1] = norm[-1]
@@ -1003,7 +1004,7 @@ class HierarchicalPerception(object):
                                 posterior_policies,\
                                 prior_context,\
                                 policies,\
-                                context=None,argmax = True):
+                                context=None,argmax = False):
 
 
         post_policies = (prior_context[np.newaxis,:] * posterior_policies).sum(axis=1)
@@ -1035,8 +1036,6 @@ class HierarchicalPerception(object):
             # todo: recalc
             #outcome_surprise = ((states * prior_context[np.newaxis,:]).sum(axis=1)[:,np.newaxis] * (scs.digamma(beta_prime[reward]) - scs.digamma(beta_prime.sum(axis=0)))).sum(axis=0)
             if t>0:
-                if (tau >= 141):
-                    a=0
                 outcome_surprise = (posterior_policies * ln(self.fwd_norms.prod(axis=0))).sum(axis=0)
                 entropy = - (posterior_policies * ln(posterior_policies)).sum(axis=0)
                 #policy_surprise = (post_policies[:,np.newaxis] * scs.digamma(alpha_prime)).sum(axis=0) - scs.digamma(alpha_prime.sum(axis=0))

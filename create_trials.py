@@ -17,7 +17,19 @@ import json
 import pandas as pd 
 
 
-#%%
+
+state_transition_matrix = np.zeros([6,6,2])
+
+m = [1,2,3,4,5,0]
+for r, row in enumerate(state_transition_matrix[:,:,0]):
+    row[m[r]] = 1
+
+j = np.array([5,4,5,6,2,2])-1
+for r, row in enumerate(state_transition_matrix[:,:,1]):
+    row[j[r]] = 1
+
+
+
 
 ''' 
 creates all permutations of a vector r which holds possible digits
@@ -65,21 +77,10 @@ def create_path(conf, p, stm, sequence, r):
 
 
 
-def generate_trials_df(planet_rewards, sequences):
+def generate_trials_df(planet_rewards, sequences, state_transition_matrix):
 
     # create state transition matrices
     nplanets = 6
-    state_transition_matrix = np.zeros([6,6,2])
-
-    m = [1,2,3,4,5,0]
-    for r, row in enumerate(state_transition_matrix[:,:,0]):
-        row[m[r]] = 1
-
-    j = np.array([5,4,5,6,2,2])-1
-    for r, row in enumerate(state_transition_matrix[:,:,1]):
-        row[j[r]] = 1
-
-
 
     # reward probabiltiy vector
     p = [0.95, 0.05, 0.95]
@@ -186,6 +187,7 @@ def generate_trials_df(planet_rewards, sequences):
 
 def all_possible_trials(habit_seq=3, shuffle=False, extend=False):
     
+
     np.random.seed(1)
     ns=6
     all_rewards = [[-1,1,1], [1,1,-1]]
@@ -196,7 +198,7 @@ def all_possible_trials(habit_seq=3, shuffle=False, extend=False):
     planet_confs = [None for nn in range(2)]
     
     for ri, rewards in enumerate(all_rewards):
-        slices[ri], planet_confs[ri] = generate_trials_df(rewards, sequences)
+        slices[ri], planet_confs[ri] = generate_trials_df(rewards, sequences, state_transition_matrix)
 
 
     data = [[] for i in range(len(sequences))]
@@ -244,7 +246,7 @@ def create_trials_planning(data, habit_seq = 3, contingency_degradation = True,\
                         switch_cues= False,\
                         training_blocks = 2,\
                         degradation_blocks = 1,\
-                        extinction_blocks = 2,\
+                        extinction_blocks = 1,\
                         interlace = True,\
                         block = None,\
                         trials_per_block = 28, export = True,blocked=False,shuffle=False,seed=1):
@@ -342,6 +344,7 @@ def create_trials_planning(data, habit_seq = 3, contingency_degradation = True,\
                 planning_trials[t,:] = split_data[planning_seqs[t]][contingency][rewards[ri]][0]
                 split_data[planning_seqs[t]][contingency][rewards[ri]] = \
                     np.roll(split_data[planning_seqs[t]][contingency][rewards[ri]], -1, axis=0)
+
                 np.random.shuffle(planning_trials)
 
             for mb in range(miniblocks):
@@ -374,6 +377,7 @@ def create_trials_planning(data, habit_seq = 3, contingency_degradation = True,\
     path = os.path.join(os.getcwd(),'config'+subfolder)
     fname = os.path.join(path, fname)
 
+    
 
     if export:
         config = {
@@ -549,6 +553,7 @@ def create_trials_two(data,
 
 
 
+
     if export:
         config = {
                   'context' : context.astype('int32').tolist(),
@@ -607,38 +612,15 @@ for con in conf:
 
 
 
-
+#%%
 
 combinations = []
-create_config_files_planning([4],[6],[70],shuffle=True,blocked=True,block=5)
-create_config_files_planning([4],[6],[70],shuffle=True)
-
+create_config_files_planning([4],[2],[42],shuffle=True,blocked=True,block=3)
+# create_config_files_planning([2],[1],[42],shuffle=True)
+# create_config_files_planning([4],[2],[42],shuffle=True)
 
 # create_config_files([3],[1],[70],shuffle=True,blocked=True,block=5)
 # create_config_files([3],[1],[70],shuffle=True)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -673,11 +655,51 @@ import json
 import pandas as pd
 import numpy as np
 
-f = open('config/shuffled/planning_config_degradation_1_switch_0_train3_degr1_n70.json')
+
+
+f = open('config/shuffled_and_blocked/planning_config_degradation_1_switch_0_train2_degr1_n42.json')
+
 data = json.load(f)
 df = pd.DataFrame.from_dict(data)
-df.head(50)
+df.head(10)
 
+
+# planet_positions = np.array(df['planets'].to_list())
+# # planet_positions = planet_positions[:5,:]
+
+planets = np.array([1,3,5])
+
+    
+for ind in df.index:
+    # planets[np.array(df['planets'][ind])]
+    df['planets'][ind] = planets[df['planets'][ind]]
+    df['starts'][ind] = df['starts'][ind] +  1; 
+
+    if df['context'][ind] == 0:
+        mode = 'habit_training'
+    else:
+        mode = 'planning'
+
+    df['context'][ind] = mode
+
+
+
+config_file = {
+    'conditionsExp' : {
+        'planets' : np.stack(df['planets'].to_numpy()).tolist(), 
+        'starts' : df['starts'].tolist(),
+        'contexts' : df['context'].tolist(),
+        'planetRewardProbs' : [[0.95, 0, 0   , 0, 0   ],
+                         [0.05, 0, 0.95, 0, 0.05 ],
+                         [0   , 0, 0.05, 0, 0.95]], 
+        'planetRewards' : [-1,0,1], 
+        'stateTransitionMatrix' : state_transition_matrix.tolist()   
+    }
+}
+
+
+with open('sat_config.json', 'w') as f:
+    json.dump(config_file, f)
 
 #%%
 

@@ -357,21 +357,7 @@ class BayesianPlanner(object):
     #this function creates a reward matrix for the given planet constelation
     def initiate_planet_rewards(self):#,tau):
             
-
         gen_mod_rewards = np.zeros([self.nr, self.nh, self.nc])
-
-        # if tau ==502:
-        #     planet_reward_probs = np.array([[0.95, 0   , 0   ],
-        #                     [0.05, 0.95, 0.05],
-        #                     [0,    0.05, 0.95]])    # npl x nr
-
-        #     planet_reward_probs_switched = np.array([[0   , 0    , 0.95],
-        #                             [0.05, 0.95 , 0.05],
-        #                             [0.95, 0.05 , 0.0]]) 
-        #     self.perception.generative_model_rewards = np.zeros([self.nr, self.npl, self.nc])
-        #     self.perception.generative_model_rewards[:,:,:2] = planet_reward_probs[...,None]
-        #     self.perception.generative_model_rewards[:,:,2:] =  planet_reward_probs_switched[...,None]
-            
 
         for p in range(self.nh):
             gen_mod_rewards[:,p,:] =\
@@ -379,11 +365,13 @@ class BayesianPlanner(object):
         
         return gen_mod_rewards
 
+
     def update_beliefs(self, tau, t, observation, reward, response, context=None):
         
         self.observations[tau,t] = observation
         self.rewards[tau,t] = reward
         self.perception.planets = self.planets
+
         if context is not None:
             self.context_obs[tau] = context
 
@@ -393,8 +381,7 @@ class BayesianPlanner(object):
             possible_policies = np.where(self.policies[:,t-1]==response)[0]
             self.possible_polcies = np.intersect1d(self.possible_polcies, possible_policies)
             self.log_probability += ln(self.posterior_actions[tau,t-1,response])
-            # if t == 3 and self.possible_polcies[0] != 3 and self.possible_polcies[0] != 6:
-            #     print('suboptimal',tau) 
+
         self.perception.current_gen_model_rewards = self.initiate_planet_rewards()#tau)
         self.posterior_states[tau, t] = self.perception.update_beliefs_states(
                                          tau, t,
@@ -464,11 +451,7 @@ class BayesianPlanner(object):
                                                             self.posterior_context[tau,t])
 
         if self.learn_rew and t>0:#==self.T-1:
-            # if t ==1:
-            #     print(tau)
-            # if hasattr(self,  'trial_type'):
-            #     if not self.trial_type[tau] == 2:
-            # print('NOT UNLEARNING')
+
             self.posterior_dirichlet_rew[tau,t] = self.perception.update_beliefs_dirichlet_rew_params(tau, t, \
                                                     reward, \
                                                     self.posterior_states[tau, t], \
@@ -496,13 +479,13 @@ class BayesianPlanner(object):
                 # print('\naveraged:\n', post_pol.round(2))
             # except:
                 # pass
-        if t == 0:
-            print(tau,t)
-            try:
-                # print('\naveraged:\n', post_pol.round(2))
-                print('\naction:\n', self.posterior_actions[tau,t].round(2))
-            except:
-                pass
+        # if t == 0:
+        #     print(tau,t)
+        #     try:
+        #         # print('\naveraged:\n', post_pol.round(2))
+        #         print('\naction:\n', self.posterior_actions[tau,t].round(2))
+        #     except:
+        #         pass
 
         # if self.trial_type[tau] == 2:
         #     executed = self.actions[280:tau,:-1]
@@ -520,7 +503,6 @@ class BayesianPlanner(object):
         posterior_policies = np.einsum('pc,c->p', self.posterior_policies[tau, t], self.posterior_context[tau, t])
         posterior_policies /= posterior_policies.sum()
         
-        # average likelihood refers to averaging over contexts
         avg_likelihood = np.einsum('pc,c->p', self.likelihood[tau,t], self.posterior_context[tau, t])
         avg_likelihood /= avg_likelihood.sum()
         prior = np.einsum('pc,c->p', self.prior_policies[tau-1], self.posterior_context[tau, t])
@@ -530,9 +512,7 @@ class BayesianPlanner(object):
         non_zero = posterior_policies > 0
         controls = self.policies[:, t]#[non_zero]
         actions = np.unique(controls)
-        # posterior_policies = posterior_policies[non_zero]
-        # avg_likelihood = avg_likelihood[non_zero]
-        # prior = prior[non_zero]
+
 
         self.actions[tau, t] = self.action_selection.select_desired_action(tau,
                                         t, posterior_policies, controls, avg_likelihood, prior)

@@ -61,6 +61,7 @@ import time
 import matplotlib.gridspec as gridspec
 import string
 import matplotlib.patheffects as pe
+import sys
 
 
 
@@ -218,10 +219,17 @@ def run_single_sim(lst,
 
    
     fname = os.path.join(os.path.join(os.getcwd(),'temp'), fname)
+
+    # windows
+    if sys.platform == 'win32':
+        fname = fname.replace('/','\\')
+        print(fname)
+
     jsonpickle_numpy.register_handlers()
     pickled = pickle.encode(worlds)
     with open(fname, 'w') as outfile:
         json.dump(pickled, outfile)
+
 
 
     return fname
@@ -367,9 +375,13 @@ def load_file_names(arrays, use_fitting=False,plotting_gammas=False):
 
 
         fname +=  '_extinguish.json'
+        
+         # windows
+        if sys.platform == 'win32':
+            fname = fname.replace('/','\\')
+            print(fname)
 
-        names.append(fname)
-
+            names.append(fname)
 
     return names
 
@@ -913,7 +925,9 @@ def load_df_reward_dkl(names,data_folder='temp',nc=4):
         for w in range(nw):
             q = reward_probs[w]
             e = (db+tb)*tpb
-            q[e:,:,:,:,:] = np.tile(q[e-1,:,:,:,:], (2*tpb,1,1,1,1))
+            # q[e:,:,:,:,:] = np.tile(q[e-1,:,:,:,:], (2*tpb,1,1,1,1))
+            q[e:,:,:,:,:] = np.tile(q[e-1,:,:,:,:], (tpb,1,1,1,1))
+
             q[q == 0] = 10**(-300)
             norm = 1/(q.sum(axis=2))
             q = np.einsum('etrpc, etpc -> etrpc', q, norm)
@@ -1203,6 +1217,12 @@ def plot_all(lst,hs=[[1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]],utility
                 [l[5]], [l[6]], [l[7]],[l[8]],[l[9]],[l[10]], utility, [l[11]]] 
         print(names_arrays)
         data_folder = 'temp/'+l[11]
+                
+        # windows
+        if sys.platform == "win32":
+            data_folder = data_folder.replace('/', '\\')
+            print(data_folder)
+
         names = load_file_names(names_arrays)
         df = load_df(names, data_folder=data_folder,extinguish=extinguish)
         df_dkl = load_df_reward_dkl(names, data_folder=data_folder)
@@ -1466,8 +1486,8 @@ def plot_all(lst,hs=[[1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]],utility
                     ax.set_ylabel('Average DKL',fontsize=y_fs, labelpad=5)
                     ax.set_xlabel('Trial', fontsize=x_fs, labelpad = x_pad)
 
-            fname = '/figs_paper/multiple/'+ l[-1] + '_'
-
+            # fname = 'figs_paper/multiple/'+ l[-1] + '_'
+            fname = 'figs/'+ l[-1] + '_'
             if testing:
                 fname += '_'.join(['multiple_all','switch', str(int(l[0])), 'degr', str(int(l[1])),\
                     'learn', str(int(l[2])), 'q', str(l[3]),\
@@ -1482,6 +1502,12 @@ def plot_all(lst,hs=[[1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]],utility
             #            fnames = os.path.join(os.getcwd(), fname)
             fnames = os.getcwd() + '/' + fname
             print(fname)
+            
+            # windows
+            if sys.platform == "win32":
+                fnames = fnames.replace('/','\\')
+                print(fname)
+
             ratio = [0.333, 0.5, 0.22]
 
             for n, ax in enumerate([ax0, ax1, ax2]):
@@ -1496,24 +1522,21 @@ def plot_all(lst,hs=[[1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]],utility
 nc = 4
 extinguish = True
 
-
-
-hs =  [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]
-# h = [40]
+hs = [1,100]
 cue_ambiguity = [0.8]                       
 context_trans_prob = [0.85]
 cue_switch = [False]
 reward_naive = [True]
 training_blocks = [4]
-degradation_blocks=[6]
+degradation_blocks=[2,1]
 degradation = [True]
-trials_per_block=[70]
+trials_per_block=[42]
 dec_temps = [1]
 rews = [0]
-dec_temp_cont = [10]
-utility = [[1, 9 , 90]]
+dec_temp_cont = [1]
 conf = ['shuffled_and_blocked']
 
+utility = [[1, 9 , 90]]
 
 arrays = [cue_switch, degradation, reward_naive, context_trans_prob, cue_ambiguity,\
         training_blocks, degradation_blocks, trials_per_block,dec_temps, dec_temp_cont, rews, conf]
