@@ -332,6 +332,23 @@ if __name__ == '__main__':
 
     nc = 4
 
+    # h =  [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]
+    # # h = [1,100]
+    # cue_ambiguity = [0.8]                       
+    # context_trans_prob = [0.85]
+    # cue_switch = [False]
+    # reward_naive = [True]
+    # training_blocks = [4]
+    # degradation_blocks=[2]
+    # degradation = [True]
+    # trials_per_block=[42]
+    # dec_temps = [1]
+    # rews = [0]
+    # dec_context = [1]
+    # utility = [[1, 9 , 90]]
+    # conf = ['shuffled_and_blocked']
+
+
     h =  [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]
     # h = [1,100]
     cue_ambiguity = [0.8]                       
@@ -345,13 +362,25 @@ if __name__ == '__main__':
     dec_temps = [1]
     rews = [0]
     dec_context = [1]
-
     utility = [[1, 9 , 90]]
-
-
     conf = ['shuffled']
 
-
+    # h =  [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]
+    h = [1,100]
+    cue_ambiguity = [0.8]                       
+    context_trans_prob = [0.65]
+    cue_switch = [False]
+    reward_naive = [True]
+    training_blocks = [6]
+    degradation_blocks=[6]
+    degradation = [True]
+    trials_per_block=[42]
+    dec_temps = [2]
+    rews = [0]
+    # for determinstic context update do a 100 
+    dec_context = [4]
+    utility = [[1, 9 , 90]]
+    conf = ['shuffled_and_blocked']
 
 
     data_folder = 'temp'
@@ -364,5 +393,6 @@ if __name__ == '__main__':
     arrays = [cue_switch, degradation, reward_naive, context_trans_prob, cue_ambiguity,h,\
             training_blocks, degradation_blocks, trials_per_block,dec_temps, dec_context, rews, utility, conf]
 
-
+    # pooled(arrays,repetitions = 1,check_missing=False,debugging=True)
     pooled(arrays,repetitions = 10,check_missing=False,debugging=False)
+ 

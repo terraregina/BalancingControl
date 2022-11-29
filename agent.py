@@ -381,6 +381,13 @@ class BayesianPlanner(object):
 
     def update_beliefs(self, tau, t, observation, reward, response, context=None):
         
+
+        # if self.trial_type[tau] == 1:
+            # self.perception.generative_model_context = np.array([[1.99e-01, 5.00e-04, 8.00e-01, 5.00e-04],
+            #                                                           [5.00e-04, 1.99e-01, 5.00e-04, 8.00e-01]])
+
+            # print('changed observations', '\n', self.perception.generative_model_context)
+            
         self.observations[tau,t] = observation
         self.rewards[tau,t] = reward
         self.perception.planets = self.planets
@@ -413,6 +420,10 @@ class BayesianPlanner(object):
 #                prior_context = np.dot(self.perception.transition_matrix_context, self.posterior_context[tau, t-1])
 
 
+        # if tau > 419:
+        #     if t == 0:
+        #         print('\n',tau ,self.context_obs[tau])
+
         if self.nc>1 and t>=0:
             
             if hasattr(self, 'context_obs'): 
@@ -429,6 +440,10 @@ class BayesianPlanner(object):
                                                 prior_context, \
                                                 self.policies,\
                                                 context=c_obs)
+        # if tau > 419:
+        #     # if t == 0:
+        #     #     print(tau ,self.context_obs[tau])
+        #     print(self.posterior_context[tau,t].round(5))
 
         # if self.trial_type[tau] == 1 and t==0:
         #     if c_obs == 0:

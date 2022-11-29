@@ -292,6 +292,7 @@ def create_trials_planning(data, habit_seq = 3, contingency_degradation = True,\
         miniblocks = half_block//block
 
 
+
     for i in range(nblocks):
 
         if i >= training_blocks and i < training_blocks + degradation_blocks:
@@ -342,7 +343,7 @@ def create_trials_planning(data, habit_seq = 3, contingency_degradation = True,\
                 planning_trials[t,:] = split_data[planning_seqs[t]][contingency][rewards[ri]][0]
                 split_data[planning_seqs[t]][contingency][rewards[ri]] = \
                     np.roll(split_data[planning_seqs[t]][contingency][rewards[ri]], -1, axis=0)
-                np.random.shuffle(planning_trials)
+            np.random.shuffle(planning_trials)
 
             for mb in range(miniblocks):
                 tr = int(i*trials_per_block)
@@ -611,7 +612,10 @@ for con in conf:
 
 combinations = []
 # create_config_files_planning([4],[2],[42],shuffle=True,blocked=True,block=5)
-create_config_files_planning([4],[6],[70],shuffle=True,blocked=False)
+# create_config_files_planning([4],[6],[70],shuffle=True,blocked=False)
+create_config_files_planning([4],[2],[42],shuffle=True,blocked=True, block=3)
+# create_config_files_planning([4],[6],[42],shuffle=True,blocked=True, block=3)
+create_config_files_planning([6],[6],[42],shuffle=True,blocked=True, block=3)
 
 
 # create_config_files([3],[1],[70],shuffle=True,blocked=True,block=5)
@@ -672,11 +676,20 @@ create_config_files_planning([4],[6],[70],shuffle=True,blocked=False)
 import json 
 import pandas as pd
 import numpy as np
+import sys
 
-f = open('config/shuffled/planning_config_degradation_1_switch_0_train3_degr1_n70.json')
+fname = 'config/shuffled_and_blocked/planning_config_degradation_1_switch_0_train6_degr6_n42.json'
+if sys.platform == 'win32':
+   fname = fname.replace('/', '\\') 
+f = open(fname)
+
 data = json.load(f)
 df = pd.DataFrame.from_dict(data)
-df.head(50)
+
+exp_rewards = df.groupby('block').mean('exp_reward')['exp_reward']
+print(exp_rewards[:6].sum()/6)
+print(exp_rewards[6:12].sum()/6)
+# df.head(10)
 
 
 #%%

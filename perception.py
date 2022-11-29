@@ -1003,7 +1003,7 @@ class HierarchicalPerception(object):
                                 posterior_policies,\
                                 prior_context,\
                                 policies,\
-                                context=None,argmax = True):
+                                context=None):
 
 
         post_policies = (prior_context[np.newaxis,:] * posterior_policies).sum(axis=1)
@@ -1054,7 +1054,7 @@ class HierarchicalPerception(object):
             posterior = outcome_surprise + policy_surprise + entropy + context_obs_suprise
             posterior = np.nan_to_num(softmax(posterior+ln(prior_context)))
 
-            if argmax:
+            if self.dec_temp != 100:
                 # print('argmax context')
                 mode = np.argmax(posterior)
                 posterior = np.zeros(posterior.shape)
