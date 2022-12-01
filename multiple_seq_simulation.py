@@ -31,6 +31,7 @@ import multiprocessing.pool as mpp
 import tqdm
 from run_exampe_habit_v1 import run_agent
 import sys
+from sim_parameters import *
 
 import gc
 gc.enable()
@@ -147,8 +148,11 @@ def run_single_sim(lst,
     if reward_naive==True:
         reward_counts = np.ones([nr, npl, nc])
     else:
-        reward_counts = np.tile(planet_reward_probs.T[:,:,np.newaxis]*5,(1,1,nc))+1
-
+        # reward_counts = np.tile(planet_reward_probs.T[:,:,np.newaxis]*20,(1,1,nc))+1
+        reward_counts = np.ones([nr, npl, nc])
+        reward_counts[:,:,:2] = np.tile(planet_reward_probs.T[:,:,np.newaxis]*20,(1,1,2))+1
+        print('\nDoing different naive rewards')
+        print(reward_counts)
     par_list = [h,                        
                 context_trans_prob,
                 cue_ambiguity,            
@@ -331,56 +335,25 @@ if __name__ == '__main__':
     state_transition_matrix = np.repeat(state_transition_matrix[:,:,:,np.newaxis], repeats=nc, axis=3)
 
     nc = 4
-
-    # h =  [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]
-    # # h = [1,100]
-    # cue_ambiguity = [0.8]                       
-    # context_trans_prob = [0.85]
-    # cue_switch = [False]
-    # reward_naive = [True]
-    # training_blocks = [4]
-    # degradation_blocks=[2]
-    # degradation = [True]
-    # trials_per_block=[42]
-    # dec_temps = [1]
-    # rews = [0]
-    # dec_context = [1]
-    # utility = [[1, 9 , 90]]
-    # conf = ['shuffled_and_blocked']
-
-
-    h =  [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]
-    # h = [1,100]
-    cue_ambiguity = [0.8]                       
-    context_trans_prob = [0.85]
-    cue_switch = [False]
-    reward_naive = [True]
-    training_blocks = [4]
-    degradation_blocks=[6]
-    degradation = [True]
-    trials_per_block=[70]
-    dec_temps = [1]
-    rews = [0]
-    dec_context = [1]
-    utility = [[1, 9 , 90]]
-    conf = ['shuffled']
-
-    # h =  [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]
-    h = [1,100]
-    cue_ambiguity = [0.8]                       
-    context_trans_prob = [0.65]
-    cue_switch = [False]
-    reward_naive = [True]
-    training_blocks = [6]
-    degradation_blocks=[6]
-    degradation = [True]
-    trials_per_block=[42]
-    dec_temps = [2]
-    rews = [0]
-    # for determinstic context update do a 100 
-    dec_context = [4]
-    utility = [[1, 9 , 90]]
-    conf = ['shuffled_and_blocked']
+    if importing:
+        pass
+    else:
+        # h =  [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]
+        h = [1,100]
+        cue_ambiguity = [0.8,0.9,0.7]                       
+        context_trans_prob = [0.75,0.65,0.55]
+        cue_switch = [False]
+        reward_naive = [False]
+        training_blocks = [6]
+        degradation_blocks=[6]
+        degradation = [True]
+        trials_per_block=[42]
+        dec_temps = [1,2,4]
+        rews = [0]
+        # for determinstic context update do a 100 
+        dec_context = [1,2,4]
+        utility = [[1, 9 , 90]]
+        conf = ['shuffled_and_blocked']
 
 
     data_folder = 'temp'
@@ -395,4 +368,3 @@ if __name__ == '__main__':
 
     # pooled(arrays,repetitions = 1,check_missing=False,debugging=True)
     pooled(arrays,repetitions = 10,check_missing=False,debugging=False)
- 

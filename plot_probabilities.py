@@ -34,6 +34,7 @@ import multiprocessing.pool as mpp
 import tqdm
 from run_exampe_habit_v1 import run_agent
 
+#%%
 # def load_df(names,data_folder='data', extinguish=None):
 
 #     if extinguish is None:
@@ -225,25 +226,7 @@ from run_exampe_habit_v1 import run_agent
 
 #     return data
 
-# name = 'multiple_hier_switch0_degr1_p0.8_learn_rew1_q0.85_h1_42_66_decp1_decc4_rew0_u1-9-90_shuffled_and_blocked_extinguish.json'
-# fname = '/temp/'+ conf[0] + '/' + name
-# fname = (os.getcwd()+fname).replace('/','\\')
-
-# jsonpickle_numpy.register_handlers()
-
-# with open(fname, 'r') as infile:
-#     data = json.load(infile)
-
-# worlds = pickle.decode(data)
-# posterior_context = worlds[0].agent.posterior_context[:,0,:]
-# trial_type = worlds[-1]['trial_type']
-# context_cue = worlds[0].environment.context_cues
-
-
-# for t in range(trial_type.size):
-#     print(t)
-
-# #%%
+#%%
 nc = 4
 extinguish = True
 
@@ -264,7 +247,8 @@ utility = [[1, 9 , 90]]
 conf = ['shuffled_and_blocked']
 
 
-name = 'multiple_hier_switch0_degr1_p0.8_learn_rew1_q0.85_h1_42_66_decp6_decc6_rew0_u1-9-90_shuffled_and_blocked_extinguish.json'
+# name = 'multiple_hier_switch0_degr1_p0.8_learn_rew1_q0.85_h1_42_66_decp6_decc6_rew0_u1-9-90_shuffled_and_blocked_extinguish.json'
+name = 'multiple_hier_switch0_degr1_p0.8_learn_rew1_q0.75_h1_42_66_decp1_decc1_rew0_u1-9-90_shuffled_and_blocked_extinguish.json'
 fname = os.path.join('/'+conf[0] + '/' + name)
 fname = fname.replace('/','\\')
 # fname = name
@@ -289,45 +273,50 @@ for f,fname in enumerate(names):
     with open(fname, 'r') as infile:
         data = json.load(infile)
 
+    #agent data
     worlds = pickle.decode(data)
     meta = worlds[-1]
     worlds = worlds[:-1]
-    nagents = len(worlds)
     agents = [w.agent for w in worlds]
     perceptions = [a.perception for a in agents]
     actions = [a.posterior_actions for a in agents]
+    
+    #constants
+    nagents = len(worlds)
     ntrials = actions[0].shape[0]
-    context_cues =np.tile(worlds[0].environment.context_cues,nagents)
     policies = agents[0].policies
-    agnt = np.arange(nagents).repeat(ntrials)
     tt = actions[0].shape[1]
+    nblocks = meta['nblocks']
     optimal_policy = agents[0].true_optimal
+    
+    # data frame entries shared across agents
+    agnt = np.arange(nagents).repeat(ntrials)
     trial = np.tile(np.arange(ntrials),nagents)
     db = meta['degradation_blocks']
     tb = meta['training_blocks']
     tpb = meta['trials_per_block']
-    nblocks = meta['nblocks']
     trial_type = np.tile(np.array(meta['trial_type']), nagents)
+    context_cues =np.tile(worlds[0].environment.context_cues,nagents)
+
     nth_trial = np.zeros(ntrials)
     nth_trial[:tb*tpb] = np.arange(tb*tpb)
     nth_trial[tb*tpb:(tb+db)*tpb] = np.arange(db*tpb)
     nth_trial[tb*tpb + db*tpb:] = np.arange((nblocks-(tb+db))*tpb)
     nth_trial = np.tile(nth_trial,nagents)
-    print(meta.keys())
-
-
+    
+    # data frame entries calculated separately for each agent
 
     # Probability to select first action correctly
-    tp = 0
-    optimal_action_t0 = policies[optimal_policy][:,tp]
-    op_action_prob_t0 = np.zeros([nagents,ntrials])
-    for ai, agent in enumerate(agents):
-        for t in range(ntrials):
-            op_action_prob_t0[ai,t] = agent.posterior_actions[t,tp,optimal_action_t0[t]]
-    
-    op_action_prob_t0 = op_action_prob_t0.reshape(nagents*ntrials)
+    action_probs = np.zeros([nagents*ntrials, 3])
+    for tp in range(3):
+        optimal_action_at_tp = policies[optimal_policy][:,tp]
+        optimal_action_probability = np.zeros([nagents,ntrials])
 
-
+        for ai, agent in enumerate(agents):
+            for t in range(ntrials):
+                optimal_action_probability[ai,t] = agent.posterior_actions[t,tp,optimal_action_at_tp[t]]
+        
+        action_probs[:,tp] = optimal_action_probability.reshape(nagents*ntrials)
 
     # Posterior over contexts
 
@@ -335,10 +324,51 @@ for f,fname in enumerate(names):
         agent.posterior_context
 
 
-    df_dict = {'nth_trial':nth_trial, 'context_cues':context_cues, 'trial':trial, 'action_prob': op_action_prob_t0, 'trial_type' : trial_type, 'agent':agnt}
+    df_dict = {'agent':agnt, 'trial_type' : trial_type, 'trial':trial, 'nth_trial':nth_trial, 'context_cues':context_cues, 
+               'prob_action_t0': action_probs[:,0], 'prob_action_t1': action_probs[:,1], 'prob_action_t2': action_probs[:,2]}
     df = pd.DataFrame(df_dict)
-    df.groupby(['trial_type', 'context_cues']).mean('op_action_prob_t0')
+    df.groupby(['trial_type', 'context_cues']).mean('prob_action_t0')
+
+
 
 # %%
+conf = ['shuffled_and_blocked']
+name = 'multiple_hier_switch0_degr1_p0.8_learn_rew1_q0.85_h100_42_66_decp1_decc1_rew0_u1-9-90_shuffled_and_blocked_extinguish.json'
+fname = '/temp/'+ conf[0] + '/' + name
+fname = (os.getcwd()+fname).replace('/','\\')
 
-%%
+jsonpickle_numpy.register_handlers()
+
+with open(fname, 'r') as infile:
+    data = json.load(infile)
+
+worlds = pickle.decode(data)
+posterior_context = worlds[0].agent.posterior_context
+trial_type = worlds[-1]['trial_type']
+context_cue = worlds[0].environment.context_cues
+tp = 1
+cont0 = posterior_context[:,tp,0].round(5)
+cont1 = posterior_context[:,tp,1].round(5)
+cont2 = posterior_context[:,tp,2].round(5)
+cont3 = posterior_context[:,tp,3].round(5)
+
+df_dict = {'trial':np.arange(len(trial_type)), 'trial_type':trial_type, 'context_cue':context_cue,
+           'c0':cont0,'c1':cont1,'c2':cont2,'c3':cont3}
+
+df = pd.DataFrame(df_dict)
+df.to_excel('test.xlsx')
+# def categorize(row):
+#     if row['trial_type'] == 0 and row['context_cue'] == 0:
+#         return 0
+#     elif row['trial_type'] == 0 and row['context_cue'] == 1:
+#         return 1
+#     elif row['trial_type'] == 1 and row['context_cue'] == 0:
+#         return 2
+#     elif row['trial_type'] == 1 and row['context_cue'] == 1:
+#         return 3
+#     elif row['trial_type'] == 2:
+#         return -1
+
+# df['true_context'] = df.apply(lambda row: categorize(row), axis=1)
+# df['inferred_context'] = df[['c0', 'c1', 'c2','c3']].max(axis=1) == df['true_context'] 
+# %%

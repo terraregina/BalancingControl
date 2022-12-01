@@ -383,8 +383,8 @@ class BayesianPlanner(object):
         
 
         # if self.trial_type[tau] == 1:
-            # self.perception.generative_model_context = np.array([[1.99e-01, 5.00e-04, 8.00e-01, 5.00e-04],
-            #                                                           [5.00e-04, 1.99e-01, 5.00e-04, 8.00e-01]])
+        #     self.perception.generative_model_context = np.array([[1.99e-01, 5.00e-04, 8.00e-01, 5.00e-04],
+        #                                                               [5.00e-04, 1.99e-01, 5.00e-04, 8.00e-01]])
 
             # print('changed observations', '\n', self.perception.generative_model_context)
             
@@ -421,6 +421,10 @@ class BayesianPlanner(object):
 
 
         # if tau > 419:
+        #     if self.context_obs[tau] == 1:
+        #         print('\n',tau, t, self.planets, observation)
+        #         print('planet: ', self.planets[observation], ' reward: ', reward)
+
         #     if t == 0:
         #         print('\n',tau ,self.context_obs[tau])
 
@@ -440,34 +444,45 @@ class BayesianPlanner(object):
                                                 prior_context, \
                                                 self.policies,\
                                                 context=c_obs)
+
         # if tau > 419:
         #     # if t == 0:
         #     #     print(tau ,self.context_obs[tau])
         #     print(self.posterior_context[tau,t].round(5))
+        # print('\n',tau, t, self.planets)
+        # print(self.context_obs[tau])
+        # print('planet: ', self.planets[observation], ' reward: ', reward)
+        # print(self.posterior_context[tau,t].round(3), 'posterior context')
+        # print(prior_context.round(3), 'prior context')
+        # print(self.outcome_suprise[tau,t].round(3), 'outcome surprise')
+        # print(self.policy_entropy[tau,t].round(3), 'policy entropy')
+        # print(self.context_obs_suprise[tau,t].round(3), 'observation suprise')
 
-        # if self.trial_type[tau] == 1 and t==0:
-        #     if c_obs == 0:
-        #         self.posterior_context[tau,t,:] = np.array([0.09,0.005, 0.9, 0.005])
-        #     elif c_obs == 1:
-        #         self.posterior_context[tau,t,:] = np.array([0.005,0.09, 0.005,0.9])            # print(tau,t, self.policy_entropy[tau,t,:])
-        # else:
-        #     self.posterior_context[tau,t] = 1
-        
-        # if self.trial_type[tau] == 2:
-        #     print('\n', tau,t, 'planet: ', self.planets[observation], ' reward: ', reward)
-        #     # print(self.outcome_suprise[tau,:][:,[0,2]].round(3), ' outcome suprise')
-        #     # print(self.policy_entropy[tau,:][:,[0,2]].round(3),' policy entropy')
-        #     # print(self.policy_surprise[tau,:][:,[0,2]].round(3),'  policy surprise')
-        #     # print(self.context_obs_suprise[tau,:][:,[0,2]].round(3), ' context obs suprise')
-        #     # print(self.posterior_context[tau,:][:,[0,2]].round(3), ' posterior_context')
+        if False:
+            inferred_context = np.argmax(self.posterior_context[tau,t])
+            if self.trial_type[tau] == 0 and self.context_obs[tau] == 0:
+                true_context = 0
+            elif self.trial_type[tau] == 0 and self.context_obs[tau] == 1:
+                true_context = 1
+            elif self.trial_type[tau] == 1 and self.context_obs[tau] == 0:
+                true_context = 2
+            elif self.trial_type[tau] == 1 and self.context_obs[tau] == 1:
+                true_context = 3  
+            inferred_correct_context = inferred_context == true_context
+            
+            if t == 0:
+                print('\n\n',tau, self.context_obs[tau])
+            print(self.posterior_context[tau,t].round(5), inferred_correct_context)
+            
+            if not inferred_correct_context and self.trial_type[tau] == 1:
+                print('\n', self.planets, 'planet: ', self.planets[observation], ' reward: ', reward)
+                print(self.posterior_context[tau,t].round(5), 'posterior context')
+                print(prior_context.round(3), 'prior context')
+                print(self.outcome_suprise[tau,t].round(3), 'outcome surprise')
+                print(self.policy_entropy[tau,t].round(3), 'policy entropy')
+                print(self.context_obs_suprise[tau,t].round(3), 'observation suprise')
+                a=0
 
-        #     print(ln(self.pr_cont).round(3), ' prior context')
-        #     print(self.outcome_suprise[tau,t].round(3), ' outcome suprise')
-        #     print(self.policy_entropy[tau,t].round(3),' policy entropy')
-        #     print(self.policy_surprise[tau,t].round(3),'  policy surprise')
-        #     print(self.context_obs_suprise[tau,t].round(3), ' context obs suprise')
-        #     print(self.pr_cont + self.outcome_suprise[tau,t] + self.policy_entropy[tau,t] + self.policy_surprise[tau,t] + self.context_obs_suprise[tau,t])
-        #     print(self.posterior_context[tau,t].round(3), ' posterior_context')
 
         if t < self.T-1:
             post_pol = np.dot(self.posterior_policies[tau, t], self.posterior_context[tau, t])

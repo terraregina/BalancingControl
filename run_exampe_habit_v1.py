@@ -81,14 +81,22 @@ def run_agent(par_list, trials, T, ns=6, na=2, nr=3, nc=2, npl=2, added=None, us
     initialize context transition matrix
     """
 
+    # p = context_trans_prob
+    # q = (1-p)/(nc-1)
+
+    # transition_matrix_context = np.zeros([nc,nc]) + q
+    # transition_matrix_context = transition_matrix_context - np.eye(nc)*q + np.eye(nc)*p 
+
     p = context_trans_prob
-    q = (1-p)/(nc-1)
+    q = (1 - p)/4
 
-    transition_matrix_context = np.zeros([nc,nc]) + q
-    transition_matrix_context = transition_matrix_context - np.eye(nc)*q + np.eye(nc)*p 
-
-
-
+    transition_matrix_context = np.array([\
+        [p,    q*2,  q,    q  ],
+        [q*2,  p,    q,    q  ],
+        [q,    q,    p,    q*2],
+        [q,    q,    q*2,  p  ]
+    ])
+    print('\n\nbiased transition matrix\n', transition_matrix_context)
     """ 
     create environment class
     """
@@ -136,9 +144,12 @@ def run_agent(par_list, trials, T, ns=6, na=2, nr=3, nc=2, npl=2, added=None, us
     set context prior
     """
 
-    prior_context = np.zeros((nc)) + 0.1/(nc-1)
-    prior_context[0] = 0.9
+    # prior_context = np.zeros((nc)) + 0.1/(nc-1)
+    # prior_context[0] = 0.9
+    prior_context = np.zeros((nc)) + 0.1/(nc-2)
+    prior_context[:2] = (1 - 0.1)/2
 
+    print('\nprior_context', prior_context)
     """
     define generative model for context
     """
@@ -146,11 +157,22 @@ def run_agent(par_list, trials, T, ns=6, na=2, nr=3, nc=2, npl=2, added=None, us
 
     no =  np.unique(colors).size                    # number of observations (background color)
     C = np.zeros([no, nc])
-    p = cue_ambiguity                               # how strongly agent associates context observation with a particular context       
+
     dp = 0.001
-    p2 = 1 - p - dp
+    p = cue_ambiguity                               # how strongly agent associates context observation with a particular context       
+    p2 = 1 - p
+    p -= dp/2
+    p2 -= dp/2
+   
     C[0,:] = [p,dp/2,p2,dp/2]
     C[1,:] = [dp/2, p, dp/2, p2]
+    print('\ngenerative model observations', C)
+
+    # p = cue_ambiguity                               # how strongly agent associates context observation with a particular context       
+    # dp = 0.001
+    # p2 = 1 - p - dp
+    # C[0,:] = [p,dp/2,p2,dp/2]
+    # C[1,:] = [dp/2, p, dp/2, p2]
 
     # C[0,:] = [p2,dp/2, p,dp/2]
     # C[1,:] = [dp/2, p2, dp/2, p]
@@ -400,6 +422,10 @@ def run_single_sim(lst,
         reward_counts = np.ones([nr, npl, nc])
     else:
         reward_counts = np.tile(planet_reward_probs.T[:,:,np.newaxis]*20,(1,1,nc))+1
+        # reward_counts = np.ones([nr, npl, nc])
+        # reward_counts[:,:,:2] = np.tile(planet_reward_probs.T[:,:,np.newaxis]*10,(1,1,2))+1
+        # print('\nDoing different naive rewards')
+        # print(reward_counts)
 
     par_list = [h,                        
                 context_trans_prob,

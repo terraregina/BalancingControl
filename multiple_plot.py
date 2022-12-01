@@ -1,5 +1,5 @@
 
-# %%
+# %%k
 import sys
 import pickle
 import seaborn as sns
@@ -62,272 +62,7 @@ import time
 import matplotlib.gridspec as gridspec
 import string
 import matplotlib.patheffects as pe
-
-
-
-def istarmap(self, func, iterable, chunksize=1):
-    """starmap-version of imap
-    """
-    self._check_running()
-    if chunksize < 1:
-        raise ValueError(
-            "Chunksize must be 1+, not {0:n}".format(
-                chunksize))
-
-    task_batches = mpp.Pool._get_tasks(func, iterable, chunksize)
-    result = mpp.IMapIterator(self)
-    self._taskqueue.put(
-        (
-            self._guarded_task_generation(result._job,
-                                          mpp.starmapstar,
-                                          task_batches),
-            result._set_length
-        ))
-    return (item for chunk in result for item in chunk)
-
-
-mpp.Pool.istarmap = istarmap
-
-
-def run_single_sim(lst,
-                    ns,
-                    na,
-                    npl,
-                    nc,
-                    nr,
-                    T,
-                    state_transition_matrix,
-                    planet_reward_probs,
-                    planet_reward_probs_switched,
-                    repetitions, use_fitting):
-
-
-    switch_cues, contingency_degradation, reward_naive, context_trans_prob, cue_ambiguity, h,\
-    training_blocks, degradation_blocks, trials_per_block, dec_temp, rew, util, config_folder = lst
-    
-    config = 'planning_config' + '_degradation_'+ str(int(contingency_degradation)) \
-                      + '_switch_' + str(int(switch_cues))                \
-                      + '_train' + str(training_blocks)                   \
-                      + '_degr' + str(degradation_blocks)                 \
-                      + '_n' + str(trials_per_block)+'.json'
-
-
-    folder = os.path.join(os.getcwd(),'config/' + config_folder)
-    file = open(os.path.join(folder,config))
-
-    task_params = js.load(file)                                                                                 
-    colors = np.asarray(task_params['context'])          # 0/1 as indicator of color
-    sequence = np.asarray(task_params['sequence'])       # what is the optimal sequence
-    starts = np.asarray(task_params['starts'])           # starting position of agent
-    planets = np.asarray(task_params['planets'])         # planet positions 
-    trial_type = np.asarray(task_params['trial_type'])
-    blocks = np.asarray(task_params['block'])
-
-
-    nblocks = int(blocks.max()+1)         # number of blocks
-    trials = blocks.size                  # number of trialsor
-    block = task_params['trials_per_block']           # trials per block
- 
-    meta = {
-        'trial_file' : config, 
-        'trial_type' : trial_type,
-        'switch_cues': switch_cues == True,
-        'contingency_degradation' : contingency_degradation == True,
-        'learn_rew' : reward_naive == True,
-        'context_trans_prob': context_trans_prob,
-        'cue_ambiguity' : cue_ambiguity,
-        'h' : h,
-        'optimal_sequence' : sequence,
-        'blocks' : blocks,
-        'trials' : trials,
-        'nblocks' : nblocks,
-        'degradation_blocks': task_params['degradation_blocks'],
-        'training_blocks': task_params['training_blocks'],
-        'interlace': task_params['interlace'],
-        'contingency_degrdataion': task_params['contingency_degradation'],
-        'switch_cues': task_params['switch_cues'],
-        'trials_per_block': task_params['trials_per_block']
-    }
-
-    all_optimal_seqs = np.unique(sequence)                                                                            
-
-    # reward probabilities schedule dependent on trial and planet constelation
-    Rho = np.zeros([trials, nr, ns])
-
-    for i, pl in enumerate(planets):
-        if i >= block*meta['training_blocks'] and i < block*(meta['training_blocks'] + meta['degradation_blocks']) and contingency_degradation:
-            # print(i)
-            # print(pl)
-            Rho[i,:,:] = planet_reward_probs_switched[tuple([pl])].T
-        else:
-            Rho[i,:,:] = planet_reward_probs[tuple([pl])].T
-
-    # u = 0.99
-    # utility = np.array([(1-u)/2,(1-u)/2,u])
-
-    utility = np.array([float(u)/100 for u in util])
-    # print(utility)
-
-    if reward_naive==True:
-        reward_counts = np.ones([nr, npl, nc])
-    else:
-        reward_counts = np.tile(planet_reward_probs.T[:,:,np.newaxis]*5,(1,1,nc))+1
-
-    par_list = [h,                        
-                context_trans_prob,
-                cue_ambiguity,            
-                'avg',                    
-                Rho,                      
-                utility,                  
-                state_transition_matrix,  
-                planets,                  
-                starts,                   
-                colors,
-                reward_counts,
-                1,
-                dec_temp,
-                rew]
-
-    prefix = 'multiple_'
-
-    if use_fitting == True:
-        prefix += 'fitt_'
-    else:
-        prefix +='hier_'
-
-    if switch_cues == True:
-        prefix += 'switch1_'
-    else:
-        prefix +='switch0_'
-
-    if contingency_degradation == True:
-        prefix += 'degr1_'
-    else:
-        prefix += 'degr0_'
-
-    fname = prefix +'p' + str(cue_ambiguity) +'_learn_rew' + str(int(reward_naive == True)) + '_q' + str(context_trans_prob) + '_h' + str(h)+ '_' +\
-    str(meta['trials_per_block']) +'_'+str(meta['training_blocks']) + str(meta['degradation_blocks']) +\
-    '_dec' + str(dec_temp)+ '_rew' + str(rew) + '_u' +  '-'.join(util) + '_' + config_folder
- 
-    fname +=  '_extinguish.json'
-
-    worlds = [run_agent(par_list, trials, T, ns , na, nr, nc, npl, added=[trial_type,sequence], use_fitting=use_fitting) for _ in range(repetitions)]
-    meta['trial_type'] = task_params['trial_type']
-    meta['optimal_sequence'] = task_params['sequence']
-
-    worlds.append(meta)
-
-   
-    fname = os.path.join(os.path.join(os.getcwd(),'temp'), fname)
-    jsonpickle_numpy.register_handlers()
-    pickled = pickle.encode(worlds)
-    with open(fname, 'w') as outfile:
-        json.dump(pickled, outfile)
-
-
-    return fname
-
-def pooled(arrays):
-    use_fitting = False
-
-    repetitions = 1
-
-    seed = 521312
-    np.random.seed(seed)
-    ar.manual_seed(seed)
-
-    lst = []
-    path = os.path.join(os.getcwd(),'temp')
-    existing_files = os.listdir(path)
-
-    for i in product(*arrays):
-        lst.append(list(i))
-
-
-    names = []
-
-    for li, l in enumerate(lst):
-        prefix = 'multiple_'
-        if l[0] == True:
-            prefix += 'switch1_'
-        else:
-            prefix +='switch0_'
-
-        if l[1] == True:
-            prefix += 'degr1_'
-        else:
-            prefix += 'degr0_'
-
-
-        l[11] = [str(entry) for entry in l[11]]
-        fname = prefix + 'p' + str(l[4])  +'_learn_rew' + str(int(l[2] == True))+ '_q' + str(l[3]) + '_h' + str(l[5]) + '_' +\
-        str(l[8]) + '_' + str(l[6]) + str(l[7]) + \
-        '_dec' + str(l[9]) +'_rew' + str(l[10]) + '_' + 'u'+  '-'.join(l[11]) + '_' + l[12]
-
-        if extinguish:
-            fname += '_extinguish.json'
-        else:
-            fname += '.json'
-        names.append([li, fname])
-
-
-    print('simulations to run: ' + str(len(lst)))
-
-    ca = [ns, na, npl, nc, nr, T, state_transition_matrix, planet_reward_probs,\
-        planet_reward_probs_switched,repetitions,use_fitting]
-
-    with Pool() as pool:
-
-        for _ in tqdm.tqdm(pool.istarmap(run_single_sim, zip(lst,\
-                                                repeat(ca[0]),\
-                                                repeat(ca[1]),\
-                                                repeat(ca[2]),\
-                                                repeat(ca[3]),\
-                                                repeat(ca[4]),\
-                                                repeat(ca[5]),\
-                                                repeat(ca[6]),\
-                                                repeat(ca[7]),\
-                                                repeat(ca[8]),\
-                                                repeat(ca[9]),\
-                                                repeat(ca[10]))),
-                        total=len(lst)):
-            pass
-    
-if __name__ == '__main__':
-
-
-    data_folder = 'temp'
-
-
-    extinguish = True
-
-    na = 2                                           # number of unique possible actions
-    nc = 4                                           # number of contexts, planning and habit
-    nr = 3                                           # number of rewards
-    ns = 6                                           # number of unique travel locations
-    npl = 3
-    steps = 3                                        # numbe of decisions made in an episode
-    T = steps + 1                                    # episode length
-
-
-    planet_reward_probs = np.array([[0.95, 0   , 0   ],
-                                    [0.05, 0.95, 0.05],
-                                    [0,    0.05, 0.95]]).T    # npl x nr
-    planet_reward_probs_switched = np.array([[0   , 0    , 0.95],
-                                            [0.05, 0.95 , 0.05],
-                                            [0.95, 0.05 , 0.0]]).T 
-    state_transition_matrix = np.zeros([ns,ns,na])
-    m = [1,2,3,4,5,0]
-    for r, row in enumerate(state_transition_matrix[:,:,0]):
-        row[m[r]] = 1
-    j = np.array([5,4,5,6,2,2])-1
-    for r, row in enumerate(state_transition_matrix[:,:,1]):
-        row[j[r]] = 1
-    state_transition_matrix = np.transpose(state_transition_matrix, axes= (1,0,2))
-    state_transition_matrix = np.repeat(state_transition_matrix[:,:,:,np.newaxis], repeats=nc, axis=3)
-
-
-# %matplotlib inline
+from sim_parameters import *
 
 # functions
 def load_file_names(arrays, use_fitting=False,plotting_gammas=False):
@@ -490,8 +225,10 @@ def load_df(names,data_folder='data', extinguish=None):
         trial = np.tile(np.repeat(np.arange(ntrials),nt), nw)
         run = np.repeat(np.arange(nw),nt*ntrials)
         run.astype('str')
-        inferred_context_t0 = np.zeros(ntrials*nw,dtype='int32')
-        inferred_context_t3  = np.zeros(ntrials*nw,'int32')
+        c0 = np.zeros(ntrials*nw,dtype='int32')
+        c1 = np.zeros(ntrials*nw,dtype='int32')
+        c2 = np.zeros(ntrials*nw,dtype='int32')
+        c3  = np.zeros(ntrials*nw,'int32')
         agnt = np.repeat(np.arange(nw)+f*nw,nt*ntrials)
         true_context = np.zeros(ntrials*nw, dtype='int32')
         no, nc = perception[0].generative_model_context.shape 
@@ -500,45 +237,77 @@ def load_df(names,data_folder='data', extinguish=None):
         if_inferred_context_switch = np.zeros(ntrials, dtype="int32")
 
         # c is an array holding what contexts should be for the given task trials [0,1,0,1,..2,3,2,3...0,1] etc
+        # to = np.zeros(ntrials, dtype="int32")
+
+        # for i in range(no):    
+        #     c = np.array([contexts[i][-1]]*(meta['trials_per_block']*meta['training_blocks'])\
+        #         + [contexts[i][-2]]*(meta['trials_per_block']*meta['degradation_blocks'])\
+        #         + [contexts[i][-1]]*meta['trials_per_block']*2)
+        #     to[np.where(context_cues == i)] = c[np.where(context_cues == i)]
+        #     # print(to)
+        #     if_inferred_context_switch[np.where(context_cues == i)] = c[np.where(context_cues == i)]
+        # inferred_switch = np.zeros(ntrials*nw,dtype='int32')
+        # context_optimality = np.zeros(ntrials*nw)
+
         to = np.zeros(ntrials, dtype="int32")
+        
         for i in range(no):    
-            c = np.array([contexts[i][-1]]*(meta['trials_per_block']*meta['training_blocks'])\
-                + [contexts[i][-2]]*(meta['trials_per_block']*meta['degradation_blocks'])\
-                + [contexts[i][-1]]*meta['trials_per_block']*2)
+            c = np.array([contexts[i][-2]]*(meta['trials_per_block']*meta['training_blocks'])\
+                + [contexts[i][-1]]*(meta['trials_per_block']*meta['degradation_blocks'])\
+                + [contexts[i][-2]]*meta['trials_per_block']*2)
             to[np.where(context_cues == i)] = c[np.where(context_cues == i)]
             # print(to)
             if_inferred_context_switch[np.where(context_cues == i)] = c[np.where(context_cues == i)]
-        inferred_switch = np.zeros(ntrials*nw,dtype='int32')
+        switch_t0 = np.zeros(ntrials*nw,dtype='int32')
+        switch_t1 = np.zeros(ntrials*nw,dtype='int32')
+        switch_t2 = np.zeros(ntrials*nw,dtype='int32')
+        switch_t3 = np.zeros(ntrials*nw,dtype='int32')
+
         context_optimality = np.zeros(ntrials*nw)
 
+
         for w in range(nw):
-            inferred_context_t0[w*ntrials:(w+1)*ntrials] = np.argmax(posterior_context[w][:,0,:],axis=1)
-            inferred_context_t3[w*ntrials:(w+1)*ntrials] = np.argmax(posterior_context[w][:,-1,:],axis=1)
-            inferred_switch[w*ntrials:(w+1)*ntrials] = if_inferred_context_switch == \
-                                                    inferred_context_t3[w*ntrials:(w+1)*ntrials]
+            c0[w*ntrials:(w+1)*ntrials] = np.argmax(posterior_context[w][:,0,:],axis=1)
+            c1[w*ntrials:(w+1)*ntrials] = np.argmax(posterior_context[w][:,1,:],axis=1)
+            c2[w*ntrials:(w+1)*ntrials] = np.argmax(posterior_context[w][:,2,:],axis=1)
+            c3[w*ntrials:(w+1)*ntrials] = np.argmax(posterior_context[w][:,3,:],axis=1)
+
+            switch_t0[w*ntrials:(w+1)*ntrials] = if_inferred_context_switch == \
+                                                    c0[w*ntrials:(w+1)*ntrials]
+            switch_t1[w*ntrials:(w+1)*ntrials] = if_inferred_context_switch == \
+                                                    c1[w*ntrials:(w+1)*ntrials]
+            switch_t2[w*ntrials:(w+1)*ntrials] = if_inferred_context_switch == \
+                                                    c2[w*ntrials:(w+1)*ntrials]
+            switch_t3[w*ntrials:(w+1)*ntrials] = if_inferred_context_switch == \
+                                                    c3[w*ntrials:(w+1)*ntrials]
+            
+            inferred_switch = np.logical_and(np.logical_and(np.logical_and(switch_t0, switch_t1), switch_t2) ,switch_t3)
             context_optimality[w*ntrials:(w+1)*ntrials] = np.cumsum(inferred_switch[w*ntrials:(w+1)*ntrials])\
                                                                 /(np.arange(ntrials)+1)
         true_context[w*ntrials:(w+1)*ntrials] = to
         inferred_switch = np.repeat(inferred_switch, nt)
-        inferred_context_t0 = np.repeat(inferred_context_t0, nt)
-        inferred_context_t3 = np.repeat(inferred_context_t3, nt)
+        inferred_context = np.concatenate((c0,c1,c2,c3))
+        inferred_switch = np.concatenate((switch_t0,switch_t1,switch_t2,switch_t3,))
         context_optimality = np.repeat(context_optimality, nt)
         true_context =  np.repeat(true_context, nt)
         t = np.tile(np.arange(4), nw*ntrials)
         
         # print(true_context.size)
         # print(trial_type.size)
-        d = {'trial_type':trial_type, 'run':run, 'trial':trial, 't':t, 'true_optimal':true_optimal,\
-                            'cue':cue, 'q':q, 'p':p, 'h':h, 'inferred_context_t0':inferred_context_t0,\
-                            'inferred_context_t3':inferred_context_t3, 'executed_policy':executed_policy,\
-                            'chose_optimal': chose_optimal, 'entropy_rew_c1': entropy_rewards[:,0], 'entropy_rew_c2': entropy_rewards[:,1], \
-                            'entropy_rew_c3': entropy_rewards[:,2] , 'entropy_rew_c4': entropy_rewards[:,3],\
-                            'policy_optimality':optimality,'agent':agnt, 'inferred_switch': inferred_switch,\
-                            'context_optimality':context_optimality, 'learn_rew': learn_rew, 'entropy_context':entropy_context, \
-                            'switch_cues':switch_cues, 'contingency_degradation': contingency_degradation,\
-                            'degradation_blocks': ndb, 'training_blocks':ntb, 'trials_per_block': tr_per_block,\
-                            'true_context': true_context, 'dec_temp':dec_temp, 'utility_0': utility_0, 'utility_1': utility_1, 'utility_2': utility_2,
-                            'r_lambda': r_lambda,'dec_temp_cont': dec_temp_cont} 
+        d = { 'agent':agnt, 'run':run, 'trial':trial, 't':t, 'trial_type':trial_type,'cue':cue,
+              'true_context': true_context,\
+            #  'c0':c0, 'c1':c1, 'c2':c2, 'c3':c3,\
+              'inferred_context': inferred_context,'inferred_switch': inferred_switch, 'context_optimality':context_optimality,
+        
+        'true_optimal':true_optimal, 'executed_policy':executed_policy,'chose_optimal': chose_optimal,\
+        'policy_optimality':optimality, \
+        'entropy_rew_c1': entropy_rewards[:,0], 'entropy_rew_c2': entropy_rewards[:,1], \
+        'entropy_rew_c3': entropy_rewards[:,2], 'entropy_rew_c4': entropy_rewards[:,3],\
+        'learn_rew': learn_rew, 'entropy_context':entropy_context, \
+        'switch_cues':switch_cues, 'contingency_degradation': contingency_degradation,\
+        'degradation_blocks': ndb, 'training_blocks':ntb, 'trials_per_block': tr_per_block,\
+        'dec_temp':dec_temp, 'utility_0': utility_0, 'utility_1': utility_1, 'utility_2': utility_2,
+        'r_lambda': r_lambda,'dec_temp_cont': dec_temp_cont, 'q':q, 'p':p, 'h':h} 
 
         # for key in d.keys():
         #     print(key, np.unique(d[key].shape))
@@ -641,8 +410,8 @@ def context_plot_cue_dependent(query='p == 0.6',print_counts=False,util = None, 
 
     if print_counts:
         test_df =  base_df.query(query + '& t ==' + str(t))
-        test_df['correct'] = test_df['inferred_context_t3']== test_df['true_context']
-        cols = ['agent','h', 'trial','trial_type', 'cue', 'inferred_context_t3', 'true_context','correct']
+        test_df['correct'] = test_df['c3']== test_df['true_context']
+        cols = ['agent','h', 'trial','trial_type', 'cue', 'c3', 'true_context','correct']
         counts = test_df[cols].groupby(by=['h','trial_type','cue','correct']).size()
         print(counts)
 
@@ -1363,7 +1132,7 @@ def plot_all(lst,hs=[[1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]],utility
 
 
             query ='p == ' + str(p) 
-
+            t = 3
             for cue in cues:
 
                plot_df = base_df.query(query + '& t ==' + str(t) + ' & cue == ' + str(cue))
@@ -1476,12 +1245,12 @@ def plot_all(lst,hs=[[1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]],utility
             if testing:
                 fname += '_'.join(['multiple_all','switch', str(int(l[0])), 'degr', str(int(l[1])),\
                     'learn', str(int(l[2])), 'q', str(l[3]),\
-                    'p', str(l[4]),'dec', str(l[8]),str(training_blocks) + str(degradation_blocks), 'util', '-'.join([str(u) for u in util]), ''.join([str(hhh) for hhh in hs])]) + '.pdf'
+                    'p', str(l[4]),'dec', str(l[8]),str(training_blocks) + str(degradation_blocks), 'util', '-'.join([str(u) for u in util]), ''.join([str(hhh) for hhh in hs])]) + '.png'
             else:
                 fname += '_'.join(['multiple_all','switch', str(int(l[0])), 'degr', str(int(l[1])),\
                         'learn', str(int(l[2])), 'q', str(l[3]),\
                         'p', str(l[4]),'decp', str(l[8]),'decc', str(l[9]),\
-                        str(training_blocks) + str(degradation_blocks), 'util', '-'.join([str(u) for u in util])]) + '.pdf'
+                        str(training_blocks) + str(degradation_blocks), 'util', '-'.join([str(u) for u in util])]) + '.png'
             
             
             #            fnames = os.path.join(os.getcwd(), fname)
@@ -1505,107 +1274,24 @@ def plot_all(lst,hs=[[1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]],utility
 nc = 4
 extinguish = True
 
+if importing:
+    pass
+else:
+    hs = [1,100]
+    cue_ambiguity = [0.8]                       
+    context_trans_prob = [0.85]
+    cue_switch = [False]
+    reward_naive = [True]
+    training_blocks = [6]
+    degradation_blocks=[6]
+    degradation = [True]
+    trials_per_block=[42]
+    dec_temps = [1,2]
+    rews = [0]
+    dec_temp_cont = [1,2,4,100]
+    utility = [[1, 9 , 90]]
+    conf = ['shuffled_and_blocked']
 
-hs = [1,100]
-cue_ambiguity = [0.8]                       
-context_trans_prob = [0.85]
-cue_switch = [False]
-reward_naive = [True]
-training_blocks = [6]
-degradation_blocks=[6]
-degradation = [True]
-trials_per_block=[42]
-dec_temps = [1,2]
-rews = [0]
-dec_temp_cont = [1,2,4,100]
-utility = [[1, 9 , 90]]
-conf = ['shuffled_and_blocked']
-
-hs = [1,100]
-cue_ambiguity = [0.8]                       
-context_trans_prob = [0.85]
-cue_switch = [False]
-reward_naive = [True]
-training_blocks = [6]
-degradation_blocks=[6]
-degradation = [True]
-trials_per_block=[42]
-dec_temps = [1]
-rews = [0]
-# for determinstic context update do a 100 
-dec_temp_cont = [4]
-utility = [[1, 9 , 90]]
-conf = ['shuffled_and_blocked']
-
-# h =  [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]
-hs = [1,100]
-cue_ambiguity = [0.8]                       
-context_trans_prob = [0.65]
-cue_switch = [False]
-reward_naive = [True]
-training_blocks = [6]
-degradation_blocks=[6]
-degradation = [True]
-trials_per_block=[42]
-dec_temps = [2]
-rews = [0]
-# for determinstic context update do a 100 
-dec_temp_cont = [4]
-utility = [[1, 9 , 90]]
-conf = ['shuffled_and_blocked']
-
-
-# hs =  [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]
-# # h = [1,100]
-# cue_ambiguity = [0.8]                       
-# context_trans_prob = [0.85]
-# cue_switch = [False]
-# reward_naive = [True]
-# training_blocks = [4]
-# degradation_blocks=[6]
-# degradation = [True]
-# trials_per_block=[70]
-# dec_temps = [1]
-# rews = [0]
-# dec_temp_cont = [1]
-# utility = [[1, 9, 90]]
-# conf = ['shuffled']
-
-
-# hs =  [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]
-# # h = [1,100]
-# cue_ambiguity = [0.8]                       
-# context_trans_prob = [0.85]
-# cue_switch = [False]
-# reward_naive = [True]
-# training_blocks = [4]
-# degradation_blocks=[6]
-# degradation = [True]
-# trials_per_block=[70]
-# dec_temps = [1]
-# rews = [0]
-# dec_temp_cont = [1]
-
-# utility = [[1, 9 , 90]]
-
-# conf = ['shuffled']
-
-
-# hs =  [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]
-# # h = [1,100]
-# cue_ambiguity = [0.8]                       
-# context_trans_prob = [0.85]
-# cue_switch = [False]
-# reward_naive = [True]
-# training_blocks = [4]
-# degradation_blocks=[2]
-# degradation = [True]
-# trials_per_block=[42]
-# dec_temps = [1]
-# rews = [0]
-# dec_temp_cont = [1]
-# utility = [[1, 9 , 90]]
-# conf = ['shuffled_and_blocked']
 
 arrays = [cue_switch, degradation, reward_naive, context_trans_prob, cue_ambiguity,\
         training_blocks, degradation_blocks, trials_per_block,dec_temps, dec_temp_cont, rews, conf]

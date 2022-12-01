@@ -1034,12 +1034,14 @@ class HierarchicalPerception(object):
         else:
             # todo: recalc
             #outcome_surprise = ((states * prior_context[np.newaxis,:]).sum(axis=1)[:,np.newaxis] * (scs.digamma(beta_prime[reward]) - scs.digamma(beta_prime.sum(axis=0)))).sum(axis=0)
+            
             if t>0:
-                if (tau >= 141):
-                    a=0
+                # the higher the reward for a given policy and a given context the lower the logarithm
                 outcome_surprise = (posterior_policies * ln(self.fwd_norms.prod(axis=0))).sum(axis=0)
+                # positive quantity
                 entropy = - (posterior_policies * ln(posterior_policies)).sum(axis=0)
                 #policy_surprise = (post_policies[:,np.newaxis] * scs.digamma(alpha_prime)).sum(axis=0) - scs.digamma(alpha_prime.sum(axis=0))
+                # 
                 policy_surprise = (posterior_policies * scs.digamma(alpha_prime)).sum(axis=0) - scs.digamma(alpha_prime.sum(axis=0))
             else:
                 outcome_surprise = 0
@@ -1047,7 +1049,7 @@ class HierarchicalPerception(object):
                 policy_surprise = 0
                 
             if context is not None:
-                context_obs_suprise = ln(self.generative_model_context[context]+1e-10)
+                context_obs_suprise = ln(self.generative_model_context[context])
             else:
                 context_obs_suprise = 0
 
