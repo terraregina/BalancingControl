@@ -1061,7 +1061,7 @@ def plot_all(lst,hs=[[1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]],utility
                              [fig.add_subplot(gs01[1,0]), fig.add_subplot(gs01[1,1]), fig.add_subplot(gs01[1,2])]])
             ax0 = axes[0,0]
             x_titles = ['Habit Trial', 'Planning Trial']
-            # base_df[base_df.columns[:14]].to_excel('test.xlsx')
+            base_df[base_df.columns[:14]].to_excel('test.xlsx')
             for phase in [0,1,2]:
                 for cue in [0,1]:
                     pal = sns.color_palette(palette[cue],n_colors=np.unique(plot_df['h']).size)
@@ -1279,7 +1279,7 @@ importing = False
 if importing:
     pass
 else:
-    h = [1,100]
+    h = [100,1]
     cue_ambiguity = [0.5]
     context_trans_prob = [0.6]
     cue_switch = [False]
@@ -1288,10 +1288,10 @@ else:
     degradation_blocks=[6]
     degradation = [True]
     trials_per_block=[42]
-    dec_temps = [1]
+    dec_temps = [4]
     rews = [0]
     # for determinstic context update do a 100
-    dec_context = [1,2,4]
+    dec_context = [4]
     utility = [[1, 9 , 90]]
     conf = ['shuffled_and_blocked']
     hs = h

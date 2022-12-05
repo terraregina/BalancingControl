@@ -123,7 +123,8 @@ def run_single_sim(lst,
         'interlace': task_params['interlace'],
         'contingency_degrdataion': task_params['contingency_degradation'],
         'switch_cues': task_params['switch_cues'],
-        'trials_per_block': task_params['trials_per_block']
+        'trials_per_block': task_params['trials_per_block'],
+        'exp_reward': task_params['exp_reward']
     }
 
     all_optimal_seqs = np.unique(sequence)                                                                            
