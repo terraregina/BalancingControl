@@ -272,6 +272,7 @@ def load_df(names,data_folder='data', extinguish=None):
             c2[w*ntrials:(w+1)*ntrials] = np.argmax(posterior_context[w][:,2,:],axis=1)
             c3[w*ntrials:(w+1)*ntrials] = np.argmax(posterior_context[w][:,3,:],axis=1)
 
+            
             switch_t0[w*ntrials:(w+1)*ntrials] = if_inferred_context_switch == \
                                                     c0[w*ntrials:(w+1)*ntrials]
             switch_t1[w*ntrials:(w+1)*ntrials] = if_inferred_context_switch == \
@@ -284,12 +285,12 @@ def load_df(names,data_folder='data', extinguish=None):
             inferred_switch = np.logical_and(np.logical_and(np.logical_and(switch_t0, switch_t1), switch_t2) ,switch_t3)
             context_optimality[w*ntrials:(w+1)*ntrials] = np.cumsum(inferred_switch[w*ntrials:(w+1)*ntrials])\
                                                                 /(np.arange(ntrials)+1)
-        true_context[w*ntrials:(w+1)*ntrials] = to
         inferred_switch = np.repeat(inferred_switch, nt)
-        inferred_context = np.concatenate((c0,c1,c2,c3))
-        inferred_switch = np.concatenate((switch_t0,switch_t1,switch_t2,switch_t3,))
+        inferred_context = np.stack((c0,c1,c2,c3)).T
+        inferred_context = inferred_context.reshape(inferred_context.size)
+        # inferred_switch = np.concatenate((switch_t0,switch_t1,switch_t2,switch_t3,))
         context_optimality = np.repeat(context_optimality, nt)
-        true_context =  np.repeat(true_context, nt)
+        true_context =  np.tile(np.repeat(to, nt),nw)
         t = np.tile(np.arange(4), nw*ntrials)
         
         # print(true_context.size)
@@ -1060,7 +1061,7 @@ def plot_all(lst,hs=[[1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]],utility
                              [fig.add_subplot(gs01[1,0]), fig.add_subplot(gs01[1,1]), fig.add_subplot(gs01[1,2])]])
             ax0 = axes[0,0]
             x_titles = ['Habit Trial', 'Planning Trial']
-
+            # base_df[base_df.columns[:14]].to_excel('test.xlsx')
             for phase in [0,1,2]:
                 for cue in [0,1]:
                     pal = sns.color_palette(palette[cue],n_colors=np.unique(plot_df['h']).size)
@@ -1274,23 +1275,28 @@ def plot_all(lst,hs=[[1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]],utility
 nc = 4
 extinguish = True
 
+importing = False
 if importing:
     pass
 else:
-    hs = [1,100]
-    cue_ambiguity = [0.8]                       
-    context_trans_prob = [0.85]
+    h = [1,100]
+    cue_ambiguity = [0.5]
+    context_trans_prob = [0.6]
     cue_switch = [False]
-    reward_naive = [True]
+    reward_naive = [False]
     training_blocks = [6]
     degradation_blocks=[6]
     degradation = [True]
     trials_per_block=[42]
-    dec_temps = [1,2]
+    dec_temps = [1]
     rews = [0]
-    dec_temp_cont = [1,2,4,100]
+    # for determinstic context update do a 100
+    dec_context = [1,2,4]
     utility = [[1, 9 , 90]]
     conf = ['shuffled_and_blocked']
+    hs = h
+    dec_temp_cont = dec_context
+
 
 
 arrays = [cue_switch, degradation, reward_naive, context_trans_prob, cue_ambiguity,\
