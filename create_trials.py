@@ -39,15 +39,18 @@ rewards = possible rewards a planet can bring
 '''
 def create_path(conf, p, stm, sequence, r):
 
-    probs = np.array([[ p[planet] for planet in conf]])           # extract reward probabilities for planets
-    probs = np.repeat(probs, repeats = stm.shape[0], axis=0)
+    probs = p[conf]   # extract reward probabilities for planets
+    probs = np.repeat(probs.reshape(1, probs.shape[0]), repeats = stm.shape[0], axis=0)
 
     
-    rewards = np.array([[ r[planet] for planet in conf]])           # extract reward probabilities for planets
-    rewards = np.repeat(rewards, repeats = stm.shape[0], axis=0)
+    # rewards = np.array([[ r[planet] for planet in conf]])           # extract reward probabilities for planets
+    rewards = r[conf]
+    rewards = np.repeat(rewards.reshape(1, rewards.shape[0]), repeats = stm.shape[0], axis=0)
 
     # path holds position of rocket at each time step
     # different rows correspond to different starting positions
+
+    
     path = np.zeros([stm.shape[0], stm.shape[1], 3])
     path[:,:,0] = stm[:,:,sequence[0]]
     
@@ -82,10 +85,15 @@ def generate_trials_df(planet_rewards, sequences):
 
 
     # reward probabiltiy vector
-    p = [0.95, 0.05, 0.95]
+    if len(planet_rewards) == 3:
+        p = np.array([0.95, 0.05, 0.95])
+        planet_confs = sequence_of_length_n([0,1,2],6)
+    else:
+        p = np.array([0.95, 0.95])
+        planet_confs = sequence_of_length_n([0,1],6)
+
     # planet_rewards = [-1,1,1]
     moves = sequence_of_length_n([0,1],3)
-    planet_confs = sequence_of_length_n([0,1,2],6)
 
     # generate all planet constelations
     planet_confs = np.delete(planet_confs,[0,planet_confs.shape[0]-1], 0)
@@ -94,43 +102,35 @@ def generate_trials_df(planet_rewards, sequences):
 
     expectations = np.zeros([planet_confs.shape[1], moves.shape[0],  planet_confs.shape[0]])
 
-
-    row_data = {
-
-        'conf_ind': 0,
-        'planet_conf':0,
-        'start': 0,
-        'sequence': 0,
-        'p0': 0,
-        'p1': 0,
-        'p2': 0,
-        'p3': 0,
-        'p4': 0,
-        'p5': 0,
-        'expected_reward': 0
-    }
-
-    data = pd.DataFrame(columns = row_data.keys(), index = np.arange(planet_confs.shape[0]*nplanets*moves.shape[0]))
+    col_names = ['conf_ind', 'planet_conf', 'start', 'sequence', 'p0', 'p1', 'p2', 'p3', 'p4', 'p5', 'expected_reward', ]
 
 
     for ci, conf in enumerate(planet_confs):
         for m, move in enumerate(moves):
+
             expectations[:, m, ci] = create_path(conf, p, state_transition_matrix, move, planet_rewards)
 
     s = 0
     i = 0
+    rr = 0
+    nrows = planet_confs.shape[0]*nplanets*moves.size 
+    data_array = np.zeros([nrows, len(col_names)])
     for ci, conf in enumerate(planet_confs):
         for st in np.arange(nplanets):
             for m, move in enumerate(moves):
-                rd = [s, ci, st, m, conf[0], conf[1], conf[2], conf[3], conf[4], conf[5], expectations[st,m,ci]]
-                k = 0
-                for key in row_data:
-                    row_data[key] = rd[k]
-                    k += 1
-                k = 0
-                data.loc[i] = pd.Series(row_data)
+                data_array[rr,:] = \
+                [s, ci, st, m, conf[0], conf[1], conf[2], conf[3], conf[4], conf[5], expectations[st,m,ci]]
+                # rd = [s, ci, st, m, conf[0], conf[1], conf[2], conf[3], conf[4], conf[5], expectations[st,m,ci]]
+                # k = 0
+                # for key in row_data:
+                #     row_data[key] = rd[k]
+                #     k += 1
+                # k = 0
+                rr += 1
+                # data.loc[i] = pd.Series(row_data)
                 i += 1
             s += 1
+    data = pd.DataFrame(data_array, columns = col_names)
 
 
     # # define max reward for a given conformation and starting point
@@ -184,11 +184,17 @@ def generate_trials_df(planet_rewards, sequences):
     return slices, planet_confs
 
 
-def all_possible_trials(habit_seq=3, shuffle=False, extend=False):
+def all_possible_trials(habit_seq=3, shuffle=False, extend=False, nr=3):
     
     np.random.seed(1)
     ns=6
-    all_rewards = [[-1,1,1], [1,1,-1]]
+
+    if nr == 3:
+        all_rewards = np.array([[-1,1,1], [1,1,-1]])
+    elif nr == 2:
+        all_rewards = np.array([[-1,1], [1,-1]])
+    else:
+        print('Rewards are wrong')
     sequences  = np.arange(8)
     
     slices = [None for nn in range(2)]
@@ -402,10 +408,10 @@ def create_trials_planning(data, habit_seq = 3, contingency_degradation = True,\
 
 
 def create_config_files_planning(training_blocks, degradation_blocks, trials_per_block, habit_seq = 3,\
-    shuffle=False, blocked=False, block=None, trials=None):
+    shuffle=False, blocked=False, block=None, trials=None, nr=3):
 
     if trials is None:
-        trials = all_possible_trials(habit_seq=habit_seq,shuffle=shuffle)
+        trials = all_possible_trials(habit_seq=habit_seq,shuffle=shuffle,nr=nr)
 
     degradation = [True]
     cue_switch = [False]
@@ -613,10 +619,10 @@ for con in conf:
 combinations = []
 # create_config_files_planning([4],[2],[42],shuffle=True,blocked=True,block=5)
 # create_config_files_planning([4],[6],[70],shuffle=True,blocked=False)
-create_config_files_planning([4],[2],[42],shuffle=True,blocked=True, block=3)
+# create_config_files_planning([4],[2],[42],shuffle=True,blocked=True, block=3)
 # create_config_files_planning([4],[6],[42],shuffle=True,blocked=True, block=3)
-create_config_files_planning([6],[6],[42],shuffle=True,blocked=True, block=3)
-
+create_config_files_planning([6],[6],[42],shuffle=True,blocked=True, block=3,nr=2)
+create_config_files_planning([6],[6],[70],shuffle=True,blocked=True, block=5,nr=2)
 
 # create_config_files([3],[1],[70],shuffle=True,blocked=True,block=5)
 # create_config_files([3],[1],[70],shuffle=True)
@@ -697,3 +703,4 @@ print(exp_rewards[6:12].sum()/6)
 # df = df[['block','sequence','context','starts','planets','exp_reward']]
 
 df.barplot()
+# %%

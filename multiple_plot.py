@@ -64,6 +64,7 @@ import string
 import matplotlib.patheffects as pe
 from sim_parameters import *
 
+
 # functions
 def load_file_names(arrays, use_fitting=False,plotting_gammas=False):
     lst = []
@@ -99,7 +100,7 @@ def load_file_names(arrays, use_fitting=False,plotting_gammas=False):
         l[12] = [str(entry) for entry in l[12]]
         fname = prefix + 'p' + str(l[4])  +'_learn_rew' + str(int(l[2] == True))+ '_q' + str(l[3]) + '_h' + str(l[5]) + '_' +\
         str(l[8]) + '_' + str(l[6]) + str(l[7]) + \
-        '_decp' + str(l[9]) +'_decc' + str(l[10]) + '_rew' + str(l[11]) + '_' + 'u'+  '-'.join(l[12]) + '_' + l[13]
+        '_decp' + str(l[9]) +'_decc' + str(l[10]) + '_rew' + str(l[11]) + '_' + 'u'+  '-'.join(l[12]) + '_3'+ '_' + l[13]
 
 
         fname +=  '_extinguish.json'
@@ -108,6 +109,7 @@ def load_file_names(arrays, use_fitting=False,plotting_gammas=False):
 
 
     return names
+
 
 def load_df(names,data_folder='data', extinguish=None):
 
@@ -131,6 +133,7 @@ def load_df(names,data_folder='data', extinguish=None):
         with open(fname, 'r') as infile:
             data = json.load(infile)
         worlds = pickle.decode(data)
+        # worlds = worlds[-2:]
         meta = worlds[-1]
         agents = [w.agent for w in worlds[:-1]]
         perception = [w.agent.perception for w in worlds[:-1]]
@@ -200,7 +203,8 @@ def load_df(names,data_folder='data', extinguish=None):
 
         for w in range(nw):
             for pi, p in enumerate(policies):
-                inds = np.where( (actions[w][:,0] == p[0]) & (actions[w][:,1] == p[1]) & (actions[w][:,2] == p[2]) )[0]
+                inds = np.where( (actions[w][:,0] == p[0]) & (actions[w][:,1] == p[1]) &\
+                                 (actions[w][:,2] == p[2]) )[0]
                 ex_p[inds] = pi
             executed_policy[w*ntrials:(w+1)*ntrials] = ex_p
             ch_op = executed_policy[w*ntrials:(w+1)*ntrials] == meta['optimal_sequence']
@@ -233,7 +237,8 @@ def load_df(names,data_folder='data', extinguish=None):
         true_context = np.zeros(ntrials*nw, dtype='int32')
         no, nc = perception[0].generative_model_context.shape 
         modes_gmc =  perception[0].generative_model_context.argsort(axis=1)
-        contexts = [modes_gmc[i,:][-2:] for i in range(no)] # arranged in ascending order!
+        contexts = np.array([modes_gmc[i,:][-2:] for i in range(no)]) # arranged in ascending order!
+        contexts.sort()
         if_inferred_context_switch = np.zeros(ntrials, dtype="int32")
 
         # c is an array holding what contexts should be for the given task trials [0,1,0,1,..2,3,2,3...0,1] etc
@@ -252,12 +257,13 @@ def load_df(names,data_folder='data', extinguish=None):
         to = np.zeros(ntrials, dtype="int32")
         
         for i in range(no):    
-            c = np.array([contexts[i][-2]]*(meta['trials_per_block']*meta['training_blocks'])\
-                + [contexts[i][-1]]*(meta['trials_per_block']*meta['degradation_blocks'])\
-                + [contexts[i][-2]]*meta['trials_per_block']*2)
+            c = np.array([contexts[i][0]]*(meta['trials_per_block']*meta['training_blocks'])\
+                + [contexts[i][1]]*(meta['trials_per_block']*meta['degradation_blocks'])\
+                + [contexts[i][0]]*meta['trials_per_block']*2)
             to[np.where(context_cues == i)] = c[np.where(context_cues == i)]
             # print(to)
             if_inferred_context_switch[np.where(context_cues == i)] = c[np.where(context_cues == i)]
+
         switch_t0 = np.zeros(ntrials*nw,dtype='int32')
         switch_t1 = np.zeros(ntrials*nw,dtype='int32')
         switch_t2 = np.zeros(ntrials*nw,dtype='int32')
@@ -283,6 +289,7 @@ def load_df(names,data_folder='data', extinguish=None):
                                                     c3[w*ntrials:(w+1)*ntrials]
             
             inferred_switch = np.logical_and(np.logical_and(np.logical_and(switch_t0, switch_t1), switch_t2) ,switch_t3)
+            # inferred_switch = switch_t3
             context_optimality[w*ntrials:(w+1)*ntrials] = np.cumsum(inferred_switch[w*ntrials:(w+1)*ntrials])\
                                                                 /(np.arange(ntrials)+1)
         inferred_switch = np.repeat(inferred_switch, nt)
@@ -291,24 +298,47 @@ def load_df(names,data_folder='data', extinguish=None):
         # inferred_switch = np.concatenate((switch_t0,switch_t1,switch_t2,switch_t3,))
         context_optimality = np.repeat(context_optimality, nt)
         true_context =  np.tile(np.repeat(to, nt),nw)
+        exp_reward = np.tile(np.repeat(meta['exp_reward'],nt),nw)
         t = np.tile(np.arange(4), nw*ntrials)
-        
-        # print(true_context.size)
-        # print(trial_type.size)
-        d = { 'agent':agnt, 'run':run, 'trial':trial, 't':t, 'trial_type':trial_type,'cue':cue,
-              'true_context': true_context,\
-            #  'c0':c0, 'c1':c1, 'c2':c2, 'c3':c3,\
-              'inferred_context': inferred_context,'inferred_switch': inferred_switch, 'context_optimality':context_optimality,
-        
+
+
+        general_exp_reward = np.zeros([ntrials, policies.shape[0], nc])
+        plnts = worlds[0].environment.planet_conf
+        strts = worlds[0].environment.starting_position
+        rwrds = np.array([-0.95, 0.05, 0.95])
+        rewards = np.array([rwrds, rwrds, rwrds*(-1), rwrds*(-1)])
+        for tt in range(ntrials):
+            for c in range(nc):
+                planet_exp_reward = rewards[c]
+                planets = planet_exp_reward[plnts[tt]]
+                for pi, ps in enumerate(policies):
+                    A = worlds[0].agent.perception.generative_model_states
+                    C = np.zeros([A.shape[0],nt-1])
+                    C[:,0] = A[:,strts[tt],ps[0],c]
+                    for i in range(2):
+                        C[:,i+1] = A[:,np.argmax(C[:,i]),ps[i+1],c]
+                    C = (C.T*planets).sum()
+                    general_exp_reward[tt,pi,c] = C
+        reward_variance = general_exp_reward[:,:,0].var(axis=1)
+        reward_variance = reward_variance.repeat(nt)
+        reward_variance = np.tile(reward_variance, nw)
+
+
+        d = {\
+        'agent':agnt, 'run':run, 'trial':trial, 't':t, 'trial_type':trial_type,'cue':cue,
+        'true_context': true_context,\
+        'inferred_context': inferred_context,'inferred_switch': inferred_switch, 'context_optimality':context_optimality,
         'true_optimal':true_optimal, 'executed_policy':executed_policy,'chose_optimal': chose_optimal,\
-        'policy_optimality':optimality, \
+        'policy_optimality':optimality, 'cont_reward':exp_reward,\
+        'pol_reward':exp_reward, 'reward_variance': reward_variance,\
+        'h':h,\
         'entropy_rew_c1': entropy_rewards[:,0], 'entropy_rew_c2': entropy_rewards[:,1], \
         'entropy_rew_c3': entropy_rewards[:,2], 'entropy_rew_c4': entropy_rewards[:,3],\
         'learn_rew': learn_rew, 'entropy_context':entropy_context, \
         'switch_cues':switch_cues, 'contingency_degradation': contingency_degradation,\
         'degradation_blocks': ndb, 'training_blocks':ntb, 'trials_per_block': tr_per_block,\
         'dec_temp':dec_temp, 'utility_0': utility_0, 'utility_1': utility_1, 'utility_2': utility_2,
-        'r_lambda': r_lambda,'dec_temp_cont': dec_temp_cont, 'q':q, 'p':p, 'h':h} 
+        'r_lambda': r_lambda,'dec_temp_cont': dec_temp_cont, 'q':q, 'p':p} 
 
         # for key in d.keys():
         #     print(key, np.unique(d[key].shape))
@@ -363,7 +393,6 @@ def context_plot(query='p == 0.6'):
     fig.suptitle(title, fontsize=15)
 
 
-
 def reward_entropy_plot(query='p == 0.6'):
 
     # entropy of reward distribution for each context 
@@ -388,6 +417,7 @@ def reward_entropy_plot(query='p == 0.6'):
             ', degradation: ' + str(int(contingency_degr)) + ', reward_naive: ' + str(int(reward_naive)) + \
             ', cue_shown: ' + str(cue)
     fig.suptitle(title, fontsize=15)
+
 
 def context_plot_cue_dependent(query='p == 0.6',print_counts=False,util = None, save=False):
     fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(10,6), sharex = True)
@@ -727,9 +757,6 @@ def load_df_reward_dkl(names,data_folder='temp',nc=4):
     return data
 
 
-
-
-
 def plot_gammas(lst,hs=[[1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]],utility=[[1,9,90]], testing=False):
 
  
@@ -971,6 +998,7 @@ def plot_gammas(lst,hs=[[1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]],util
     fig.savefig(fname, dpi=300)    
     return fig
 
+
 def plot_all(lst,hs=[[1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]],utility=[[1,9,90]], testing=False):
 
     for l in lst:
@@ -1061,7 +1089,7 @@ def plot_all(lst,hs=[[1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]],utility
                              [fig.add_subplot(gs01[1,0]), fig.add_subplot(gs01[1,1]), fig.add_subplot(gs01[1,2])]])
             ax0 = axes[0,0]
             x_titles = ['Habit Trial', 'Planning Trial']
-            base_df[base_df.columns[:14]].to_excel('test.xlsx')
+            # base_df[base_df.columns[:18]].to_excel('test.xlsx')
             for phase in [0,1,2]:
                 for cue in [0,1]:
                     pal = sns.color_palette(palette[cue],n_colors=np.unique(plot_df['h']).size)
@@ -1275,7 +1303,7 @@ def plot_all(lst,hs=[[1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]],utility
 nc = 4
 extinguish = True
 
-importing = False
+# importing = False
 if importing:
     pass
 else:

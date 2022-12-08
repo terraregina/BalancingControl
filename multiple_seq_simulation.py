@@ -71,10 +71,9 @@ def run_single_sim(lst,
                     planet_reward_probs_switched,
                     repetitions, use_fitting):
 
-
     switch_cues, contingency_degradation, reward_naive, context_trans_prob, cue_ambiguity, h,\
     training_blocks, degradation_blocks, trials_per_block, dec_temp, dec_temp_cont,\
-    rew, util, config_folder = lst
+    rew, rewards, util, config_folder = lst
     
     config = 'planning_config' + '_degradation_'+ str(int(contingency_degradation)) \
                       + '_switch_' + str(int(switch_cues))                \
@@ -154,6 +153,7 @@ def run_single_sim(lst,
         reward_counts[:,:,:2] = np.tile(planet_reward_probs.T[:,:,np.newaxis]*20,(1,1,2))+1
         print('\nDoing different naive rewards')
         print(reward_counts)
+
     par_list = [h,                        
                 context_trans_prob,
                 cue_ambiguity,            
@@ -168,7 +168,8 @@ def run_single_sim(lst,
                 1,
                 dec_temp,
                 dec_temp_cont,
-                rew]
+                rew,
+                rewards]
 
     prefix = 'multiple_'
 
@@ -190,7 +191,7 @@ def run_single_sim(lst,
     fname = prefix +'p' + str(cue_ambiguity) +'_learn_rew' + str(int(reward_naive == True)) + '_q' + str(context_trans_prob) + '_h' + str(h)+ '_' +\
     str(meta['trials_per_block']) +'_'+str(meta['training_blocks']) + str(meta['degradation_blocks']) +\
     '_decp' + str(dec_temp)+ '_decc' + str(dec_temp_cont)+ '_rew' + str(rew) + \
-    '_u' +  '-'.join(util) + '_' + config_folder
+    '_u' +  '-'.join(util) + '_' + str(nr) + '_' + config_folder
  
     fname +=  '_extinguish.json'
 
@@ -247,10 +248,10 @@ def pooled(arrays,seed=521312,repetitions=1, data_folder='temp',check_missing = 
             prefix += 'degr0_'
 
 
-        l[12] = [str(entry) for entry in l[12]]
+        l[13] = [str(entry) for entry in l[13]]
         fname = prefix + 'p' + str(l[4])  +'_learn_rew' + str(int(l[2] == True))+ '_q' + str(l[3]) + '_h' + str(l[5]) + '_' +\
         str(l[8]) + '_' + str(l[6]) + str(l[7]) + \
-        '_decp' + str(l[9]) + '_decc' + str(l[10]) +'_rew' + str(l[11]) + '_' + 'u'+  '-'.join(l[12]) + '_' + l[13]
+        '_decp' + str(l[9]) + '_decc' + str(l[10]) +'_rew' + str(l[11]) + '_' + 'u'+  '-'.join(l[13])+'_' + str(nr) + '_' + l[14]
 
         if extinguish:
             fname += '_extinguish.json'
@@ -308,53 +309,80 @@ def pooled(arrays,seed=521312,repetitions=1, data_folder='temp',check_missing = 
 
 if __name__ == '__main__':
 
-    extinguish = True
-
-    na = 2                                           # number of unique possible actions
-    nc = 4                                           # number of contexts, planning and habit
-    nr = 3                                           # number of rewards
-    ns = 6                                           # number of unique travel locations
-    npl = 3
-    steps = 3                                        # numbe of decisions made in an episode
-    T = steps + 1                                    # episode length
-
-
-    planet_reward_probs = np.array([[0.95, 0   , 0   ],
-                                    [0.05, 0.95, 0.05],
-                                    [0,    0.05, 0.95]]).T    # npl x nr
-    planet_reward_probs_switched = np.array([[0   , 0    , 0.95],
-                                            [0.05, 0.95 , 0.05],
-                                            [0.95, 0.05 , 0.0]]).T 
-    state_transition_matrix = np.zeros([ns,ns,na])
-    m = [1,2,3,4,5,0]
-    for r, row in enumerate(state_transition_matrix[:,:,0]):
-        row[m[r]] = 1
-    j = np.array([5,4,5,6,2,2])-1
-    for r, row in enumerate(state_transition_matrix[:,:,1]):
-        row[j[r]] = 1
-    state_transition_matrix = np.transpose(state_transition_matrix, axes= (1,0,2))
-    state_transition_matrix = np.repeat(state_transition_matrix[:,:,:,np.newaxis], repeats=nc, axis=3)
-
-    nc = 4
+    # importing = False
     if importing:
         pass
     else:
-        # h =  [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]
+
+        extinguish = True
+
+        na = 2                                           # number of unique possible actions
+        nc = 4                                           # number of contexts, planning and habit
+        nr = 3                                           # number of rewards
+        nr = 2
+        ns = 6                                           # number of unique travel locations
+        npl = 3
+        steps = 3                                        # numbe of decisions made in an episode
+        T = steps + 1                                    # episode length
+
+        print('NUMBER OF REWARDS', nr)
+
+        if nr == 3:
+
+            planet_reward_probs = np.array([[0.95, 0   , 0   ],
+                                            [0.05, 0.95, 0.05],
+                                            [0,    0.05, 0.95]]).T    # npl x nr
+            planet_reward_probs_switched = np.array([[0   , 0    , 0.95],
+                                                    [0.05, 0.95 , 0.05],
+                                                    [0.95, 0.05 , 0.0]]).T 
+
+
+        elif nr == 2:
+            planet_reward_probs = np.array([[0.95,   0.05   ],
+                                            [0.05,   0.95]]).T    # npl x nr
+
+            planet_reward_probs_switched = np.array([[0.05,   0.95   ],
+                                                        [0.95,   0.05]]).T    # npl x nr
+
+        state_transition_matrix = np.zeros([ns,ns,na])
+        m = [1,2,3,4,5,0]
+        for r, row in enumerate(state_transition_matrix[:,:,0]):
+            row[m[r]] = 1
+        j = np.array([5,4,5,6,2,2])-1
+
+        for r, row in enumerate(state_transition_matrix[:,:,1]):
+            row[j[r]] = 1
+        state_transition_matrix = np.transpose(state_transition_matrix, axes= (1,0,2))
+        state_transition_matrix = np.repeat(state_transition_matrix[:,:,:,np.newaxis], repeats=nc, axis=3)
+
+        nc = 4
+
+
+        h = [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]
         h = [1,100]
-        cue_ambiguity = [0.8,0.9,0.7]                       
-        context_trans_prob = [0.75,0.65,0.55]
+        cue_ambiguity = [0.5]
+        context_trans_prob = [0.6, 0.7, 0.8, 0.9]
         cue_switch = [False]
         reward_naive = [False]
         training_blocks = [6]
         degradation_blocks=[6]
         degradation = [True]
         trials_per_block=[42]
-        dec_temps = [1,2,4]
+        dec_temps = [1]
+        rewards = [-1,1]
         rews = [0]
-        # for determinstic context update do a 100 
-        dec_context = [1,2,4]
-        utility = [[1, 9 , 90]]
+        # for determinstic context update do a 100
+        dec_context = [100]
+
+        if nr == 3:
+            utility = [[1, 9 , 90]]
+        else:
+            utility = [[1,99]]
+            
         conf = ['shuffled_and_blocked']
+
+        hs = h
+        dec_temp_cont = dec_context
 
 
     data_folder = 'temp'
@@ -365,7 +393,8 @@ if __name__ == '__main__':
             os.makedirs(path)
 
     arrays = [cue_switch, degradation, reward_naive, context_trans_prob, cue_ambiguity,h,\
-            training_blocks, degradation_blocks, trials_per_block,dec_temps, dec_context, rews, utility, conf]
+            training_blocks, degradation_blocks, trials_per_block,dec_temps, dec_context, rews, rewards, utility, conf]
 
     # pooled(arrays,repetitions = 1,check_missing=False,debugging=True)
     pooled(arrays,repetitions = 10,check_missing=False,debugging=False)
+

@@ -1015,7 +1015,9 @@ class HierarchicalPerception(object):
         if not np.all(states[:,0] == states[:,1]):
             raise Exception("inferred states are different for the two contexts") 
         beta_prime = self.dirichlet_rew_params.copy()
-        beta_prime[self.reward_ind[reward]] = beta[self.reward_ind[reward]] + planets
+        
+        if t != 0:
+            beta_prime[self.reward_ind[reward]] = beta[self.reward_ind[reward]] + planets
 
 
         alpha = self.dirichlet_pol_params.copy()

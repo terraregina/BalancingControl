@@ -135,7 +135,7 @@ def generate_trials_df(planet_rewards, sequences):
     for ci, conf in enumerate(planet_confs):
         for m, move in enumerate(moves):
             expectations[:, m, ci] = create_path(conf, p, state_transition_matrix, move, planet_rewards)
-
+    print('CAME HERE!!!')
     s = 0
     i = 0
     for ci, conf in enumerate(planet_confs):

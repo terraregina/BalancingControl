@@ -57,12 +57,14 @@ def run_agent(par_list, trials, T, ns=6, na=2, nr=3, nc=2, npl=2, added=None, us
     # C_beta           = phi or estimate of p(reward|planet,context) 
     
     learn_pol, context_trans_prob, cue_ambiguity, avg,\
-    Rho, utility, B, planets, starts, colors, rc, learn_rew, dec_temp, dec_temp_cont, rew = par_list
+    Rho, utility, B, planets, starts, colors, rc, learn_rew,\
+    dec_temp, dec_temp_cont, rew, possible_rewards = par_list
 
 
     """
     create matrices
     """
+
 
     #generating probability of observations in each state
     A = np.eye(ns)
@@ -81,22 +83,23 @@ def run_agent(par_list, trials, T, ns=6, na=2, nr=3, nc=2, npl=2, added=None, us
     initialize context transition matrix
     """
 
-    # p = context_trans_prob
-    # q = (1-p)/(nc-1)
-
-    # transition_matrix_context = np.zeros([nc,nc]) + q
-    # transition_matrix_context = transition_matrix_context - np.eye(nc)*q + np.eye(nc)*p 
-
     p = context_trans_prob
-    q = (1 - p)/4
+    q = (1-p)/(nc-1)
 
-    transition_matrix_context = np.array([\
-        [p,    q*2,  q,    q  ],
-        [q*2,  p,    q,    q  ],
-        [q,    q,    p,    q*2],
-        [q,    q,    q*2,  p  ]
-    ])
-    print('\n\nbiased transition matrix\n', transition_matrix_context)
+    transition_matrix_context = np.zeros([nc,nc]) + q
+    transition_matrix_context = transition_matrix_context - np.eye(nc)*q + np.eye(nc)*p 
+    
+    # ///////// 
+    # p = context_trans_prob
+    # q = (1 - p)/4
+
+    # transition_matrix_context = np.array([\
+    #     [p,    q*2,  q,    q  ],
+    #     [q*2,  p,    q,    q  ],
+    #     [q,    q,    p,    q*2],
+    #     [q,    q,    q*2,  p  ]
+    # ])
+    # print('\n\nbiased transition matrix\n', transition_matrix_context)
     """ 
     create environment class
     """
@@ -144,12 +147,16 @@ def run_agent(par_list, trials, T, ns=6, na=2, nr=3, nc=2, npl=2, added=None, us
     set context prior
     """
 
-    # prior_context = np.zeros((nc)) + 0.1/(nc-1)
-    # prior_context[0] = 0.9
-    prior_context = np.zeros((nc)) + 0.1/(nc-2)
-    prior_context[:2] = (1 - 0.1)/2
+    prior_context = np.zeros((nc)) + 0.1/(nc-1)
+    prior_context[0] = 0.9
 
-    print('\nprior_context', prior_context)
+
+    # prior_context = np.zeros((nc)) + 0.1/(nc-2)
+    # prior_context[:2] = (1 - 0.1)/2
+
+    # print('\nprior_context', prior_context)
+    
+    
     """
     define generative model for context
     """
@@ -158,24 +165,22 @@ def run_agent(par_list, trials, T, ns=6, na=2, nr=3, nc=2, npl=2, added=None, us
     no =  np.unique(colors).size                    # number of observations (background color)
     C = np.zeros([no, nc])
 
-    dp = 0.001
-    p = cue_ambiguity                               # how strongly agent associates context observation with a particular context       
-    p2 = 1 - p
-    p -= dp/2
-    p2 -= dp/2
-   
-    C[0,:] = [p,dp/2,p2,dp/2]
-    C[1,:] = [dp/2, p, dp/2, p2]
-    print('\ngenerative model observations', C)
-
-    # p = cue_ambiguity                               # how strongly agent associates context observation with a particular context       
     # dp = 0.001
-    # p2 = 1 - p - dp
+    # p = cue_ambiguity                               # how strongly agent associates context observation with a particular context       
+    # p2 = 1 - p
+    # p -= dp/2
+    # p2 -= dp/2
+   
     # C[0,:] = [p,dp/2,p2,dp/2]
     # C[1,:] = [dp/2, p, dp/2, p2]
+    # print('\ngenerative model observations')
+    # print(C)
 
-    # C[0,:] = [p2,dp/2, p,dp/2]
-    # C[1,:] = [dp/2, p2, dp/2, p]
+    p = cue_ambiguity                               # how strongly agent associates context observation with a particular context       
+    dp = 0.001
+    p2 = 1 - p - dp
+    C[0,:] = [p,dp/2,p2,dp/2]
+    C[1,:] = [dp/2, p, dp/2, p2]
     """
     set up environment
     """
@@ -189,6 +194,7 @@ def run_agent(par_list, trials, T, ns=6, na=2, nr=3, nc=2, npl=2, added=None, us
 
     # perception
 
+    nr = len(possible_rewards)
 
     if use_fitting == True:
         A = ar.tensor(A)
@@ -255,10 +261,6 @@ def run_agent(par_list, trials, T, ns=6, na=2, nr=3, nc=2, npl=2, added=None, us
                                     )
         w = FittingWorld(environment, bayes_pln, trials = trials, T = T)
 
-
-
-
-
     else:
         ac_sel = asl.AveragedSelector(trials = trials, T = T,
                                       number_of_actions = na)
@@ -286,7 +288,8 @@ def run_agent(par_list, trials, T, ns=6, na=2, nr=3, nc=2, npl=2, added=None, us
                                C_alphas,
                                C_beta,
                                generative_model_context = C,
-                               T=T,dec_temp=dec_temp, dec_temp_cont=dec_temp_cont, r_lambda=rew)
+                               T=T,dec_temp=dec_temp, dec_temp_cont=dec_temp_cont,\
+                               possible_rewards = possible_rewards, r_lambda=rew)
 
         bayes_pln = agt.BayesianPlanner(bayes_prc,
                                         ac_sel,
@@ -297,7 +300,8 @@ def run_agent(par_list, trials, T, ns=6, na=2, nr=3, nc=2, npl=2, added=None, us
                                         prior_context = prior_context,
                                         learn_habit=True,
                                         learn_rew = learn_rew,
-                                        number_of_planets = npl
+                                        number_of_planets = npl,
+                                        number_of_rewards = nr
                                         )
                                         
         w = World(environment, bayes_pln, trials = trials, T = T)
