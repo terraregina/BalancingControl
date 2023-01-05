@@ -181,8 +181,7 @@ def generate_trials_df(planet_rewards, sequences):
         # print(slice.columns)
         slices[si] = slice
         # print(slices[0][0])
-    return slices, planet_confs
-
+    return slices, planet_confs,state_transition_matrix
 
 def all_possible_trials(habit_seq=3, shuffle=False, extend=False, nr=3):
     
@@ -202,7 +201,7 @@ def all_possible_trials(habit_seq=3, shuffle=False, extend=False, nr=3):
     planet_confs = [None for nn in range(2)]
     
     for ri, rewards in enumerate(all_rewards):
-        slices[ri], planet_confs[ri] = generate_trials_df(rewards, sequences)
+        slices[ri], planet_confs[ri],state_transition_matrix = generate_trials_df(rewards, sequences)
 
 
     data = [[] for i in range(len(sequences))]
@@ -243,7 +242,7 @@ def all_possible_trials(habit_seq=3, shuffle=False, extend=False, nr=3):
     else:
         data_extended = data.copy()
     
-    return data_extended
+    return data_extended, state_transition_matrix
 
 
 def create_trials_planning(data, habit_seq = 3, contingency_degradation = True,\
@@ -255,7 +254,7 @@ def create_trials_planning(data, habit_seq = 3, contingency_degradation = True,\
                         block = None,\
                         trials_per_block = 28,\
                         export = True,blocked=False,shuffle=False,\
-                        nr= 3, seed=1):
+                        nr= 3, seed=1,stm=None):
 
     np.random.seed(seed)
 
@@ -405,22 +404,23 @@ def create_trials_planning(data, habit_seq = 3, contingency_degradation = True,\
                   'miniblock_size' : block,
                   'seed':seed,
                   'nr': nr,
+                  'state_transition_matrix':stm,
                 }
 
         with open(fname, "w") as file:
             js.dump(config, file)
 
 
-def create_config_files_planning(training_blocks, degradation_blocks, trials_per_block, habit_seq = 3,\
+def create_config_files_planning(training_blocks, degradation_blocks, extinction_blocks, trials_per_block, habit_seq = 3,\
     shuffle=False, blocked=False, block=None, trials=None, nr=3):
 
     if trials is None:  
 
-        trials = all_possible_trials(habit_seq=habit_seq,shuffle=shuffle,nr=nr)
+        trials, state_transition_matrix = all_possible_trials(habit_seq=habit_seq,shuffle=shuffle,nr=nr)
 
     degradation = [True]
     cue_switch = [False]
-    arrays = [degradation, cue_switch, degradation_blocks, training_blocks, trials_per_block,[blocked]]
+    arrays = [degradation, cue_switch, degradation_blocks, training_blocks, extinction_blocks, trials_per_block,[blocked]]
 
     lst = []
     for i in product(*arrays):
@@ -429,8 +429,8 @@ def create_config_files_planning(training_blocks, degradation_blocks, trials_per
     for l in lst:
         print(l)
         create_trials_planning(trials, contingency_degradation=l[0],switch_cues=l[1],degradation_blocks=l[2],
-                            training_blocks=l[3], trials_per_block=l[4], habit_seq = habit_seq,\
-                            blocked = l[-1],shuffle=shuffle,block=block,nr=nr)
+                            training_blocks=l[3], extinction_blocks=l[4], trials_per_block=l[5], habit_seq = habit_seq,\
+                            blocked = l[-1],shuffle=shuffle,block=block,nr=nr,stm=state_transition_matrix)
 
 
 #%% CALLS
@@ -453,8 +453,11 @@ combinations = []
 # create_config_files_planning([6],[6],[42],shuffle=True,blocked=True, block=3,nr=2)
 # create_config_files_planning([6],[6],[70],shuffle=True,blocked=True, block=5,nr=2)
 
-create_config_files_planning([6],[6],[42],shuffle=True,blocked=True, block=3,nr=3)
-create_config_files_planning([6],[6],[70],shuffle=True,blocked=True, block=5,nr=3)
+create_config_files_planning([2],[0],[0],[28],shuffle=True,blocked=True, block=2,nr=3)
+create_config_files_planning([1],[1],[1],[28],shuffle=True,blocked=True, block=2,nr=3)
+
+# create_config_files_planning([6],[6],[2],[42],shuffle=True,blocked=True, block=3,nr=3)
+# create_config_files_planning([6],[6],[2],[70],shuffle=True,blocked=True, block=5,nr=3)
 
 
 
@@ -466,6 +469,8 @@ import numpy as np
 import sys
 
 fname = 'config/shuffled_and_blocked/planning_config_degradation_1_switch_0_train6_degr6_n42.json'
+fname = 'config/shuffled_and_blocked/planning_config_degradation_1_switch_0_train2_degr0_n42_nr_3.json'
+
 if sys.platform == 'win32':
    fname = fname.replace('/', '\\') 
 f = open(fname)
