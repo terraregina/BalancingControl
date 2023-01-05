@@ -1,20 +1,22 @@
 import numpy as np
 
 h = [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]
-# h = [1,100]
-cue_ambiguity = [0.85]
-context_trans_prob = [0.8]
+h = [1,100]
+cue_ambiguity = [0.5]
+context_trans_prob = [0.7]
 cue_switch = [False]
-reward_naive = [True]
+reward_naive = [False]
 training_blocks = [6]
 degradation_blocks=[6]
 degradation = [True]
 trials_per_block=[42]
 dec_temps = [1]
 rews = [0]
-rewards = [[-1,0,1]]
+# rewards = [[-1,0,1]]
+rewards = [[-1,1]]
+
 # for determinstic context update do a 100
-dec_context = [1]
+dec_context = [100]
 
 
 extinguish = True

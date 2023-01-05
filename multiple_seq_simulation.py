@@ -79,7 +79,7 @@ def run_single_sim(lst,
                       + '_switch_' + str(int(switch_cues))                \
                       + '_train' + str(training_blocks)                   \
                       + '_degr' + str(degradation_blocks)                 \
-                      + '_n' + str(trials_per_block)+'.json'
+                      + '_n' + str(trials_per_block)+ '_nr_' + str(nr) + '.json'
 
 
     folder = os.path.join(os.getcwd(),'config/' + config_folder)

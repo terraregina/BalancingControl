@@ -1,4 +1,4 @@
-#%%                     
+#%% IMPORTS
 import json  as js
 from re import L
 import numpy as np
@@ -17,7 +17,7 @@ import json
 import pandas as pd 
 
 
-#%%
+#%% FUNCTIONS
 
 ''' 
 creates all permutations of a vector r which holds possible digits
@@ -253,7 +253,9 @@ def create_trials_planning(data, habit_seq = 3, contingency_degradation = True,\
                         extinction_blocks = 2,\
                         interlace = True,\
                         block = None,\
-                        trials_per_block = 28, export = True,blocked=False,shuffle=False,seed=1):
+                        trials_per_block = 28,\
+                        export = True,blocked=False,shuffle=False,\
+                        nr= 3, seed=1):
 
     np.random.seed(seed)
 
@@ -365,7 +367,8 @@ def create_trials_planning(data, habit_seq = 3, contingency_degradation = True,\
     trial_type = trial_type.astype('int32')
 
     fname = 'planning_config_'+'degradation_'+ str(int(contingency_degradation))+ '_switch_' + str(int(switch_cues))\
-             + '_train' + str(training_blocks) + '_degr' + str(degradation_blocks) + '_n' + str(trials_per_block)+'.json'
+             + '_train' + str(training_blocks) + '_degr' + str(degradation_blocks) + '_n' + str(trials_per_block)\
+             + '_nr_' + str(nr) +'.json'
 
     # fname = 'test.json'
 
@@ -400,7 +403,8 @@ def create_trials_planning(data, habit_seq = 3, contingency_degradation = True,\
                   'blocked': blocked,
                   'shuffle': shuffle, 
                   'miniblock_size' : block,
-                  'seed':seed
+                  'seed':seed,
+                  'nr': nr,
                 }
 
         with open(fname, "w") as file:
@@ -410,7 +414,8 @@ def create_trials_planning(data, habit_seq = 3, contingency_degradation = True,\
 def create_config_files_planning(training_blocks, degradation_blocks, trials_per_block, habit_seq = 3,\
     shuffle=False, blocked=False, block=None, trials=None, nr=3):
 
-    if trials is None:
+    if trials is None:  
+
         trials = all_possible_trials(habit_seq=habit_seq,shuffle=shuffle,nr=nr)
 
     degradation = [True]
@@ -425,9 +430,57 @@ def create_config_files_planning(training_blocks, degradation_blocks, trials_per
         print(l)
         create_trials_planning(trials, contingency_degradation=l[0],switch_cues=l[1],degradation_blocks=l[2],
                             training_blocks=l[3], trials_per_block=l[4], habit_seq = habit_seq,\
-                            blocked = l[-1],shuffle=shuffle,block=block)
+                            blocked = l[-1],shuffle=shuffle,block=block,nr=nr)
 
 
+#%% CALLS
+conf = ['shuffled', 'shuffled_and_blocked', 'blocked','original']
+data_folder='config'
+
+
+for con in conf:
+    path = os.path.join(data_folder, con)
+
+    if not os.path.exists(path):
+        os.makedirs(path)
+
+
+combinations = []
+# create_config_files_planning([4],[2],[42],shuffle=True,blocked=True,block=5)
+# create_config_files_planning([4],[6],[70],shuffle=True,blocked=False)
+# create_config_files_planning([4],[2],[42],shuffle=True,blocked=True, block=3)
+# create_config_files_planning([4],[6],[42],shuffle=True,blocked=True, block=3)
+# create_config_files_planning([6],[6],[42],shuffle=True,blocked=True, block=3,nr=2)
+# create_config_files_planning([6],[6],[70],shuffle=True,blocked=True, block=5,nr=2)
+
+create_config_files_planning([6],[6],[42],shuffle=True,blocked=True, block=3,nr=3)
+create_config_files_planning([6],[6],[70],shuffle=True,blocked=True, block=5,nr=3)
+
+
+
+
+#%% Average reward in each phase
+import json 
+import pandas as pd
+import numpy as np
+import sys
+
+fname = 'config/shuffled_and_blocked/planning_config_degradation_1_switch_0_train6_degr6_n42.json'
+if sys.platform == 'win32':
+   fname = fname.replace('/', '\\') 
+f = open(fname)
+
+data = json.load(f)
+df = pd.DataFrame.from_dict(data)
+
+exp_rewards = df.groupby('block').mean('exp_reward')['exp_reward']
+print(exp_rewards[:6].sum()/6)
+print(exp_rewards[6:12].sum()/6)
+# df.head(10)
+
+
+
+#%% OLD FUNCTIONS
 
 def create_trials_two(data, 
                       switch_cues= False,\
@@ -602,105 +655,3 @@ def create_config_files(training_blocks, degradation_blocks, trials_per_block,\
             degradation_blocks=l[2], training_blocks=l[3], trials_per_block=l[4],\
             shuffle=shuffle, blocked=blocked,block=block)
 
-conf = ['shuffled', 'shuffled_and_blocked', 'blocked','original']
-data_folder='config'
-
-
-for con in conf:
-    path = os.path.join(data_folder, con)
-
-    if not os.path.exists(path):
-        os.makedirs(path)
-
-
-
-
-
-combinations = []
-# create_config_files_planning([4],[2],[42],shuffle=True,blocked=True,block=5)
-# create_config_files_planning([4],[6],[70],shuffle=True,blocked=False)
-# create_config_files_planning([4],[2],[42],shuffle=True,blocked=True, block=3)
-# create_config_files_planning([4],[6],[42],shuffle=True,blocked=True, block=3)
-create_config_files_planning([6],[6],[42],shuffle=True,blocked=True, block=3,nr=2)
-create_config_files_planning([6],[6],[70],shuffle=True,blocked=True, block=5,nr=2)
-
-# create_config_files([3],[1],[70],shuffle=True,blocked=True,block=5)
-# create_config_files([3],[1],[70],shuffle=True)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# create_config_files([4], [24,6], [70])
-# create_config_files_planning([4],[1],[70],shuffle=True)
-# create_config_files_planning([4],[6],[70],shuffle=True,blocked=True, block=7)
-
-
-
-
-
-# trials = all_possible_trials_two_seqs(shuffle=False)
-# trials_shuffled = all_possible_tarials_two_seqs(shuffle=True)
-
-
-# create_config_files_planning([2],[1],[70],shuffle=True, blocked=True, block=5)
-# create_config_files([3],[1],[70],shuffle=False,blocked=False)
-# create_config_files([2],[1],[70],shuffle=True, blocked = True, block = 5)
-
-
-# fname = 'config/' + 'config_degradation_1_switch_0_train4_degr2_n70.json' 
-# file = os.path.join(os.getcwd(), fname)
-# import pandas as pd
-# file = open(file, 'r')
-# data = js.load(file)
-# df = pd.DataFrame(data)
-# df.query('trial_type == 2').tail(30)
-
-
-#%%
-import json 
-import pandas as pd
-import numpy as np
-import sys
-
-fname = 'config/shuffled_and_blocked/planning_config_degradation_1_switch_0_train6_degr6_n42.json'
-if sys.platform == 'win32':
-   fname = fname.replace('/', '\\') 
-f = open(fname)
-
-data = json.load(f)
-df = pd.DataFrame.from_dict(data)
-
-exp_rewards = df.groupby('block').mean('exp_reward')['exp_reward']
-print(exp_rewards[:6].sum()/6)
-print(exp_rewards[6:12].sum()/6)
-# df.head(10)
-
-
-#%%
-
-# df = df[['block','sequence','context','starts','planets','exp_reward']]
-
-df.barplot()
-# %%

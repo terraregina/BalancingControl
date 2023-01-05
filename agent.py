@@ -322,6 +322,7 @@ class BayesianPlanner(object):
         self.observations = np.zeros((trials, T), dtype = int)
         self.rewards = np.zeros((trials, T), dtype = int)
         self.posterior_context = np.ones((trials, T, self.nc))
+        self.prior_context_log = np.ones((trials, T, self.nc))
         self.posterior_context[:,:,:] = self.prior_context[np.newaxis,np.newaxis,:]
         self.likelihood = np.zeros((trials, T, self.npi, self.nc))
         self.prior_policies = np.zeros((trials, self.npi, self.nc))
@@ -416,7 +417,8 @@ class BayesianPlanner(object):
         else: #elif t == 0:
             prior_context = np.dot(self.perception.transition_matrix_context, self.posterior_context[tau-1, -1]).reshape((self.nc))
             self.pr_cont = prior_context
-#            else:
+        self.prior_context_log[tau,t] = prior_context       
+#  else:
 #                prior_context = np.dot(self.perception.transition_matrix_context, self.posterior_context[tau, t-1])
 
 
@@ -458,30 +460,7 @@ class BayesianPlanner(object):
         # print(self.policy_entropy[tau,t].round(3), 'policy entropy')
         # print(self.context_obs_suprise[tau,t].round(3), 'observation suprise')
 
-        if False:
-            inferred_context = np.argmax(self.posterior_context[tau,t])
-            if self.trial_type[tau] == 0 and self.context_obs[tau] == 0:
-                true_context = 0
-            elif self.trial_type[tau] == 0 and self.context_obs[tau] == 1:
-                true_context = 1
-            elif self.trial_type[tau] == 1 and self.context_obs[tau] == 0:
-                true_context = 2
-            elif self.trial_type[tau] == 1 and self.context_obs[tau] == 1:
-                true_context = 3  
-            inferred_correct_context = inferred_context == true_context
-            
-            if t == 0:
-                print('\n\n',tau, self.context_obs[tau])
-            print(self.posterior_context[tau,t].round(5), inferred_correct_context)
-            
-            if not inferred_correct_context and self.trial_type[tau] == 1:
-                print('\n', self.planets, 'planet: ', self.planets[observation], ' reward: ', reward)
-                print(self.posterior_context[tau,t].round(5), 'posterior context')
-                print(prior_context.round(3), 'prior context')
-                print(self.outcome_suprise[tau,t].round(3), 'outcome surprise')
-                print(self.policy_entropy[tau,t].round(3), 'policy entropy')
-                print(self.context_obs_suprise[tau,t].round(3), 'observation suprise')
-                a=0
+        #   
 
 
         if t < self.T-1:
@@ -504,6 +483,15 @@ class BayesianPlanner(object):
                                                     self.posterior_states[tau, t], \
                                                     self.posterior_policies[tau, t], \
                                                     self.posterior_context[tau,t])
+
+        # print('\n')
+        # print(tau,t)
+        # print(self.planets, self.planets[observation],reward)
+        # print(self.posterior_context[tau,t].round(2))
+        # print(self.posterior_dirichlet_rew[tau,t, :,:,0])
+        # print(self.posterior_dirichlet_rew[tau,t, :,:,1])
+        # print(self.posterior_dirichlet_rew[tau,t, :,:,2])
+        # print(self.posterior_dirichlet_rew[tau,t, :,:,3])
     
         # if self.trial_type[tau] == 1:
         #     print('degradation')
@@ -741,6 +729,7 @@ class BayesianPlanner_old(object):
                                                    self.posterior_states[tau, t], \
                                                    self.posterior_policies[tau, t], \
                                                    self.posterior_context[tau,t])
+
 
     def generate_response(self, tau, t):
 
