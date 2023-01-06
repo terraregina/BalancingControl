@@ -404,7 +404,7 @@ def create_trials_planning(data, habit_seq = 3, contingency_degradation = True,\
                   'miniblock_size' : block,
                   'seed':seed,
                   'nr': nr,
-                  'state_transition_matrix':stm,
+                  'state_transition_matrix':[stm.tolist()]*len(context),
                 }
 
         with open(fname, "w") as file:
