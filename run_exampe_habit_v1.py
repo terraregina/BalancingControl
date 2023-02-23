@@ -83,15 +83,13 @@ def run_agent(par_list, trials, T, ns=6, na=2, nr=3, nc=2, npl=2, added=None, us
     initialize context transition matrix
     """
 
-    p = context_trans_prob
-    q = (1-p)/(nc-1)
+    # p = context_trans_prob
+    # q = (1-p)/(nc-1)
 
-    transition_matrix_context = np.zeros([nc
-    
-    
-    ,nc]) + q
-    transition_matrix_context = transition_matrix_context - np.eye(nc)*q + np.eye(nc)*p 
-    
+    # transition_matrix_context = np.zeros([nc,nc]) + q
+    # transition_matrix_context = transition_matrix_context - np.eye(nc)*q + np.eye(nc)*p 
+    # print('\n\nnormal matrix\n', transition_matrix_context)
+
     # ///////// 
     p = context_trans_prob
     q = (1 - p)/6
@@ -178,12 +176,15 @@ def run_agent(par_list, trials, T, ns=6, na=2, nr=3, nc=2, npl=2, added=None, us
     C[1,:] = [dp/2, p, dp/2, p2]
     print('\ngenerative model observations')
     print(C)
-
+    
+    ################
     # p = cue_ambiguity                               # how strongly agent associates context observation with a particular context       
     # dp = 0.001
     # p2 = 1 - p - dp
     # C[0,:] = [p,dp/2,p2,dp/2]
     # C[1,:] = [dp/2, p, dp/2, p2]
+    # print('\noriginal model observations')
+    # print(C)
     """
     set up environment
     """

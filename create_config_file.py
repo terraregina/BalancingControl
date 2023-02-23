@@ -6,13 +6,13 @@ import sys
 
 
 # hardcoded - not good;
-planetRewardProbs = [[0.95, 0, 0   , 0, 0   ],
-                        [0.05, 0, 0.95, 0, 0.05 ],
-                        [0   , 0, 0.05, 0, 0.95]]
+planetRewardProbs = [[0.9, 0, 0   , 0, 0   ],
+                        [0.1, 0, 0.9, 0, 0.1 ],
+                        [0   , 0, 0.1, 0, 0.9]]
                         
-planetRewardProbsDegradation = [[0,    0, 0.05, 0, 0.95],
-                                [0.05, 0, 0.95, 0, 0.05],
-                                [0.95, 0,    0, 0,    0]]
+planetRewardProbsDegradation = [[0,    0, 0.1, 0, 0.9],
+                                [0.1, 0, 0.9, 0, 0.1],
+                                [0.9, 0,    0, 0,    0]]
 
 context_coding = np.array(["habit_training", "planning"])
 planet_coding = np.array([1,3,5]) # 1 = red, 3 = gray, 5 = green;
@@ -24,14 +24,15 @@ planet_coding = np.array([1,3,5]) # 1 = red, 3 = gray, 5 = green;
 
 ####################################################################################################
 
-day2 = 'config/shuffled_and_blocked/planning_config_degradation_1_switch_0_train1_degr1_n28_nr_3.json'
-day1 = 'config/shuffled_and_blocked/planning_config_degradation_1_switch_0_train2_degr0_n28_nr_3.json'
+day2 = 'config/shuffled_and_blocked/new_planning_config_degradation_1_switch_0_train2_degr2_n42_nr_3.json'
+day1 = 'config/shuffled_and_blocked/new_planning_config_degradation_1_switch_0_train5_degr0_n42_nr_3.json'
 
 files = {
          'day1' : day1,
          'day2' : day2
         }
-
+debugging = False
+data_array = []
 for key in files:
     f = files[key]
 
@@ -41,11 +42,19 @@ for key in files:
 
     data = json.load(f)
     
-
+    data_array.append(data)
+    if debugging:
+        df = pd.DataFrame.from_dict(data)
+        if key == 'day2': 
+            a = [0,1,2,3,4,28,29,30,31,32,56,57,58,59,60]
+        else:
+            a = np.arange(28)
+        df = df.loc[a]
+        data = df.to_dict(orient='list')
 
     config = {
         'conditionsExp': {
-            'planets': planet_coding[data['planets']].tolist(),
+            'planets': planet_coding[np.array(data['planets'])].tolist(),
             'starts': (np.array(data['starts']) + 1).tolist(),
             'contexts': context_coding[data['context']].tolist(),
             'trial_type':data['trial_type'],
@@ -78,8 +87,28 @@ for key in files:
                 'optimal_sequence':data['sequence']
             }
     
+
+
     # save file config file
 
     with open(key + '.json', 'w') as outfile:
         json.dump(config, outfile)
 # %%
+
+dfs = []
+for data in data_array:
+    dfs.append(pd.DataFrame.from_dict(data))
+df = pd.concat(dfs).reset_index(drop=True)
+blocks_total = df.query('training_blocks == 5').block.unique().max()+1
+blocks_total += df.query('training_blocks == 2').block.unique().max()+1
+df['training_blocks'] = 7
+df['degradation_blocks'] = 2
+df['block'] = np.arange(blocks_total).repeat(df['trials_per_block'].unique()[0])
+cols = df.columns
+config = {}
+for col in cols:
+    config[col] = df[col].tolist()
+
+name = 'config/shuffled_and_blocked/new_planning_config_degradation_1_switch_0_train7_degr2_n42_nr_3.json'
+with open(name, 'w') as outfile:
+    json.dump(config, outfile)

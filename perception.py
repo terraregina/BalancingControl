@@ -1007,18 +1007,6 @@ class HierarchicalPerception(object):
 
 
         post_policies = (prior_context[np.newaxis,:] * posterior_policies).sum(axis=1)
-        # beta = self.dirichlet_rew_params.copy()
-        # states = (posterior_states[:,t,:] * post_policies[np.newaxis,:,np.newaxis]).sum(axis=1)
-        # st = np.argmax(states, axis=0)
-        # planets = np.zeros([self.npl, self.nc])
-        # planets[self.planets[st], np.arange(self.nc)] = 1
-        # if not np.all(states[:,0] == states[:,1]):
-        #     raise Exception("inferred states are different for the two contexts") 
-        # beta_prime = self.dirichlet_rew_params.copy()
-        
-        # if t != 0:
-        #     beta_prime[self.reward_ind[reward]] = beta[self.reward_ind[reward]] + planets
-
 
         alpha = self.dirichlet_pol_params.copy()
         if t == self.T-1:

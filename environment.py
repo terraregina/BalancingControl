@@ -100,7 +100,7 @@ class PlanetWorld(object):
         reward = np.random.choice(self.possible_rewards, p=rp)
         # reward = self.possible_rewards[np.argmax(rp)]
         # print(self.hidden_states[tau,t], curr_loc)
-        # print(self.planet_conf[tau,:])
+        # print(self.planet_conf[tau,:d])
         # print(self.R[tau,:,curr_loc])
         # print('rewards')
         # print(reward, reward_old)

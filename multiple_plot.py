@@ -376,14 +376,16 @@ def load_df(names,data_folder='data', extinguish=None):
 
         cue0 = (wrong[wrong['cue'] == 0]).drop(cols1, axis= 1)
         cue1 = (wrong[wrong['cue'] == 1]).drop(cols0, axis= 1)
-        cue0['difference'] = cue0[cols0].sum(axis=1)
+        cue0['difference'] = cue0[
+            
+            cols0].sum(axis=1)
         cue1['difference'] = cue1[cols1].sum(axis=1)
 
         test = cue1[cue1['trial'] % 3 != 0]
 
 
             # outcome_surprise = a.outcome_suprise
-            # entropy = a.policy_entropy
+            # entropy = a.policy_entropy    
             # observation_surprise = a.context_obs_suprise
             # policy_surprise = a.policy_surprise
 
@@ -1039,7 +1041,8 @@ def plot_all(lst,hs=[[1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]],utility
                         size=18, weight='bold')
             
   
-            fig.savefig(fnames, dpi=300)    
+            fig.savefig(fnames, dpi=100)    
+            # fig.savefig(fnames, dpi=300)    
 
 
 # %%

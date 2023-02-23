@@ -72,15 +72,15 @@ def generate_trials_df(planet_rewards, sequences):
 
     # create state transition matrices
     nplanets = 6
-    state_transition_matrix = np.zeros([6,6,2])
+    # state_transition_matrix = np.zeros([6,6,2])
 
-    m = [1,2,3,4,5,0]
-    for r, row in enumerate(state_transition_matrix[:,:,0]):
-        row[m[r]] = 1
+    # m = [1,2,3,4,5,0]
+    # for r, row in enumerate(state_transition_matrix[:,:,0]):
+    #     row[m[r]] = 1
 
-    j = np.array([5,4,5,6,2,2])-1
-    for r, row in enumerate(state_transition_matrix[:,:,1]):
-        row[j[r]] = 1
+    # j = np.array([5,4,5,6,2,2])-1
+    # for r, row in enumerate(state_transition_matrix[:,:,1]):
+    #     row[j[r]] = 1
 
 
 
@@ -97,6 +97,8 @@ def generate_trials_df(planet_rewards, sequences):
 
     # generate all planet constelations
     planet_confs = np.delete(planet_confs,[0,planet_confs.shape[0]-1], 0)
+    # planet_confs = planet_confs[1:-1]
+
     starts = np.tile(np.arange(nplanets), planet_confs.shape[0])
 
 
@@ -183,7 +185,7 @@ def generate_trials_df(planet_rewards, sequences):
         # print(slices[0][0])
     return slices, planet_confs,state_transition_matrix
 
-def all_possible_trials(habit_seq=3, shuffle=False, extend=False, nr=3):
+def all_possible_trials(habit_seq=3, shuffle=False, extend=False, nr=3, seed = 1):
     
     np.random.seed(1)
     ns=6
@@ -412,11 +414,11 @@ def create_trials_planning(data, habit_seq = 3, contingency_degradation = True,\
 
 
 def create_config_files_planning(training_blocks, degradation_blocks, extinction_blocks, trials_per_block, habit_seq = 3,\
-    shuffle=False, blocked=False, block=None, trials=None, nr=3):
+    shuffle=False, blocked=False, block=None, trials=None, nr=3,seed=1):
 
     if trials is None:  
 
-        trials, state_transition_matrix = all_possible_trials(habit_seq=habit_seq,shuffle=shuffle,nr=nr)
+        trials, state_transition_matrix = all_possible_trials(habit_seq=habit_seq,shuffle=shuffle,nr=nr,seed=seed)
 
     degradation = [True]
     cue_switch = [False]
@@ -444,8 +446,33 @@ for con in conf:
     if not os.path.exists(path):
         os.makedirs(path)
 
-
 combinations = []
+
+
+matrix = 'new'
+
+if matrix == 'new':
+    state_transition_matrix = np.zeros([6,6,2])
+
+    m = np.array([1,2,3,4,5,0])
+    for r, row in enumerate(state_transition_matrix[:,:,0]):
+        row[m[r]] = 1
+
+    j = np.array([2,3,4,5,0,1])
+    for r, row in enumerate(state_transition_matrix[:,:,1]):
+        row[j[r]] = 1
+        
+elif matrix == 'old':
+    state_transition_matrix = np.zeros([6,6,2])
+
+    m = [1,2,3,4,5,0]
+    for r, row in enumerate(state_transition_matrix[:,:,0]):
+        row[m[r]] = 1
+
+    j = np.array([5,4,5,6,2,2])-1
+    for r, row in enumerate(state_transition_matrix[:,:,1]):
+        row[j[r]] = 1
+
 # create_config_files_planning([4],[2],[42],shuffle=True,blocked=True,block=5)
 # create_config_files_planning([4],[6],[70],shuffle=True,blocked=False)
 # create_config_files_planning([4],[2],[42],shuffle=True,blocked=True, block=3)
@@ -453,8 +480,14 @@ combinations = []
 # create_config_files_planning([6],[6],[42],shuffle=True,blocked=True, block=3,nr=2)
 # create_config_files_planning([6],[6],[70],shuffle=True,blocked=True, block=5,nr=2)
 
-create_config_files_planning([2],[0],[0],[28],shuffle=True,blocked=True, block=2,nr=3)
-create_config_files_planning([1],[1],[1],[28],shuffle=True,blocked=True, block=2,nr=3)
+# create_config_files_planning([5],[0],[0],[42], shuffle=True, blocked=True, block=3,nr=3)
+# create_config_files_planning([2],[2],[1],[42], shuffle=True, blocked=True, block=3,nr=3)
+
+
+create_config_files_planning([4],[2],[2],[42], shuffle=True, blocked=True, block=3,nr=3)
+
+
+# create_config_files_planning([1],[1],[1],[28],shuffle=True,blocked=True, block=2,nr=3)
 
 # create_config_files_planning([6],[6],[2],[42],shuffle=True,blocked=True, block=3,nr=3)
 # create_config_files_planning([6],[6],[2],[70],shuffle=True,blocked=True, block=5,nr=3)
@@ -468,8 +501,29 @@ import pandas as pd
 import numpy as np
 import sys
 
-fname = 'config/shuffled_and_blocked/planning_config_degradation_1_switch_0_train6_degr6_n42.json'
-fname = 'config/shuffled_and_blocked/planning_config_degradation_1_switch_0_train2_degr0_n42_nr_3.json'
+# fname = 'config/shuffled_and_blocked/planning_config_degradation_1_switch_0_train4_degr2_n42_nr_3.json'
+fname = 'config/shuffled_and_blocked/planning_config_degradation_1_switch_0_train7_degr2_n42_nr_3.json'
+
+if sys.platform == 'win32':
+   fname = fname.replace('/', '\\') 
+f = open(fname)
+
+data = json.load(f)
+df = pd.DataFrame.from_dict(data)
+
+exp_rewards = df.groupby(by=['block','context']).mean('exp_reward')['exp_reward']
+# df.head(10)
+
+
+#%% Check if trials are the same if just shorter training
+
+import json 
+import pandas as pd
+import numpy as np
+import sys
+
+fname = 'config/shuffled_and_blocked/planning_config_degradation_1_switch_0_train4_degr2_n42.json'
+# fname = 'config/shuffled_and_blocked/planning_config_degradation_1_switch_0_train2_degr0_n42_nr_3.json'
 
 if sys.platform == 'win32':
    fname = fname.replace('/', '\\') 
@@ -482,7 +536,6 @@ exp_rewards = df.groupby('block').mean('exp_reward')['exp_reward']
 print(exp_rewards[:6].sum()/6)
 print(exp_rewards[6:12].sum()/6)
 # df.head(10)
-
 
 
 #%% OLD FUNCTIONS

@@ -81,6 +81,8 @@ def run_single_sim(lst,
                       + '_degr' + str(degradation_blocks)                 \
                       + '_n' + str(trials_per_block)+ '_nr_' + str(nr) + '.json'
 
+    # config = 'planning_config_degradation_1_switch_0_train7_degr2_n42_nr_3.json'
+
 
     folder = os.path.join(os.getcwd(),'config/' + config_folder)
 
@@ -90,7 +92,19 @@ def run_single_sim(lst,
 
 
     file = open(os.path.join(folder,config))
+    ##############################################    
+    # data = json.load(file)
+    # df = pd.DataFrame.from_dict(data)
+    # df = df.query('block != 4 & block != 5 & block != 6')
+    # df.loc[df['trial_type']>0, 'block'] -= 3
+    # task_params = df.to_dict('list')
+    # task_params['training_blocks'] = 4
+    # task_params['degradation_blocks'] = 2
+    # task_params['trials_per_block'] = 42
+    # task_params['switch_cues'] = task_params['switch_cues'][0]
 
+    #####################################
+    
     task_params = js.load(file)                                                                                 
     colors = np.asarray(task_params['context'])          # 0/1 as indicator of color
     sequence = np.asarray(task_params['sequence'])       # what is the optimal sequence
@@ -99,9 +113,8 @@ def run_single_sim(lst,
     trial_type = np.asarray(task_params['trial_type'])
     blocks = np.asarray(task_params['block'])
 
-
-    nblocks = int(blocks.max()+1)         # number of blocks
-    trials = blocks.size                  # number of trials
+    nblocks = int(blocks.max()+1)                    # number of blocks
+    trials = blocks.size                             # number of trials
     block = task_params['trials_per_block']           # trials per block
  
     meta = {
@@ -123,7 +136,10 @@ def run_single_sim(lst,
         'contingency_degrdataion': task_params['contingency_degradation'],
         'switch_cues': task_params['switch_cues'],
         'trials_per_block': task_params['trials_per_block'],
-        'exp_reward': task_params['exp_reward']
+        'exp_reward': task_params['exp_reward'],
+        'nr': task_params['nr'],
+        'state_transition_matrix': task_params['state_transition_matrix'][0],
+        'deterministic_reward': deterministic_reward
     }
 
     all_optimal_seqs = np.unique(sequence)                                                                            
@@ -131,10 +147,13 @@ def run_single_sim(lst,
     # reward probabilities schedule dependent on trial and planet constelation
     Rho = np.zeros([trials, nr, ns])
 
+    if deterministic_reward:
+        planet_reward_probs = planet_reward_probs.round(1)
+        planet_reward_probs_switched = planet_reward_probs_switched.round(1)
+
     for i, pl in enumerate(planets):
         if i >= block*meta['training_blocks'] and i < block*(meta['training_blocks'] + meta['degradation_blocks']) and contingency_degradation:
-            # print(i)
-            # print(pl)
+
             Rho[i,:,:] = planet_reward_probs_switched[tuple([pl])].T
         else:
             Rho[i,:,:] = planet_reward_probs[tuple([pl])].T
@@ -195,12 +214,14 @@ def run_single_sim(lst,
  
     fname +=  '_extinguish.json'
 
+    trial_file_stm = np.array(meta['state_transition_matrix'])
+    if not np.all(trial_file_stm[:,:,1] == state_transition_matrix[:,:,1,0].T):
+        raise Exception('desire state transition matrix does not match state transition matrix in trial file\n')
     worlds = [run_agent(par_list, trials, T, ns , na, nr, nc, npl, added=[trial_type,sequence], use_fitting=use_fitting) for _ in range(repetitions)]
     meta['trial_type'] = task_params['trial_type']
     meta['optimal_sequence'] = task_params['sequence']
-
     worlds.append(meta)
-    fname = os.path.join(os.path.join(os.getcwd(),'temp' + '/' + config_folder), fname)
+    fname = os.path.join(os.path.join(os.getcwd(),'temp' + '\\' + config_folder), fname)
     jsonpickle_numpy.register_handlers()
     pickled = pickle.encode(worlds)
     with open(fname, 'w') as outfile:
@@ -252,7 +273,7 @@ def pooled(arrays,seed=521312,repetitions=1, data_folder='temp',check_missing = 
         fname = prefix + 'p' + str(l[4])  +'_learn_rew' + str(int(l[2] == True))+ '_q' + str(l[3]) + '_h' + str(l[5]) + '_' +\
         str(l[8]) + '_' + str(l[6]) + str(l[7]) + \
         '_decp' + str(l[9]) + '_decc' + str(l[10]) +'_rew' + str(l[11]) + '_' + 'u'+  '-'.join(l[13])+'_' + str(nr) + '_' + l[14]
-
+        print(l[9])
         if extinguish:
             fname += '_extinguish.json'
         else:
@@ -301,6 +322,7 @@ def pooled(arrays,seed=521312,repetitions=1, data_folder='temp',check_missing = 
                                                     repeat(ca[7]),\
                                                     repeat(ca[8]),\
                                                     repeat(ca[9]),\
+                                                        
                                                     repeat(ca[10]))),
                             total=len(lst)):
                 pass
