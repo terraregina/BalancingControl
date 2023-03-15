@@ -24,6 +24,7 @@ import jsonpickle.ext.numpy as jsonpickle_numpy
 import json
 import time
 from multiprocessing import Pool
+import torch as ar
 
 import perception as prc
 import agent as agt
@@ -219,10 +220,7 @@ def run_agent(par_list, trials, T, ns=6, na=2, nr=3, nc=2, npl=2, added=None, us
         prior_context = ar.tensor(prior_context)
         alpha_0 = ar.tensor([alpha_0])
         dec_temp = ar.tensor([dec_temp])
-        dec_temp_cont = ar.tensor([dec_temp])
-
-
-    if use_fitting ==True:
+        dec_temp_cont = ar.tensor([dec_temp_cont])
 
         ac_sel = asl.FittingAveragedSelector(trials = trials, T = T,
                                       number_of_actions = na)
@@ -327,253 +325,60 @@ def run_agent(par_list, trials, T, ns=6, na=2, nr=3, nc=2, npl=2, added=None, us
     """
     simulate experiment
     """
+
+
+
     w.simulate_experiment(range(trials))
+    # w.simulate_experiment(range(4)) 
+
     w.h = learn_pol
     w.q = context_trans_prob
     w.p = cue_ambiguity
     w.dec_temp = dec_temp
-
-    return w
-
-
-'''
-function creating all possible trials and starting points
-for given optimal sequence (s1 and s2) and planet reward association (all_rewards)
-
-if you want reverse contingenvies you need to give [[1,1,-1]], this will produce
-the following p(reward|planet)
-[0,  , 0   , 0.95]
-[0.05, 0.95, 0.05]
-[0.95, 0.05, 0   ]
-where rows are possible rewards [-1,0,1] and cols possible planet types [red, gray, green] for example
-
-OUTPUT: list with all trial information for all possible trials for a given optimal sequence pair
-'''
-
-def run_single_sim(lst,
-                    ns,
-                    na,
-                    npl,
-                    nc,
-                    nr,
-                    T,
-                    state_transition_matrix,
-                    planet_reward_probs,
-                    planet_reward_probs_switched,
-                    repetitions):
-
-    switch_cues, contingency_degradation, reward_naive, context_trans_prob, cue_ambiguity, h,\
-    training_blocks, degradation_blocks, trials_per_block = lst
     
-    config = 'config/config' + '_degradation_'+ str(int(contingency_degradation)) \
-                      + '_switch_' + str(int(switch_cues))                \
-                      + '_train' + str(training_blocks)                   \
-                      + '_degr' + str(degradation_blocks)                 \
-                      + '_n' + str(trials_per_block)+'.json'
+    if use_fitting:
+        wn = w
+        wn.actions = np.array(wn.actions)
+        wn.rewards = np.array(wn.rewards)
+        wn.observations = np.array(wn.observations)
+        for key in wn.environment.__dict__.keys():
+            if ar.is_tensor(w.environment.__dict__[key]):
+                w.environment.__dict__[key] = np.array(w.environment.__dict__[key])
 
-    folder = os.getcwd()
+        keys = ['actions', 'observations', 'rewards', 'posterior_actions',\
+                'posterior_rewards', 'context_obs', 'policies','possible_polcies','prior_states','prior_context',\
+                'prior_policies','posterior_contexts','control_probs','planets','prev_pols','possible_policies']
 
-    file = open(os.path.join(folder,config))
+        for key in keys:
+            wn.agent.__dict__[key] =  np.array(wn.agent.__dict__[key])
+        
+        keys = ['rewards', 'observations', 'dirichlet_rew_params', 'dirichlet_pol_params', 'bwd_messages', 'fwd_messages', 'obs_messages', 'rew_messages', 'fwd_norms',\
+                'curr_gen_mod_rewards', 'posterior_states', 'posterior_policies', 'posterior_actions',\
+                'posterior_contexts', 'likelihoods'] 
 
-    task_params = js.load(file)                                                                                 
-
-    colors = np.asarray(task_params['context'])          # 0/1 as indicator of color
-    sequence = np.asarray(task_params['sequence'])       # what is the optimal sequence
-    starts = np.asarray(task_params['starts'])           # starting position of agent
-    planets = np.asarray(task_params['planets'])         # planet positions 
-    trial_type = np.asarray(task_params['trial_type'])
-    blocks = np.asarray(task_params['block'])
+        for key in keys:
+            wn.agent.perception.__dict__[key] = np.array(ar.stack(wn.agent.perception.__dict__[key]))
 
 
-    nblocks = int(blocks.max()+1)         # number of blocks
-    trials = blocks.size                  # number of trials
-    block = task_params['trials_per_block']           # trials per block
- 
-    meta = {
-        'trial_file' : config, 
-        'trial_type' : trial_type,
-        'switch_cues': switch_cues == True,
-        'contingency_degradation' : contingency_degradation == True,
-        'learn_rew' : reward_naive == True,
-        'context_trans_prob': context_trans_prob,
-        'cue_ambiguity' : cue_ambiguity,
-        'h' : h,
-        'optimal_sequence' : sequence,
-        'blocks' : blocks,
-        'trials' : trials,
-        'nblocks' : nblocks,
-        'degradation_blocks': task_params['degradation_blocks'],
-        'training_blocks': task_params['training_blocks'],
-        'interlace': task_params['interlace'],
-        'contingency_degrdataion': task_params['contingency_degradation'],
-        'switch_cues': task_params['switch_cues'],
-        'trials_per_block': task_params['trials_per_block']
-    }
+        keys = ['big_trans_matrix', 'generative_model_observations','generative_model_states',\
+                'generative_model_context','transition_matrix_context','prior_rewards','prior_states',\
+                'dec_temp','dec_temp_cont','policies','actions','alpha_0','dirichlet_rew_params_init',\
+                'dirichlet_pol_params_init','prior_context']
+        
+        for key in keys:
+            wn.agent.perception.__dict__[key] =  np.array(wn.agent.perception.__dict__[key])
 
-    all_optimal_seqs = np.unique(sequence)                                                                            
-
-    # reward probabilities schedule dependent on trial and planet constelation
-    Rho = np.zeros([trials, nr, ns])
-
-    for i, pl in enumerate(planets):
-        if i >= block*meta['training_blocks'] and i < block*(meta['training_blocks'] + meta['degradation_blocks']) and contingency_degradation:
-            # print(i)
-            # print(pl)
-            Rho[i,:,:] = planet_reward_probs_switched[tuple([pl])].T
-        else:
-            Rho[i,:,:] = planet_reward_probs[tuple([pl])].T
-
-    u = 0.99
-    utility = np.array([(1-u)/2,(1-u)/2,u])
-
-    if reward_naive==True:
-        reward_counts = np.ones([nr, npl, nc])
+        #  FIX properlt
+        # wn.dec_temp = 2
+        wn.agent.perception.generative_model_rewards =  0
+        wn.agent.perception.prior_policies =  0
+        # wn.agent.perception.possible_rewards =  0
+        # wn.agent.perception.planets =  0
+        wn.agent.action_selection.control_probability =  0
+        # wn.agent.perception.big_trans_matrix = 0
+        return wn
     else:
-        reward_counts = np.tile(planet_reward_probs.T[:,:,np.newaxis]*20,(1,1,nc))+1
-        # reward_counts = np.ones([nr, npl, nc])
-        # reward_counts[:,:,:2] = np.tile(planet_reward_probs.T[:,:,np.newaxis]*10,(1,1,2))+1
-        # print('\nDoing different naive rewards')
-        # print(reward_counts)
-
-    par_list = [h,                        
-                context_trans_prob,
-                cue_ambiguity,            
-                'avg',                    
-                Rho,                      
-                utility,                  
-                state_transition_matrix,  
-                planets,                  
-                starts,                   
-                colors,
-                reward_counts,
-                1]
-
-    prefix = ''
-    if switch_cues == True:
-        prefix += 'switch1_'
-    else:
-        prefix +='switch0_'
-
-    if contingency_degradation == True:
-        prefix += 'degr1_'
-    else:
-        prefix += 'degr0_'
-    fname = prefix +'p' + str(cue_ambiguity) +'_learn_rew' + str(int(reward_naive == True)) + '_q' + str(context_trans_prob) + '_h' + str(h)+ '_' +\
-    str(meta['trials_per_block']) +'_'+str(meta['training_blocks']) + str(meta['degradation_blocks']) + '.json'
-
-    worlds = [run_agent(par_list, trials, T, ns , na, nr, nc, npl,trial_type=trial_type) for _ in range(repetitions)]
-
-    worlds.append(meta)
-    if False:
-        fname = os.path.join(os.path.join(folder,'data'), fname)
-        jsonpickle_numpy.register_handlers()
-        pickled = pickle.encode(worlds)
-        with open(fname, 'w') as outfile:
-            json.dump(pickled, outfile)
-
-        return fname
-
-""""""
-def main(create_configs = False):
-
-    na = 2                                           # number of unique possible actions
-    nc = 4                                           # number of contexts, planning and habit
-    nr = 3                                           # number of rewards
-    ns = 6                                           # number of unique travel locations
-    npl = 3
-    steps = 3                                        # numbe of decisions made in an episode
-    T = steps + 1                                    # episode length
-
-    # reward probabiltiy vector
-    repetitions = 1
-    planet_reward_probs = np.array([[0.95, 0   , 0   ],
-                                    [0.05, 0.95, 0.05],
-                                    [0,    0.05, 0.95]]).T    # npl x nr
-
-    planet_reward_probs_switched = np.array([[0   , 0    , 0.95],
-                                            [0.05, 0.95 , 0.05],
-                                            [0.95, 0.05 , 0.0]]).T 
-
-
-    state_transition_matrix = np.zeros([ns,ns,na])
-
-
-    m = [1,2,3,4,5,0]
-    for r, row in enumerate(state_transition_matrix[:,:,0]):
-        row[m[r]] = 1
-
-    j = np.array([5,4,5,6,2,2])-1
-    for r, row in enumerate(state_transition_matrix[:,:,1]):
-        row[j[r]] = 1
-
-    state_transition_matrix = np.transpose(state_transition_matrix, axes= (1,0,2))
-    state_transition_matrix = np.repeat(state_transition_matrix[:,:,:,np.newaxis], repeats=nc, axis=3)
-
-    # setup simulation parameters here
-# config_degradation_1_switch_1_train4_degr4_n60.json'
-    h =  [1,70,100]
-    cue_ambiguity = [0.6]                      # cue ambiguity refers to how certain agent is a given observation refers to a given context
-    context_trans_prob = [1/nc]                # the higher the value the more peaked the distribution is
-    degradation = [True]                       # bit counter intuitive, should change the name :D
-    cue_switch = [False]
-    reward_naive = [False]
-    training_blocks = [4]
-    degradation_blocks=[4]
-    trials_per_block=[70]
-    arrays = [cue_switch, degradation, reward_naive, context_trans_prob, cue_ambiguity,h,\
-              training_blocks, degradation_blocks, trials_per_block]
-
-    data_path = os.path.join(os.getcwd(),'data')
-    if not os.path.isdir(data_path): 
-        os.mkdir(data_path)
-
-    # needs to be run only the first time you use main
-    # if create_configs:
-    #     from planet_sequences import generate_trials_df
-    #     create_config_files(training_blocks, degradation_blocks, trials_per_block)
-
-    lst = []
-    for i in product(*arrays):
-        lst.append(list(i))
-
-    fname = 'config/config_degradation_0_switch_0_train4_degr4_n60.json'
-    # failed efforts at parallel running of sims
-    ca = [ns, na, npl, nc, nr, T, state_transition_matrix, planet_reward_probs,\
-          planet_reward_probs_switched,repetitions]
-
-    # start =  time.perf_counter()
-    # with Pool() as pool:
-    #     M = pool.starmap(run_single_sim, zip(lst,\
-    #                                     repeat(ca[0]),\
-    #                                     repeat(ca[1]),\
-    #                                     repeat(ca[2]),\
-    #                                     repeat(ca[3]),\
-    #                                     repeat(ca[4]),\
-    #                                     repeat(ca[5]),\
-    #                                     repeat(ca[6]),\
-    #                                     repeat(ca[7]),\
-    #                                     repeat(ca[8]),\
-    #                                     repeat(ca[9])))
-    # finish = time.perf_counter()
-    # print(finish-start)
-
-    start =  time.perf_counter()
-    for l in lst[:1]:
-        run_single_sim(l, ca[0], ca[1], ca[2], ca[3], ca[4], ca[5], ca[6], ca[7], ca[8], ca[9])
-    finish = time.perf_counter()
-    print(f'Finished in {round(finish-start, 2)} second(s) for sequential')
-
-
-
-
-# ################################################
-
-# if __name__ == '__main__':
-#     main()
-
-
-
-
+        return w
 
 
 

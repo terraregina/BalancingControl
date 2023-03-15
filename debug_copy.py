@@ -4,7 +4,7 @@ array = ar.asarray
 import agent as agt
 import perception as prc
 import action_selection as asl
-import inference_two_seqs as inf
+# import inference_two_seqs as inf
 import action_selection as asl
 import numpy as np
 import itertools
@@ -25,36 +25,43 @@ from environment import PlanetWorld
 from world import FakeWorld
 import jsonpickle as pickle
 import jsonpickle.ext.numpy as jsonpickle_numpy
-
+from sim_parameters import *
+import sys
 #ar.autograd.set_detect_anomaly(True)
 ###################################
 """load data"""
 
-switch = 0
-degr = 1
-p = 0.85
-learn_rew  = 1
-q = 0.8
-h=4
-db = 6
-tb = 4
-tpb = 70
+switch = cue_switch[0]
+degr = degradation[0]
+p = cue_ambiguity[0]
+learn_rew  = reward_naive[0]
+q = context_trans_prob[0]
+h= h[0]
+db = degradation_blocks[0]
+tb = training_blocks[0]
+tpb = trials_per_block[0]
 n_part = 1
-u = [1,1, 98]
+u = utility[0]
 util = '-'.join([str(ut) for ut in u])
-rew = 0
-dec = 1
-conf ='shuffled'
-folder = "temp/" + 'shuffled' + '/'
+rew = rews[0]
+dec = dec_temps[0]
+dec_temp_cont = dec_context[0]
 
-run_name = "multiple_hier_switch"+str(switch) +"_degr"+str(degr) +"_p"+str(p)+ "_learn_rew"+str(learn_rew)+\
+
+conf = conf[0]
+folder = "temp/" + conf + '/'
+
+run_name = "multiple_hier_switch"+str(int(switch)) +"_degr"+str(int(degr)) +"_p"+str(p)+ "_learn_rew"+str(int(learn_rew))+\
            "_q"+str(q) + "_h"+str(h)  + "_" + str(tpb) +  "_" + str(tb) + str(db) +\
-           "_dec" + str(dec) +"_rew" + str(str(rew)) + "_" + "u"+ util + "_" + conf + "_extinguish.json"
+           "_decp" + str(dec) + "_decc" + str(dec_temp_cont) +"_rew" + str(str(rew)) + "_" + "u"+ util + "_" + str(nr) + "_" + conf + "_extinguish.json"
 print(run_name)
 
-fname = os.path.join(folder, run_name)
-jsonpickle_numpy.register_handlers()
+fname = os.path.join(os.getcwd() + '/' + folder, run_name)
+
+if sys.platform == 'win32':
+    fname = fname.replace('/','\\')
     
+jsonpickle_numpy.register_handlers()
 with open(fname, 'r') as infile:
     loaded = json.load(infile)
 
@@ -111,15 +118,15 @@ for r, row in enumerate(B[:,:,1]):
 B = np.transpose(B, axes=(1,0,2))
 B = np.repeat(B[:,:,:,None], repeats=nc, axis=3)
 
+B = state_transition_matrix
 
+# planet_reward_probs = array([[0.95, 0   , 0   ],
+#                                 [0.05, 0.95, 0.05],
+#                                 [0,    0.05, 0.95]]).T    # npl x nr
 
-planet_reward_probs = array([[0.95, 0   , 0   ],
-                                [0.05, 0.95, 0.05],
-                                [0,    0.05, 0.95]]).T    # npl x nr
-
-planet_reward_probs_switched = array([[0   , 0    , 0.95],
-                                        [0.05, 0.95 , 0.05],
-                                        [0.95, 0.05 , 0.0]]).T 
+# planet_reward_probs_switched = array([[0   , 0    , 0.95],
+#                                         [0.05, 0.95 , 0.05],
+#                                         [0.95, 0.05 , 0.0]]).T 
 
 
 Rho = ar.zeros([trials, nr, ns])
@@ -202,7 +209,7 @@ bayes_prc = prc.HierarchicalPerception(
     dirichlet_pol_params = pol_par,
     dirichlet_rew_params = C_alphas,
     generative_model_context=C,
-    T=T,dec_temp=dec, r_lambda=rew)
+    T=T,dec_temp=dec, r_lambda=rew, dec_temp_cont=dec_temp_cont)
 
 ac_sel = asl.AveragedSelector(trials = trials, T = T, number_of_actions = na)
 

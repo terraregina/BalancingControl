@@ -583,7 +583,7 @@ class BayesianPlanner_old(object):
 
         #set the modules of the agent
         self.perception = perception
-        self.action_selection = action_selecti
+        self.action_selection = action_selection
         #     self.rewon
 
         #set parameters of the agent
@@ -767,27 +767,6 @@ class BayesianPlanner_old(object):
         return control_prob
 
 
-
-
-
-# arr_type = "torch"
-# if arr_type == "numpy":
-#     import numpy as ar
-#     array = ar.array
-# else:
-#     import torch as ar
-#     array = ar.tensor
-# import numpy as np
-# from perception import HierarchicalPerception
-# from misc import ln, softmax, own_logical_and
-# import scipy.special as scs
-
-
-# try:
-#     from inference_twostage import device
-# except:
-#     device = ar.device("cpu")class FittingAgent(object):
-
 class FittingAgent(object):
     def __init__(self, perception, action_selection, policies,
                  prior_states = None, prior_policies = None,
@@ -858,6 +837,7 @@ class FittingAgent(object):
 
 
     def reset(self, param_dict):
+
 
         self.actions = ar.zeros((self.trials, self.T), dtype = int).to(device)
         self.observations = ar.zeros((self.trials, self.T), dtype = int).to(device)

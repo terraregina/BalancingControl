@@ -5,20 +5,21 @@ h = [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]
 # h = [1,2,3,4,5,6,7,8,9,100]
 h=[1,100]
 cue_ambiguity = [0.5]
-context_trans_prob = [0.6,0.7,0.8]
+context_trans_prob = [0.7]
 cue_switch = [False]
 reward_naive = [False]
-training_blocks = [7]
+training_blocks = [2]
 degradation_blocks=[2]
 degradation = [True]
 trials_per_block=[42]
-dec_temps = [2,3,3]
+dec_temps = [2]
 rews = [0]
 rewards = [[-1,0,1]]#[[-1,1]]
 # for determinstic context update do a 100
-dec_context = [2,3,4]#[100]
-
+dec_context = [2]#[100]
+use_fitting = True
 extinguish = True
+deterministic = True
 
 na = 2                                           # number of unique possible actions
 nc = 4                                           # number of contexts, planning and habit
@@ -28,18 +29,18 @@ npl = nr
 steps = 3                                        # numbe of decisions made in an episode
 T = steps + 1                                    # episode length
 matrix = 'new'
-deterministic_reward = False
+deterministic_reward = True
 
 
 print('NUMBER OF REWARDS', nr)
 
 if npl == 3:
-    planet_reward_probs = np.array([[0.95, 0   , 0   ],
-                                    [0.05, 0.95, 0.05],
-                                    [0,    0.05, 0.95]]).T    # npl x nr
-    planet_reward_probs_switched = np.array([[0   , 0    , 0.95],
-                                            [0.05, 0.95 , 0.05],
-                                            [0.95, 0.05 , 0.0]]).T 
+    # planet_reward_probs = np.array([[0.95, 0   , 0   ],
+    #                                 [0.05, 0.95, 0.05],
+    #                                 [0,    0.05, 0.95]]).T    # npl x nr
+    # planet_reward_probs_switched = np.array([[0   , 0    , 0.95],
+    #                                         [0.05, 0.95 , 0.05],
+    #                                         [0.95, 0.05 , 0.0]]).T 
 
     planet_reward_probs = np.array([[0.9, 0   , 0   ],
                                     [0.1, 0.9, 0.1],
@@ -97,7 +98,7 @@ if matrix == 'old':
     j = np.array([5,4,5,6,2,2])-1
 
     for r, row in enumerate(state_transition_matrix[:,:,1]):
-        row[j[r]] = 1
+        row[j[r]] = 1   
     state_transition_matrix = np.transpose(state_transition_matrix, axes= (1,0,2))
     state_transition_matrix = np.repeat(state_transition_matrix[:,:,:,np.newaxis], repeats=nc, axis=3)
 

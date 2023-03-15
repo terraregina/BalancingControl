@@ -413,7 +413,6 @@ class GroupPerception(object):
         self.dirichlet_rew_params.append(dirichlet_rew_params.to(device))
         self.generative_model_rewards.append(generative_model_rewards.to(device))
 
-
 class FittingPerception(object):
     def __init__(self,
                  generative_model_observations,
@@ -428,7 +427,7 @@ class FittingPerception(object):
                  dirichlet_rew_params = None,
                  generative_model_context = None,
                  T=5, trials=10, pol_lambda=0, r_lambda=0, non_decaying=0,
-                 dec_temp=ar.tensor([1]), npart=1, npl=3,nr=3, possible_rewards=[-1,0,1]):
+                 dec_temp=ar.tensor([1]), dec_temp_cont = 1, npart=1, npl=3,nr=3, possible_rewards=[-1,0,1]):
         
         self.generative_model_observations = generative_model_observations
         self.generative_model_states = generative_model_states
@@ -444,6 +443,7 @@ class FittingPerception(object):
         self.r_lambda = r_lambda
         self.non_decaying = non_decaying
         self.dec_temp = dec_temp
+        self.dec_temp_cont = dec_temp_cont
         self.policies = policies
         self.npi = policies.shape[0]
         self.actions = ar.unique(policies)
@@ -712,6 +712,10 @@ class FittingPerception(object):
             posterior = outcome_surprise + policy_surprise + entropy + context_obs_suprise           
             posterior = ar.nan_to_num(softmax(posterior+ln(prior_context)))
             
+
+            posterior = ar.pow(posterior,self.dec_temp_cont)
+            posterior /= posterior.sum()
+
             # if tau > 139 and t!=0 and context == 0 and tau < 180:
             # if tau > 130 and t > 0 and tau < 160:
             # if tau == 140 and t == 1:
@@ -864,7 +868,6 @@ class HierarchicalPerception(object):
         self.prior_policies[:] = alphas / alphas.sum(axis=0)[None,:]
         self.dirichlet_pol_params = alphas
 
-
     def instantiate_messages(self, policies):#, gen_model_rewards):
         # m^{k+1}_{pi}(h_k) 
         self.bwd_messages = np.zeros((self.nh, self.T, self.npi, self.nc))
@@ -929,7 +932,6 @@ class HierarchicalPerception(object):
                 self.fwd_norms[t+1+i,pi,c] = self.fwd_messages[:,t+1+i,pi,c].sum()
                 if self.fwd_norms[t+1+i, pi,c] > 0: #???? Shouldn't this not happen?
                     self.fwd_messages[:,t+1+i, pi,c] /= self.fwd_norms[t+1+i,pi,c]
-
 
 
     def reset_preferences(self, t, new_preference, policies):
@@ -997,7 +999,6 @@ class HierarchicalPerception(object):
 
         return posterior, likelihood
 
-
     def update_beliefs_context(self, tau, t, reward,\
                                posterior_states,\
                                 posterior_policies,\
@@ -1046,19 +1047,20 @@ class HierarchicalPerception(object):
             posterior = outcome_surprise + policy_surprise + entropy + context_obs_suprise
             posterior = np.nan_to_num(softmax(posterior+ln(prior_context)))
 
-            if self.dec_temp == 100:
-                # print('argmax context')
-                mode = np.argmax(posterior)
-                posterior = np.zeros(posterior.shape)
-                const = 0.999999
-                for pi,p in enumerate(posterior):
-                    if pi == mode:
-                        posterior[pi] = 0.99999
-                    else: 
-                        posterior[pi] = (1 - 0.99999)/(posterior.size - 1)
-            else:
-                posterior = np.power(posterior,self.dec_temp_cont)
-                posterior /= posterior.sum()
+            # if self.dec_temp_cont == 100:
+            #     # print('argmax context')
+            #     mode = np.argmax(posterior)
+            #     posterior = np.zeros(posterior.shape)
+            #     const = 0.999999
+            #     for pi,p in enumerate(posterior):
+            #         if pi == mode:
+            #             posterior[pi] = 0.99999
+            #         else: 
+            #             posterior[pi] = (1 - 0.99999)/(posterior.size - 1)
+            # else:
+            posterior = np.power(posterior,self.dec_temp_cont)
+            posterior /= posterior.sum()
+
             return [posterior, outcome_surprise, entropy, policy_surprise, context_obs_suprise]
 
     def update_beliefs_dirichlet_pol_params(self, tau, t, posterior_policies, posterior_context = [1]):
@@ -1106,7 +1108,6 @@ class HierarchicalPerception(object):
 
         return self.dirichlet_rew_params
         
-
 
 class TwoStepPerception(object):
     def __init__(self,

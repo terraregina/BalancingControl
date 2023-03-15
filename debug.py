@@ -8,7 +8,7 @@ import pyro.distributions as dist
 import agent as agt
 import perception as prc
 import action_selection as asl
-import inference_two_seqs as inf
+# import inference_two_seqs as inf
 import action_selection as asl
 import numpy as np
 import itertools
@@ -29,36 +29,43 @@ from environment import PlanetWorld
 from world import FakeWorld
 import jsonpickle as pickle
 import jsonpickle.ext.numpy as jsonpickle_numpy
-
+from sim_parameters import *
+import sys
 #ar.autograd.set_detect_anomaly(True)
 ###################################
 """load data"""
-#%%
-switch = 0
-degr = 1
-p = 0.85
-learn_rew  = 1
-q = 0.8
-h=4
-db = 6
-tb = 4
-tpb = 70
-n_part = 1
-u = [1,1, 98]
-util = '-'.join([str(ut) for ut in u])
-rew = 0
-dec = 1
-conf ='shuffled'
-folder = "temp/" + 'shuffled' + '/'
 
-run_name = "multiple_hier_switch"+str(switch) +"_degr"+str(degr) +"_p"+str(p)+ "_learn_rew"+str(learn_rew)+\
+switch = cue_switch[0]
+degr = degradation[0]
+p = cue_ambiguity[0]
+learn_rew  = reward_naive[0]
+q = context_trans_prob[0]
+h= h[0]
+db = degradation_blocks[0]
+tb = training_blocks[0]
+tpb = trials_per_block[0]
+n_part = 1
+u = utility[0]
+util = '-'.join([str(ut) for ut in u])
+rew = rews[0]
+dec = dec_temps[0]
+dec_temp_cont = dec_context[0]
+
+print(dec_temp_cont)
+conf = conf[0]
+folder = "temp/" + conf + '/'
+
+run_name = "multiple_hier_switch"+str(int(switch)) +"_degr"+str(int(degr)) +"_p"+str(p)+ "_learn_rew"+str(int(learn_rew))+\
            "_q"+str(q) + "_h"+str(h)  + "_" + str(tpb) +  "_" + str(tb) + str(db) +\
-           "_dec" + str(dec) +"_rew" + str(str(rew)) + "_" + "u"+ util + "_" + conf + "_extinguish.json"
+           "_decp" + str(dec) + "_decc" + str(dec_temp_cont) +"_rew" + str(str(rew)) + "_" + "u"+ util + "_" + str(nr) + "_" + conf + "_extinguish.json"
 print(run_name)
 
-fname = os.path.join(folder, run_name)
-jsonpickle_numpy.register_handlers()
+fname = os.path.join(os.getcwd() + '/' + folder, run_name)
+
+if sys.platform == 'win32':
+    fname = fname.replace('/','\\')
     
+jsonpickle_numpy.register_handlers()
 with open(fname, 'r') as infile:
     loaded = json.load(infile)
 
@@ -128,19 +135,16 @@ for r, row in enumerate(B[:,:,1]):
 B = np.transpose(B, axes=(1,0,2))
 B = np.repeat(B[:,:,:,None], repeats=nc, axis=3)
 
+B = array(state_transition_matrix)
 
 
-planet_reward_probs = array([[0.95, 0   , 0   ],
-                                [0.05, 0.95, 0.05],
-                                [0,    0.05, 0.95]]).T    # npl x nr
+# planet_reward_probs = array(planet_reward_probs)    # npl x nr
 
-planet_reward_probs_switched = array([[0   , 0    , 0.95],
-                                        [0.05, 0.95 , 0.05],
-                                        [0.95, 0.05 , 0.0]]).T 
+# planet_reward_probs_switched = array(planet_reward_probs_switched)
 
 
-Rho = ar.zeros([trials, nr, ns])
-planets = array(world.environment.planet_conf)
+Rho = np.zeros([trials, nr, ns])
+planets = world.environment.planet_conf
 for i, pl in enumerate(planets):
     if i >= tpb*tb and i < tpb*(tb + db) and degr == 1:
         Rho[i,:,:] = planet_reward_probs_switched[tuple([pl])].T
@@ -223,7 +227,7 @@ bayes_prc = prc.FittingPerception(
     generative_model_context=C,
     T=T, 
     trials=trials,npart=n_part,
-    dec_temp = array([dec]), r_lambda=rew)
+    dec_temp = array([dec]), r_lambda=rew, dec_temp_cont=dec_temp_cont)
 
 ac_sel = asl.AveragedSelector(trials = trials, T = T, number_of_actions = na)
 
@@ -243,7 +247,7 @@ agent = agt.FittingAgent(bayes_prc, ac_sel, pol,
 world = FakeWorld(agent, data['observations'],data['rewards'], data['actions'],trials=trials, T=T, log_prior=0)
 world.context_obs = ar.tensor(data['environment'].context_cues)
 world.planets = ar.tensor(data['environment'].planet_conf)
-world.simulate_experiment()#curr_trials = [i for i in range(30)])
+world.simulate_experiment(curr_trials = [i for i in range(30)])
 
 data = {'policies': world.log_policies, 'contexts': world.log_context, 'prior': world.log_prior_pols, 'post': world.log_post_pols}
 

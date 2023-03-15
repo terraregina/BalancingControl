@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-arr_type = "numpy"
+from sim_parameters import use_fitting
 
-if arr_type == "numpy":
+if not use_fitting:
     import numpy as ar
     array = ar.array
 else:
     import torch as ar
     array = ar.tensor
+
+import numpy as np
+import torch as tr
     
 import scipy.special as scs
 import matplotlib.pylab as plt
@@ -84,10 +87,17 @@ def own_logical_or(x,y):
     return z>0
 
 
-def ln(x):
+def ln(x,debugging=True):
 
     #with ar.errstate(divide='ignore'):
-    return ar.log(x+1e-20)#ar.nan_to_num(ar.log(x))
+
+    if debugging:
+        if isinstance(x, tr.Tensor):
+            return tr.log(x+1e-20)#ar.nan_to_num(ar.log(x))
+        else:
+            return np.log(x+1e-20)#ar.nan_to_num(ar.log(x))
+    else:
+        return ar.log(x+1e-20)#ar.nan_to_num(ar.log(x))
 
 
 def logit(x):
@@ -97,12 +107,20 @@ def logit(x):
 def logistic(x):
     return 1/(1+ar.exp(-x))
 
-def softmax(x):
+def softmax(x,debugging=True):
     """Compute softmax values for each sets of scores in x."""
-    if arr_type == 'numpy':
-        e_x = ar.exp(x - ar.max(x, axis = 0))
+
+    if debugging:
+        if isinstance(x, tr.Tensor):
+            e_x = tr.exp(x - tr.max(x, axis = 0)[0])
+        else:
+            e_x = np.exp(x - np.max(x, axis = 0))
     else:
-        e_x = ar.exp(x - ar.max(x, axis = 0)[0])
+        if not use_fitting:
+            e_x = ar.exp(x - ar.max(x, axis = 0))
+        else:
+            e_x = ar.exp(x - ar.max(x, axis = 0)[0])
+            
     return e_x / e_x.sum(axis = 0)
 
 def sigmoid(x, a=1., b=1., c=0., d=0.):

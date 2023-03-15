@@ -6,7 +6,7 @@ from scipy.stats import entropy
 import matplotlib.pylab as plt
 from misc import *
 import torch as ar
-
+from sim_parameters import deterministic
 
 '''
 _______   _______   __       __ 
@@ -154,6 +154,7 @@ $$/   $$/         $$/   $$/ $$$$$$$/  $$/      $$/
 # for policy likelihood and post look at perception update_beliefs
 # we want the context averaged out, so look into how it is with prior and likelihood
 # I can do either the free energy or the likelihood, maybe try both
+
 
 class AdvantageRacingDiffusionSelector(object):
 
@@ -778,8 +779,11 @@ class AveragedSelector(object):
         self.estimate_action_probability(tau, t, posterior_policies, actions)
 
         #generate the desired response from action probability
-        u = np.random.choice(self.na, p = self.control_probability[tau, t])
-        # u = np.argmax(self.control_probability[tau,t])
+        if deterministic:
+            u = np.argmax(self.control_probability[tau,t])
+        else:
+            u = np.random.choice(self.na, p = self.control_probability[tau, t])
+        
         return u
 
     def estimate_action_probability(self, tau, t, posterior_policies, actions, *args):
@@ -815,8 +819,11 @@ class FittingAveragedSelector(object):
         self.estimate_action_probability(tau, t, posterior_policies, actions)
 
         #generate the desired response from action probability
-        u = ar.multinomial(self.control_probability[tau, t],num_samples=1, replacement = True)[0]
-        # u = ar.argmax(self.control_probability[tau,t])
+        if deterministic:
+            u = ar.argmax(self.control_probability[tau,t])
+        else:
+            u = ar.multinomial(self.control_probability[tau, t],num_samples=1, replacement = True)[0]
+        
         return u
 
     def estimate_action_probability(self, tau, t, posterior_policies, actions, *args):

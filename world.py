@@ -43,11 +43,12 @@ class FittingWorld(object):
             trials = range(self.trials)
         for tau in trials:
             for t in range(self.T):
-                if print_thoughts:
-                    print("tau", tau, ", t", t)
-                self.__update_world(tau, t, print_thoughts=print_thoughts)
-                # print('tau: ', tau, ' t:', t)
-                # print(self.agent.perception.dirichlet_rew_params[-1][...,0])
+                # if print_thoughts:
+                    # print("tau", tau, ", t", t)
+                self.__update_world(tau, t)
+            # print('tau: ', tau, ' t:', t)
+                # print(self.actions[tau])
+
         # self.convert_to_numpy()
 
     # def convert_to_numpy(self):
@@ -61,7 +62,7 @@ class FittingWorld(object):
     #     self.dec_temp = self.dec_temp.numpy()
 
     #this is a private method do not call it outside of the class
-    def __update_world(self, tau, t, print_thoughts = False):
+    def __update_world(self, tau, t):
         """This private method performs a signel time step update of the
         whole world. Here we update the hidden state(s) of the environment,
         the perceptual and planning states of the agent, and in parallel we
@@ -107,18 +108,26 @@ class FittingWorld(object):
         else:
             self.actions[tau, t] = -1
         
-        if print_thoughts:
-            print("response", response)
-            if t>0:
-                print("rewards", self.rewards[tau, t])
-            # print("posterior policies: ", self.agent.posterior_policies[tau,t])
-            # print("posterior context: ", self.agent.posterior_context[tau,t])
-            if t<self.T-1:
-                print("prior actions: ", self.agent.prior_actions)
-                print("posterior actions: ", self.agent.posterior_actions[tau,t])
-            print("\n")
 
+        if True:
+            print( '\n\n','tau, t: ', tau,t)
+            print('observation: ', self.environment.planet_conf[tau][self.rewards[tau,t]].numpy())
+            print('reward:', self.rewards[tau,t].numpy())
+            print('action:', self.actions[tau,t].numpy())
 
+            print('\nposterior policies:')
+            print(self.agent.perception.posterior_policies[-1][...,0].numpy().round(5))
+            print('\nposterior contexts: ')
+            print(self.agent.perception.posterior_contexts[-1][...,0].numpy().round(5))
+            print('\nposterior rewards: ')
+            for i in range(4):
+                print('context ', i)
+                print(self.agent.perception.dirichlet_rew_params[-1][...,i,0].numpy())
+            print('\ndirichlet_pol_params')
+            print(self.agent.perception.dirichlet_pol_params[-1][...,0].numpy())
+
+        if tau == 200:
+            print('tau == 200')
 
 class World(object):
 
@@ -216,10 +225,6 @@ class World(object):
                 print("prior actions: ", self.agent.prior_actions)
                 print("posterior actions: ", self.agent.posterior_actions[tau,t])
                 print("\n")
-
-
-
-
 
 class World_old(object):
 

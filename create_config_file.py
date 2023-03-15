@@ -58,7 +58,9 @@ for key in files:
             'starts': (np.array(data['starts']) + 1).tolist(),
             'contexts': context_coding[data['context']].tolist(),
             'trial_type':data['trial_type'],
-            'optimal_sequence': data['sequence']
+            'optimal_sequence': data['sequence'],
+            'exp_reward':data['exp_reward']
+
         },
         # update for training conditions
  
@@ -84,7 +86,8 @@ for key in files:
                 'starts': (np.array(data['starts']) + 1).tolist(),
                 'contexts': context_coding[data['context']].tolist(),
                 'trial_type':[-1]*n_train_trials,
-                'optimal_sequence':data['sequence']
+                'optimal_sequence':data['sequence'],
+                'exp_reward':data['exp_reward']
             }
     
 

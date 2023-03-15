@@ -35,6 +35,7 @@ from sim_parameters import *
 
 import gc
 gc.enable()
+
 def istarmap(self, func, iterable, chunksize=1):
     """starmap-version of imap
     """
@@ -193,6 +194,10 @@ def run_single_sim(lst,
     prefix = 'multiple_'
 
     if use_fitting == True:
+
+
+
+
         prefix += 'fitt_'
     else:
         prefix +='hier_'
@@ -216,22 +221,46 @@ def run_single_sim(lst,
 
     trial_file_stm = np.array(meta['state_transition_matrix'])
     if not np.all(trial_file_stm[:,:,1] == state_transition_matrix[:,:,1,0].T):
-        raise Exception('desire state transition matrix does not match state transition matrix in trial file\n')
+        raise Exception('desired state transition matrix does not match state transition matrix in trial file\n')
+    
     worlds = [run_agent(par_list, trials, T, ns , na, nr, nc, npl, added=[trial_type,sequence], use_fitting=use_fitting) for _ in range(repetitions)]
     meta['trial_type'] = task_params['trial_type']
     meta['optimal_sequence'] = task_params['sequence']
     worlds.append(meta)
     fname = os.path.join(os.path.join(os.getcwd(),'temp' + '\\' + config_folder), fname)
     jsonpickle_numpy.register_handlers()
+
+
+    ################
     pickled = pickle.encode(worlds)
     with open(fname, 'w') as outfile:
         json.dump(pickled, outfile)
 
+
+    # for world in worlds[:-1]:
+    #     world.dec_temp = 2
+        # world.agent.perception.generative_model_rewards =  0
+    #     world.agent.perception.prior_policies =  0
+    #     world.agent.perception.possible_rewards =  0
+    #     world.agent.perception.planets =  0
+        # world.agent.action_selection.control_probability =  0
+        
+    
+    # for wi, world in enumerate(worlds):
+    #     jsonpickle_numpy.register_handlers()  
+    #     pickled = pickle.encode([world])
+    #     with open('world_' + str(wi) + '.json', 'w') as outfile:
+    #         json.dump(pickled, outfile)
+
+
+    #     pickled = pickle.encode(world.environment)
+
+
+
     return fname
 
-def pooled(arrays,seed=521312,repetitions=1, data_folder='temp',check_missing = True,debugging=False):
+def pooled(arrays,seed=521312,repetitions=1, data_folder='temp',check_missing = True,debugging=False, use_fitting=False):
 
-    use_fitting = False
     np.random.seed(seed)
     ar.manual_seed(seed)
 
@@ -383,7 +412,7 @@ if __name__ == '__main__':
         h = [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]
         h = [1,100]
         cue_ambiguity = [0.5]
-        context_trans_prob = [0.6, 0.7, 0.8, 0.9]
+        context_trans_prob =    [0.6, 0.7, 0.8, 0.9]
         cue_switch = [False]
         reward_naive = [False]
         training_blocks = [6]
@@ -394,7 +423,7 @@ if __name__ == '__main__':
         rewards = [-1,1]
         rews = [0]
         # for determinstic context update do a 100
-        dec_context = [100]
+        dec_context = [100] 
 
         if nr == 3:
             utility = [[1, 9 , 90]]
@@ -418,5 +447,5 @@ if __name__ == '__main__':
             training_blocks, degradation_blocks, trials_per_block,dec_temps, dec_context, rews, rewards, utility, conf]
 
     # pooled(arrays,repetitions = 1,check_missing=False,debugging=True)
-    pooled(arrays,repetitions = 10,check_missing=False,debugging=False)
+    pooled(arrays,repetitions = 10,check_missing=False,debugging=True, use_fitting=use_fitting)
 
