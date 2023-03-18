@@ -186,12 +186,8 @@ def run_agent(par_list, trials, T, ns=6, na=2, nr=3, nc=2, npl=2, added=None, us
     # C[1,:] = [dp/2, p, dp/2, p2]
     # print('\noriginal model observations')
     # print(C)
-    """
-    set up environment
-    """
-
-
-
+    
+    
 
     """
     set up agent
@@ -238,7 +234,8 @@ def run_agent(par_list, trials, T, ns=6, na=2, nr=3, nc=2, npl=2, added=None, us
                                 nr,
                                 na)
 
-        bayes_prc = prc.FittingPerception(A, 
+        bayes_prc = prc.FittingPerception(\
+                               A, 
                                B, 
                                C_agent, 
                                transition_matrix_context, 

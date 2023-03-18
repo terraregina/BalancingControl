@@ -109,7 +109,7 @@ class FittingWorld(object):
             self.actions[tau, t] = -1
         
 
-        if True:
+        if False:
             print( '\n\n','tau, t: ', tau,t)
             print('observation: ', self.environment.planet_conf[tau][self.rewards[tau,t]].numpy())
             print('reward:', self.rewards[tau,t].numpy())

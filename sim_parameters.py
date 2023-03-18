@@ -3,7 +3,7 @@ import numpy as np
 
 h = [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]
 # h = [1,2,3,4,5,6,7,8,9,100]
-h=[1,100]
+h=[100,1]
 cue_ambiguity = [0.5]
 context_trans_prob = [0.7]
 cue_switch = [False]
@@ -20,12 +20,16 @@ dec_context = [2]#[100]
 use_fitting = True
 extinguish = True
 deterministic = True
+infer_h = True
+infer_dec = True
+
 
 na = 2                                           # number of unique possible actions
 nc = 4                                           # number of contexts, planning and habit
 nr = len(rewards[0])
 ns = 6                                           # number of unique travel locations
 npl = nr
+no = 2
 steps = 3                                        # numbe of decisions made in an episode
 T = steps + 1                                    # episode length
 matrix = 'new'

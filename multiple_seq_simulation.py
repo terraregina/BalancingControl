@@ -447,5 +447,5 @@ if __name__ == '__main__':
             training_blocks, degradation_blocks, trials_per_block,dec_temps, dec_context, rews, rewards, utility, conf]
 
     # pooled(arrays,repetitions = 1,check_missing=False,debugging=True)
-    pooled(arrays,repetitions = 10,check_missing=False,debugging=True, use_fitting=use_fitting)
+    pooled(arrays,repetitions = 1,check_missing=False,debugging=False, use_fitting=use_fitting)
 

@@ -14,7 +14,7 @@ import pyro.distributions as dist
 import agent as agt
 import perception as prc
 import action_selection as asl
-import inference_two_seqs as inf
+import inference_habit as inf
 import action_selection as asl
 import numpy as np
 import itertools
@@ -36,32 +36,34 @@ from world import World
 import jsonpickle as pickle
 import jsonpickle.ext.numpy as jsonpickle_numpy
 from itertools import product
+from sim_parameters import *
+import sys
 
 #ar.autograd.set_detect_anomaly(True)
 ###################################
 ar.set_num_threads(1)
 
-task = 'multiple_'
+task =['multiple_']
 folder = 'temp'
 true_vals = []
 data = []
 
-h =  [1, 2]#,3,4,5,6,7]#,8,9,10,20,30,40,50,60] #11,12,13,14,15,16,17,18,19,20,30,40,50,60,70,80,90,100,200]
-cue_ambiguity = [0.9]#,0.8,0.95]                       
-context_trans_prob = [0.9]#, 0.95]                
-degradation = [True]
-cue_switch = [False]
-reward_naive = [False]
-training_blocks = [2]
-degradation_blocks=[2]
-trials_per_block=[70]
-dec_temps = [1]#,2,3,4,5,6]
-conf_folder = ['ordered']
-infer_h = [True]
-infer_dec = [True]
+# h =  [1, 2]#,3,4,5,6,7]#,8,9,10,20,30,40,50,60] #11,12,13,14,15,16,17,18,19,20,30,40,50,60,70,80,90,100,200]
+# cue_ambiguity = [0.9]#,0.8,0.95]                       
+# context_trans_prob = [0.9]#, 0.95]                
+# degradation = [True]
+# cue_switch = [False]
+# reward_naive = [False]
+# training_blocks = [2]
+# degradation_blocks=[2]
+# trials_per_block=[70]
+# dec_temps = [1]#,2,3,4,5,6]
+# conf_folder = ['ordered']
+# infer_h = [True]
+# infer_dec = [True]
 arrays = [cue_switch, degradation, reward_naive, context_trans_prob, cue_ambiguity,h,\
-        training_blocks, degradation_blocks, trials_per_block,dec_temps,conf_folder, infer_h, infer_dec]
-
+          training_blocks, degradation_blocks, trials_per_block,dec_temps, dec_context, rews, utility, \
+          conf, task]
 lst = []
 for i in product(*arrays):
     lst.append(list(i))
@@ -72,14 +74,24 @@ for li, l in enumerate(lst):
 
     """load data"""
 
-    switch, degr,learn_rew, q, p, h, tb, db, tpb, dec_temp, config, infer_h, infer_dec = l
+    switch, degr,learn_rew, q, p, h, tb, db, tpb, dec_temp, dec_temp_cont, rew, utility, config, task = l
     infer_both = infer_h and infer_dec
 
     prefix = task
-    run_name = prefix+"hier_switch"+str(int(switch)) +"_degr"+str(int(degr)) +"_p"+str(p)+ "_learn_rew"+str(int(learn_rew))+\
-            "_q"+str(q) + "_h"+str(h)  + "_" + str(tpb) +  "_" + str(tb) + str(db) + '_dec' + str(dec_temp) + '_' + config + "_extinguish.json"
+    if use_fitting:
+        prefix += 'fitt_switch'
+    else:
+        prefix += 'hier_switch'
 
-    fname = os.path.join(folder, run_name)
+    run_name = prefix+str(int(switch)) +"_degr"+str(int(degr)) +"_p"+str(p)+ "_learn_rew"+str(int(learn_rew))+\
+            "_q"+str(q) + "_h"+str(h)  + "_" + str(tpb) +  "_" + str(tb) + str(db) + '_decp' + str(dec_temp) + \
+            '_decc' + str(dec_temp_cont) + '_rew' + str(rew) + '_u' + '-'.join([str(u) for u in utility]) + '_'+ str(nr) +  '_' + config + '_extinguish.json'
+    
+    fname = os.getcwd() + '/' + folder + '/' + config +  '/' +  run_name
+
+    if sys.platform == "win32":
+        fname = fname.replace('/','\\')
+
     jsonpickle_numpy.register_handlers()
 
     with open(fname, 'r') as infile:

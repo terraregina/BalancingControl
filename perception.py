@@ -5,6 +5,7 @@ from misc import D_KL_nd_dirichlet, D_KL_dirichlet_categorical
 import torch as ar
 from sys import exit
 
+
 try:
     from inference_habit import device
 except:
