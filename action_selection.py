@@ -6,7 +6,7 @@ from scipy.stats import entropy
 import matplotlib.pylab as plt
 from misc import *
 import torch as ar
-from sim_parameters import deterministic
+from sim_parameters import deterministic_action
 
 '''
 _______   _______   __       __ 
@@ -775,16 +775,25 @@ class AveragedSelector(object):
 
     def select_desired_action(self, tau, t, posterior_policies, actions, *args):
 
+        #OLD
         #estimate action probability
         self.estimate_action_probability(tau, t, posterior_policies, actions)
 
         #generate the desired response from action probability
-        if deterministic:
+        if deterministic_action:
             u = np.argmax(self.control_probability[tau,t])
         else:
             u = np.random.choice(self.na, p = self.control_probability[tau, t])
         
         return u
+        ###########
+
+                # generate the desired response from action probability
+    
+        # u = ar.distributions.Categorical(posterior_policies).sample() # should be called posterior_actions
+
+        return u
+
 
     def estimate_action_probability(self, tau, t, posterior_policies, actions, *args):
 
@@ -795,6 +804,7 @@ class AveragedSelector(object):
 
         control_prob = control_prob/control_prob.sum()
         self.control_probability[tau, t] = control_prob
+
 
 class FittingAveragedSelector(object):
 
@@ -816,15 +826,17 @@ class FittingAveragedSelector(object):
     def select_desired_action(self, tau, t, posterior_policies, actions, *args):
 
         #estimate action probability
-        self.estimate_action_probability(tau, t, posterior_policies, actions)
+        # self.estimate_action_probability(tau, t, posterior_policies, actions)
 
-        #generate the desired response from action probability
-        if deterministic:
-            u = ar.argmax(self.control_probability[tau,t])
-        else:
-            u = ar.multinomial(self.control_probability[tau, t],num_samples=1, replacement = True)[0]
+        # #generate the desired response from action probability
+        # if deterministic_action:
+        #     u = ar.argmax(self.control_probability[tau,t])
+        # else:
+        #     u = ar.multinomial(self.control_probability[tau, t],num_samples=1, replacement = True)[0]
         
+        u = ar.distributions.Categorical(posterior_policies).sample() # should be called posterior_actions
         return u
+
 
     def estimate_action_probability(self, tau, t, posterior_policies, actions, *args):
 

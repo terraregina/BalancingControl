@@ -2,7 +2,7 @@
 human behavior."""
 import numpy as np
 import torch as ar
-from sim_parameters import deterministic
+from sim_parameters import deterministic_reward
 
 class FittingPlanetWorld(object):
 
@@ -48,7 +48,7 @@ class FittingPlanetWorld(object):
         curr_loc = self.hidden_states[tau,t]           # t+1 because we are still at t but have already moved the rocket
         rp = self.R[tau,:,curr_loc]                    # reward probability at current planet
         
-        if deterministic:
+        if deterministic_reward:
             ind = ar.argmax(rp)
         else:
             ind = ar.multinomial(rp, num_samples=1, replacement=True)
@@ -56,7 +56,6 @@ class FittingPlanetWorld(object):
 
         reward = self.possible_rewards[ind]
         return reward
-
 
 
 class PlanetWorld(object):
@@ -102,17 +101,11 @@ class PlanetWorld(object):
         curr_loc = self.hidden_states[tau,t]           # t+1 because we are still at t but have already moved the rocket
         rp = self.R[tau,:,curr_loc]                    # reward probability at current planet
 
-        if deterministic:
+        if deterministic_reward:
             reward = np.random.choice(self.possible_rewards, p=rp)
         else:
             reward = self.possible_rewards[np.argmax(rp)]    
-        # reward = self.possible_rewards[np.argmax(rp)]
-        # print(self.hidden_states[tau,t], curr_loc)
-        # print(self.planet_conf[tau,:d])
-        # print(self.R[tau,:,curr_loc])
-        # print('rewards')
-        # print(reward, reward_old)
-        # print('\n')
+
         return reward
 
 class GridWorld(object):

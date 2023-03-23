@@ -32,7 +32,7 @@ import time
 from multiprocessing import Pool
 import multiprocessing.pool as mpp
 import tqdm
-from run_exampe_habit_v1 import run_agent
+from run_exampe_habit import run_agent
 
 #%%
 # def load_df(names,data_folder='data', extinguish=None):

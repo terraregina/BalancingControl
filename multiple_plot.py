@@ -1,73 +1,25 @@
-
-# %%k
 import sys
 import pickle
-import seaborn as sns
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
-# import chart_studio.plotly as py
-# import plotly.express as px
-import pandas as pd
-# import cufflinks as cf
-import json as js
-# cf.go_offline()
-# cf.set_config_file(offline=False, world_readable=True)
-from itertools import product, repeat
 import os
-import action_selection as asl
-from itertools import product
+import json
 import jsonpickle as pickle
 import jsonpickle.ext.numpy as jsonpickle_numpy
-import json
-import torch as ar
-import perception as prc
-import agent as agt
-from environment import PlanetWorld
-from agent import BayesianPlanner
-from world import World
-from planet_sequences import generate_trials_df
-import time
-import time
-from multiprocessing import Pool
-import multiprocessing.pool as mpp
-import tqdm
-from run_exampe_habit_v1 import run_agent
+from itertools import product, repeat
 
-import pickle
-import seaborn as sns
 import pandas as pd
-import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-import pandas as pd
-import json as js
-import itertools
-import os
-import action_selection as asl
-from itertools import product, repeat
-import jsonpickle as pickle
-import jsonpickle.ext.numpy as jsonpickle_numpy
-import json
-# import plotly.graph_objects as go
-import perception as prc
-import agent as agt
-from environment import PlanetWorld
-from agent import BayesianPlanner
-from world import World
-from planet_sequences import generate_trials_df
-from multiprocessing import Pool
-import time
+
+import numpy as np
+import torch as ar
+
 import matplotlib.gridspec as gridspec
 import string
 import matplotlib.patheffects as pe
 from sim_parameters import *
 
 
-# functions
 def load_file_names(arrays):
-    
     lst = []
     for i in product(*arrays):
         lst.append(list(i))
@@ -93,17 +45,12 @@ def load_file_names(arrays):
             prefix += 'degr1_'
         else:
             prefix += 'degr0_'
-
-        # fname = prefix + 'p' + str(l[4])  +'_learn_rew' + str(int(l[2] == True))+ '_q' + str(l[3]) + '_h' + str(l[5]) + '_' +\
-        # str(l[8]) + '_' + str(l[6]) + str(l[7])+ '_dec' + str(l[9])
         
         l[13] = [str(entry) for entry in l[13]]
+
         fname = prefix + 'p' + str(l[4])  +'_learn_rew' + str(int(l[2] == True))+ '_q' + str(l[3]) + '_h' + str(l[5]) + '_' +\
         str(l[8]) + '_' + str(l[6]) + str(l[7]) + \
-        '_decp' + str(l[9]) +'_decc' + str(l[10]) + '_rew' + str(l[11]) + '_' + 'u'+  '-'.join(l[13]) + '_'+ str(len(l[12])) + '_' + l[14]
-
-
-        fname +=  '_extinguish.json'
+        '_decp' + str(l[9]) +'_decc' + str(l[10]) + '_rew' + str(l[11]) + '_' + 'u'+  '-'.join(l[13]) + '_'+ str(len(l[12])) + '_' + l[14] + '.json'
 
         names.append(fname)
 
@@ -115,11 +62,8 @@ def reshape(array,nt=4):
         shape = [shape[0]//nt, nt] + shape[1:]
         return [a.reshape(shape) for a in array]
 
-def load_df(names,data_folder='data', extinguish=None):
+def load_df(names,data_folder='data'):
 
-    if extinguish is None:
-        raise('did not specify if rewarded during extinction')
-    # if not just_simulated:
     path = os.path.join(os.getcwd(),data_folder)
     #     names = os.listdir(path)
     for fi, f in enumerate(names):
@@ -162,8 +106,6 @@ def load_df(names,data_folder='data', extinguish=None):
             post_dir_rewards = [a.posterior_dirichlet_rew for a in agents]
             post_dir_rewards = [post[:,1:,:,:] for post in post_dir_rewards]
         entropy_rewards = np.zeros([nw*ntrials*nt,nc])
-        extinguished = np.zeros(ntrials*nw*nt, dtype='int32')
-        extinguished[:] = int(extinguish == True)
         prior_rewards = worlds[0].agent.perception.prior_rewards
         utility_0 = np.repeat(prior_rewards[0], ntrials*nw*nt)
         utility_1 = np.repeat(prior_rewards[1], ntrials*nw*nt)
@@ -307,7 +249,7 @@ def load_df(names,data_folder='data', extinguish=None):
     data.astype({'h': 'category'})
 
     return data
-
+5
 
 def load_df_animation_context(names,data_folder='temp'):
 
@@ -404,7 +346,6 @@ def load_df_animation_context(names,data_folder='temp'):
     return data_animation
 # data_animation.to_csv('data_animation.csv')
 
-
 def load_df_animation_pol(names,data_folder='temp'):
 
     path = os.path.join(os.getcwd(),data_folder)
@@ -478,7 +419,6 @@ def load_df_animation_pol(names,data_folder='temp'):
     # data_animation.to_excel('data_animation.xlsx')
     return data_animation
 
-
 def load_df_reward_dkl(names,planet_reward_probs, planet_reward_probs_switched,data_folder='temp',nc=4):
 
     path = os.path.join(os.getcwd(),data_folder)
@@ -488,17 +428,6 @@ def load_df_reward_dkl(names,planet_reward_probs, planet_reward_probs_switched,d
         names[fi] = os.path.join(path,f)
 
     dfs = [None]*len(names)
-
-    # planet_reward_probs = np.array([[0.95, 0   , 0   ],
-    #                         [0.05, 0.95, 0.05],
-    #                         [0,    0.05, 0.95]])  
-
-    # planet_reward_probs_switched = np.array([[0   , 0    , 0.95],
-    #                                         [0.05, 0.95 , 0.05],
-    #                                         [0.95, 0.05 , 0.0]])
-    
-    # planet_reward_probs = np.tile(planet_reward_probs[:,:,np.newaxis], (1,1,nc))
-    # planet_reward_probs_switched = np.tile(planet_reward_probs_switched[:,:,np.newaxis], (1,1,nc))
 
     overall_df = [None for _ in range(len(names))]
 
@@ -527,8 +456,6 @@ def load_df_reward_dkl(names,planet_reward_probs, planet_reward_probs_switched,d
         nc = perception[0].nc
         nw = len(worlds[:-1])
         ntrials = meta['trials']
-        # post_dir_rewards = [a.posterior_dirichlet_rew for a in agents]
-        # post_dir_rewards = [post[:,1:,:,:] for post in post_dir_rewards]
         
         # define true distribution reward
         tpb = meta['trials_per_block']
@@ -617,9 +544,11 @@ def plot_all(lst,hs=[[1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]],utility
                 [l[5]], [l[6]], [l[7]],[l[8]],[l[9]],[l[10]],[l[11]], utility, [l[12]] ] 
         data_folder = 'temp/'+l[12]
         names = load_file_names(names_arrays)
-        df = load_df(names, data_folder=data_folder,extinguish=extinguish)
+        df = load_df(names, data_folder=data_folder)
         df_dkl = load_df_reward_dkl(names, planet_reward_probs, planet_reward_probs_switched,\
                                     data_folder=data_folder)
+        # df.to_excel('test.xlsx')
+        
         df.head()
 
 
@@ -927,33 +856,6 @@ def plot_all(lst,hs=[[1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]],utility
             # fig.savefig(fnames, dpi=300)    
 
 
-# %%
-nc = 4
-extinguish = True
-
-# importing = False
-if importing:
-    pass
-else:
-    h = [100,1]
-    cue_ambiguity = [0.5]
-    context_trans_prob = [0.6]
-    cue_switch = [False]
-    reward_naive = [False]
-    training_blocks = [6]
-    degradation_blocks=[6]
-    degradation = [True]
-    trials_per_block=[42]
-    dec_temps = [4]
-    rews = [0]
-    # for determinstic context update do a 100
-    dec_context = [4]
-    utility = [[1, 9 , 90]]
-    conf = ['shuffled_and_blocked']
-    hs = h
-    dec_temp_cont = dec_context
-
-
 
 arrays = [cue_switch, degradation, reward_naive, context_trans_prob, cue_ambiguity,\
         training_blocks, degradation_blocks, trials_per_block, dec_temps, dec_temp_cont,\
@@ -965,157 +867,3 @@ for i in product(*arrays):
 
 fig = plot_all(lst, hs=hs,utility=utility,testing=False)
 
-
-
-# # UNDERTRAINEED
-# #####################################################################################
-# hs =  [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]
-# cue_ambiguity = [0.8]                       
-# context_trans_prob = [0.85]
-# cue_switch = [False]
-# reward_naive = [True]
-# training_blocks = [4]
-# degradation_blocks=[2]
-# degradation = [True]
-# trials_per_block=[70]
-# dec_temps = [1]#,2,4]
-# rews = [0]
-# utility = [[1, 9 , 90]]
-# conf = ['shuffled']
-
-# arrays = [cue_switch, degradation, reward_naive, context_trans_prob, cue_ambiguity,\
-#         training_blocks, degradation_blocks, trials_per_block,dec_temps,rews, conf]
-
-# lst = []
-# for i in product(*arrays):
-#     lst.append(list(i))
-
-# fig = plot_all(lst, hs=hs,utility=utility,testing=False)
-
-
-# # OVERTRAINED
-# ######################################################################################
-# hs =  [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]
-# cue_ambiguity = [0.8]                       
-# context_trans_prob = [0.85]
-# cue_switch = [False]
-# reward_naive = [True]
-# training_blocks = [4]
-# degradation_blocks=[6]
-# degradation = [True]
-# trials_per_block=[70]
-# dec_temps = [1]#,2,4]
-# rews = [0]
-# utility = [[1, 9 , 90]]
-# conf = ['shuffled']
-
-# arrays = [cue_switch, degradation, reward_naive, context_trans_prob, cue_ambiguity,\
-#         training_blocks, degradation_blocks, trials_per_block,dec_temps,rews, conf]
-
-# lst = []
-# for i in product(*arrays):
-#     lst.append(list(i))
-
-# fig = plot_all(lst, hs=hs,utility=utility,testing=False)
-
-
-
-# # OVERTRAINED AND BLOCKED
-# #######################################################################################
-# hs =  [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]
-# cue_ambiguity = [0.8]                       
-# context_trans_prob = [0.85]
-# cue_switch = [False]
-# reward_naive = [True]
-# training_blocks = [4]
-# degradation_blocks=[6]
-# degradation = [True]
-# trials_per_block=[70]
-# dec_temps = [1]#,2,4]
-# rews = [0]
-# utility = [[1, 9 , 90]]
-# conf = ['shuffled_and_blocked']
-
-# arrays = [cue_switch, degradation, reward_naive, context_trans_prob, cue_ambiguity,\
-#         training_blocks, degradation_blocks, trials_per_block,dec_temps,rews, conf]
-
-# lst = []
-# for i in product(*arrays):
-#     lst.append(list(i))
-
-# fig = plot_all(lst, hs=hs,utility=utility,testing=False)
-
-
-# ######################################################################################
-# hs =  [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]
-# cue_ambiguity = [0.8]                       
-# context_trans_prob = [0.85]
-# cue_switch = [False]
-# reward_naive = [True]
-# training_blocks = [3]
-# degradation_blocks=[1]
-# degradation = [True]
-# trials_per_block=[70]
-# dec_temps = [2]
-# rews = [0]
-# utility = [[1, 9 , 90]]
-# conf = ['shuffled']
-
-# arrays = [cue_switch, degradation, reward_naive, context_trans_prob, cue_ambiguity,\
-#         training_blocks, degradation_blocks, trials_per_block,dec_temps,rews, conf]
-
-# lst = []
-# for i in product(*arrays):
-#     lst.append(list(i))
-
-# fig = plot_all(lst, hs=hs,utility=utility,testing=False)
-
-
-# # OVERTRAINED AND BLOCKED
-# # #######################################################################################
-# hs =  [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]
-# # hs = [1,100]
-# cue_ambiguity = [0.8]                       
-# context_trans_prob = [0.85]
-# cue_switch = [False]
-# reward_naive = [True]
-# training_blocks = [4]
-# degradation_blocks=[6]
-# degradation = [True]
-# trials_per_block=[70]
-# dec_temps = [1]
-# rews = [0]
-# utility = [[1, 9 , 90]]
-# conf = ['shuffled']
-
-# arrays = [cue_switch, degradation, reward_naive, context_trans_prob, cue_ambiguity,\
-#         training_blocks, degradation_blocks, trials_per_block,dec_temps,rews, conf]
-
-# lst = []
-# for i in product(*arrays):
-#     lst.append(list(i))
-
-# fig = plot_all(lst, hs=hs,utility=utility,testing=False)
-
-
-
-# #######################################################################################
-# # hs =  [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]
-# # cue_ambiguity = [0.8]                       
-# # context_trans_prob = [0.85]
-# # cue_switch = [False]
-# # reward_naive = [True]
-# # training_blocks = [3]
-# # degradation_blocks=[1]
-# # degradation = [True]
-# # trials_per_block=[70]
-# # dec_temps = [2,4]
-# # rews = [0]
-# # utility = [[1, 9 , 90]]
-# # conf = ['shuffled']
-
-
-# # arrays = [cue_switch, degradation, reward_naive, context_trans_prob, cue_ambiguity,hs,\
-# #         training_blocks, degradation_blocks, trials_per_block,dec_temps,rews, utility, conf]
-
-# # fig = plot_gammas(arrays, hs=hs,utility=utility,testing=False)

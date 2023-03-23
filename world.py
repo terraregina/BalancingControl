@@ -42,6 +42,8 @@ class FittingWorld(object):
         else:
             trials = range(self.trials)
         for tau in trials:
+            if tau%3 == 0:
+                print('breaktpoint')
             for t in range(self.T):
                 # if print_thoughts:
                     # print("tau", tau, ", t", t)
@@ -97,7 +99,8 @@ class FittingWorld(object):
 
         reward = self.rewards[tau, t]
 
-        self.agent.planets = self.environment.planet_conf[tau,:]
+        if self.environment.planet_confs is not None:
+            self.agent.perception.planets = self.environment.planet_conf[tau,:]
         # print('planets: ', self.agent.planets)
         # print('start: ', self.environment.starting_position[tau])
         self.agent.update_beliefs(tau, t, observation, reward, response, context)
@@ -200,12 +203,14 @@ class World(object):
         if hasattr(self, 'trial_type'):
             if self.trial_type[tau] == 2:
                 reward = 0
+
         observation = self.observations[tau, t]
 
         reward = self.rewards[tau, t]
 
-        self.agent.planets = self.environment.planet_conf[tau,:]
-        # print('planets: ', self.agent.planets)
+
+        if self.environment.planet_conf is not None:
+            self.agent.perception.planets = self.environment.planet_conf[tau,:]        # print('planets: ', self.agent.planets)
         # print('start: ', self.environment.starting_position[tau])
         self.agent.update_beliefs(tau, t, observation, reward, response, context)
 
@@ -215,6 +220,37 @@ class World(object):
         else:
             self.actions[tau, t] = -1
         
+
+        # print('\n\n----------')
+        # print('tau,t:',tau,t)
+        # print('reward, action', self.rewards[tau,t], self.actions[tau,t])
+        # print('\nfwd_norms:')
+        # for i in range(5):
+        #     print('\n', self.agent.perception.fwd_norms[tau,t,i,...])
+        # print('\nposterior_states')
+        # print(self.agent.posterior_states[tau,t,:,:,0,0])
+        # print('\nposterior_policies')
+        # print(self.agent.posterior_policies[tau,t])
+        # print('\nprior_context')
+        # print((self.agent.prior_context_log[tau,t]))
+        # print('\nposterior_context')
+        # print(self.agent.posterior_context[tau,t])
+        # print('\noutcome_suprise')
+        # print(self.agent.outcome_suprise[tau,t])
+        # print('\npolicy_entropy')
+        # print(self.agent.policy_entropy[tau,t])
+        # print('\npolicy_surprise')
+        # print(self.agent.policy_surprise[tau,t])
+        # print('\ncontext_obs_suprise')
+        # print(self.agent.context_obs_suprise[tau,t])
+        # print('\nposterior_rewards')
+        # print(self.agent.posterior_dirichlet_rew[tau,t])
+        # print('\ngenerative_model_rewards')
+        # print(self.agent.perception.generative_model_rewards[tau,t])
+        # print('\ncurr_gen_mod_rewards')
+        # print(self.agent.perception.current_gen_model_rewards)
+        # print('\prior_policy')
+        # print(self.agent.perception.prior_policies[tau])
         if print_thoughts:
             print("response", response)
             if t>0:

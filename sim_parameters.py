@@ -3,7 +3,7 @@ import numpy as np
 
 h = [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]
 # h = [1,2,3,4,5,6,7,8,9,100]
-h=[100,1]
+# h=[100]
 cue_ambiguity = [0.5]
 context_trans_prob = [0.7]
 cue_switch = [False]
@@ -15,14 +15,21 @@ trials_per_block=[42]
 dec_temps = [2]
 rews = [0]
 rewards = [[-1,0,1]]#[[-1,1]]
-# for determinstic context update do a 100
 dec_context = [2]#[100]
-use_fitting = True
-extinguish = True
-deterministic = True
+conf = ['shuffled_and_blocked']
+
+
+# non-iterable simulation parameters
+use_fitting = False
+deterministic_action = True
+deterministic_reward = True
 infer_h = True
 infer_dec = True
+init_reward_count_bias = 20
 
+# pooled arguments
+debugging = False
+repetitions = 10
 
 na = 2                                           # number of unique possible actions
 nc = 4                                           # number of contexts, planning and habit
@@ -33,7 +40,6 @@ no = 2
 steps = 3                                        # numbe of decisions made in an episode
 T = steps + 1                                    # episode length
 matrix = 'new'
-deterministic_reward = True
 
 
 print('NUMBER OF REWARDS', nr)
@@ -130,8 +136,10 @@ if nr == 3:
 else:
     utility = [[1,99]]
     
-conf = ['shuffled_and_blocked']
 
 hs = h
 dec_temp_cont = dec_context
-importing = True
+if use_fitting:
+    arr_type = 'torch'
+else:
+    arr_type = 'numpy'
