@@ -265,12 +265,12 @@ def pooled(files_to_fit):
     # 17; 20
     
     if __name__ == '__main__':
-        # with Pool(2) as pool:
+        with Pool(20) as pool:
 
-            # for _ in tqdm.tqdm(pool.map(run_single_inference, files_to_fit),\
-            #                 total=len(files_to_fit)):
-                # pass
-        run_single_inference(files_to_fit[0])
+            for _ in tqdm.tqdm(pool.map(run_single_inference, files_to_fit),\
+                            total=len(files_to_fit)):
+                pass
+        # run_single_inference(files_to_fit[0])
 
 task = ['multiple_']
 

@@ -28,7 +28,7 @@ infer_dec = True
 init_reward_count_bias = 20
 # pooled arguments
 print_thoughts = False
-debugging = False
+debugging = True
 repetitions = 1
 
 na = 2                                           # number of unique possible actions
