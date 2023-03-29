@@ -38,6 +38,7 @@ import jsonpickle.ext.numpy as jsonpickle_numpy
 
 #ar.autograd.set_detect_anomaly(True)
 ###################################
+
 """load data"""
 ar.set_num_threads(1)
 switch = 0

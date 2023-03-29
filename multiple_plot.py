@@ -13,7 +13,7 @@ import seaborn as sns
 import numpy as np
 import torch as ar
 
-import matplotlib.gridspec as gridspec
+import matplotlib.gridspec as gridspec  
 import string
 import matplotlib.patheffects as pe
 from sim_parameters import *

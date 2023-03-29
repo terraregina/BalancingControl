@@ -7,27 +7,28 @@
 
 from sim_parameters import arr_type
 from misc import ln, softmax
-if arr_type == "numpy":
-    import numpy as ar
-    array = ar.array
-else:
-    import torch as ar
-    array = ar.tensor
 
 import numpy as np
 import scipy.special as scs
 from misc import D_KL_nd_dirichlet, D_KL_dirichlet_categorical
 from opt_einsum import contract
 
-#device = ar.device("cuda") if ar.cuda.is_available() else ar.device("cpu")
-#device = ar.device("cuda")
-#device = ar.device("cpu")
+if arr_type == "numpy":
+    import numpy as ar
+    array = ar.array
+else:
+    import torch as ar
+    array = ar.tensor
+    device = ar.device("cuda") if ar.cuda.is_available() else ar.device("cpu")
+    device = ar.device("cuda")
+    device = ar.device("cpu")
 
-# try:
-#     from inference_habit import device
-# except:
-#     device = ar.device("cpu")
-# ar.set_default_dtype(ar.float64)
+    try:
+        from inference_habit import device
+    except:
+        device = ar.device("cpu")
+    ar.set_default_dtype(ar.float64)
+
 
 class GroupPerception(object):
     def __init__(self,
@@ -414,11 +415,12 @@ class GroupPerception(object):
 
 
 class FittingPerception(object):
+
+
     def __init__(self,
                  generative_model_observations,
                  generative_model_states,
                  generative_model_rewards,
-                 transition_matrix_context,
                  prior_states,
                  prior_rewards,
                  prior_policies,
@@ -426,8 +428,11 @@ class FittingPerception(object):
                  alpha_0 = None,
                  dirichlet_rew_params = None,
                  generative_model_context = None,
+                 transition_matrix_context = None,
+                 number_of_planets = None,
                  T=5, trials=10, pol_lambda=0, r_lambda=0, non_decaying=0,
-                 dec_temp=array([1]), dec_temp_cont = 1, npart=1, npl=3,nr=3, possible_rewards=[-1,0,1]):
+                 dec_temp=array([1]), dec_temp_cont = 1, npart=1, npl=3,nr=3,\
+                 prior_context=None, possible_rewards=[-1,0,1]):
         
         self.generative_model_observations = generative_model_observations
         self.generative_model_states = generative_model_states
@@ -447,22 +452,24 @@ class FittingPerception(object):
         self.policies = policies
         self.npi = policies.shape[0]
         self.actions = ar.unique(policies)
-        self.nc = transition_matrix_context.shape[0]
+        self.npl = number_of_planets
+        if transition_matrix_context is not None:
+            self.nc = transition_matrix_context.shape[0]
+        else:
+            self.nc = 1
         self.na = len(self.actions)
         self.npart = npart
-        # print(self.npart)
         self.alpha_0 = alpha_0
         self.dirichlet_rew_params_init = dirichlet_rew_params#ar.stack([dirichlet_rew_params]*self.npart, dim=-1)
-        self.dirichlet_pol_params_init = ar.zeros((self.npi,self.nc,self.npart)).to(device) + self.alpha_0[:,None,None]#ar.stack([dirichlet_pol_params]*self.npart, dim=-1)
+        self.dirichlet_pol_params_init = ar.zeros((self.npi,self.nc,self.npart)).to(device) + self.alpha_0[:,None, None]#ar.stack([dirichlet_pol_params]*self.npart, dim=-1)
         self.dirichlet_rew_params = [ar.stack([self.dirichlet_rew_params_init]*self.npart, dim=-1).to(device)]
         self.dirichlet_pol_params = [self.dirichlet_pol_params_init]
-        
         #self.prior_policies_init = self.dirichlet_pol_params[0] / self.dirichlet_pol_params[0].sum(axis=0)[None,...]
         self.prior_policies = [self.dirichlet_pol_params[0] / self.dirichlet_pol_params[0].sum(axis=0)[None,...]]
-        # print(self.prior_policies[0].shape)
-        self.prior_context = ar.tensor([0.99] + [0.1/3]*3)
+        self.prior_context = prior_context
         #self.generative_model_rewards_init = self.dirichlet_rew_params[0] / self.dirichlet_rew_params[0].sum(axis=0)[None,...]
         self.generative_model_rewards = [self.dirichlet_rew_params[0] / self.dirichlet_rew_params[0].sum(axis=0)[None,...]]
+
         self.observations = []
         self.rewards = []
         self.context_cues = []
@@ -482,97 +489,92 @@ class FittingPerception(object):
         self.posterior_policies = []
         self.posterior_actions = []
         self.posterior_contexts = []
+        self.outcome_suprise = []
+        self.policy_entropy = []
+        self.context_obs_surprise = []
+        self.policy_surprise = []
         self.likelihoods = []
 
         self.big_trans_matrix = ar.stack([ar.stack([generative_model_states[:,:,policies[pi,t],:] for pi in range(self.npi)]) for t in range(self.T-1)]).T.to(device)
         self.big_trans_matrix = ar.moveaxis(self.big_trans_matrix, (0,1,2,3,4), (3,0,1,2,4))
 
+
     def reset(self):
-        
         # print(self.alpha_0)
-        ds = self.dec_temp.shape[0]
-        hs = self.alpha_0.shape[0]
-        if hs > ds:
-            self.npart = hs
-        else:
-            self.npart = ds
-        # self.dirichlet_pol_params_init = ar.zeros((self.npi, self.nc, self.npart)).to(device) + self.alpha_0[:,None,None].to(device)
+        # ds = self.dec_temp.shape[0]
+        # hs = self.alpha_0.shape[0]
+        # if hs > ds:
+        #     self.npart = hs
+        # else:
+        #     self.npart = ds
         self.dirichlet_pol_params_init = ar.zeros((self.npi, self.nc, self.npart)).to(device) + self.alpha_0.to(device)
-        # self.dirichlet_pol_params_init = ar.zeros((self.npi, self.nc, self.npart)).to(device) + self.alpha_0[:,:,None]#ar.stack([dirichlet_pol_params]*self.npart, dim=-1)
 
         self.dirichlet_rew_params = [ar.stack([self.dirichlet_rew_params_init]*self.npart, dim=-1).to(device)]
         self.dirichlet_pol_params = [self.dirichlet_pol_params_init]
-        
+
         self.prior_policies = [self.dirichlet_pol_params[0] / self.dirichlet_pol_params[0].sum(axis=0)[None,...]]
-        
+
         self.generative_model_rewards = [self.dirichlet_rew_params[0] / self.dirichlet_rew_params[0].sum(axis=0)[None,...]]
-        
+
         self.observations = []
         self.rewards = []
+
         #self.instantiate_messages()
         self.bwd_messages = []
         self.fwd_messages = []
         self.obs_messages = []
         self.rew_messages = []
         self.fwd_norms = []
-        self.likelihoods = []
-        
+
         self.posterior_states = []
         self.posterior_policies = []
         self.posterior_actions = []
+        self.likelihoods = []
         self.posterior_contexts = []
+        self.outcome_suprise = []
+        self.policy_entropy = []
+        self.context_obs_surprise = []
+        self.policy_surprise = []
         self.curr_gen_mod_rewards = []
 
         
     def make_current_messages(self, tau, t):
-    
-        generative_model_rewards = self.curr_gen_mod_rewards[-1]
 
-        
+        if self.npl is not None:
+            generative_model_rewards = self.curr_gen_mod_rewards
+        else:
+            generative_model_rewards = self.generative_model_rewards
+
+
         prev_obs = [self.generative_model_observations[o] for o in self.observations[-t-1:]]
         obs = prev_obs + [ar.zeros((self.nh)).to(device)+1./self.nh]*(self.T-t-1)
         obs = [ar.stack(obs).T.to(device)]*self.nc
-        # obs =  ar.stack(obs
         obs = [ar.stack(obs,dim=-1).to(device).to(device)]*self.npart
         obs_messages = ar.stack(obs,dim=-1).to(device)
 
 
-        # rew_messages = ar.stack(\
-        #     [ar.stack([generative_model_rewards[self.reward_ind[int(r)],:,:,i].to(device) for r in self.rewards[-t-1:]] \
-        #     + [ar.matmul(
-        #         ar.moveaxis(generative_model_rewards[:,:,:,i],(0,1,2),(2,0,1)).to(device), self.prior_rewards
-        #         ).to(device)]*(self.T-t-1),dim=-2).to(device)\
-        #       for i in range(self.npart)], dim=-1).to(device)
-
-
-        # rew_messages = ar.stack(\
-        #     [ar.stack([self.curr_gen_mod_rewards[ti][self.reward_ind[int(self.rewards[ti])],:,:,i].to(device) for ti in range(-t-1,0,1)] \
-        #     + [ar.matmul(
-        #         ar.moveaxis(generative_model_rewards[:,:,:,i],(0,1,2),(2,0,1)).to(device), self.prior_rewards
-        #         ).to(device)]*(self.T-t-1),dim=-2).to(device)\
-        #       for i in range(self.npart)], dim=-1).to(device)
 
         rew_messages = ar.stack(\
             [
                 ar.stack(
-                    [self.curr_gen_mod_rewards[ti][self.reward_ind[int(self.rewards[ti])],:,:,i].to(device) for ti in range(-t-1,0,1)] \
+                    [generative_model_rewards[ti][self.reward_ind[int(self.rewards[ti])],:,:,i].to(device) for ti in range(-t-1,0,1)] \
                     + 
-                    [ar.matmul(ar.moveaxis(self.curr_gen_mod_rewards[-t-1][:,:,:,i],(0,1,2),(2,0,1)).to(device), self.prior_rewards).to(device)]*(self.T-t-1)\
+                    [ar.matmul(ar.moveaxis(generative_model_rewards[-t-1][:,:,:,i],(0,1,2),(2,0,1)).to(device), self.prior_rewards).to(device)]*(self.T-t-1)\
                 ,dim=-2).to(device)\
             for i in range(self.npart)], dim=-1).to(device)
 
-        
         # for i in range(t):
         #     tp = -t-1+i
             # observation = self.observations[tp]
             # obs_messages[:,i] = self.generative_model_observations[observation]
-            
+
             # reward = self.rewards[tp]
             # rew_messages[:,i] = generative_model_rewards[reward]
-        
-        rew_messages[:,0,:,:] = 1/self.possible_rewards.size()[0]
+        if self.npl is not None:
+            rew_messages[:,0,:,:] = 1/self.possible_rewards.size()[0]
         self.obs_messages.append(obs_messages)
         self.rew_messages.append(rew_messages)
+
 
     def update_messages(self, tau, t):
         
@@ -585,20 +587,17 @@ class FittingPerception(object):
         # fwd_norms = ar.zeros((self.T+1, self.npi))
         # fwd_norms[0,:] = 1.
         fwd_norm = [ar.ones(self.npi, self.nc, self.npart).to(device)]
-        
+
         self.make_current_messages(tau,t)
-        
+
         obs_messages = self.obs_messages[-1]
         rew_messages = self.rew_messages[-1]
 
         for i in range(self.T-2,-1,-1):
             tmp = ar.einsum('hpcn,shpc,hcn,hcn->spcn',bwd[-1],self.big_trans_matrix[...,i],obs_messages[:,i+1,:],rew_messages[:,i+1,:]).to(device)
-            # tmp = ar.einsum('hpn,shp,hn,hn->spn',bwd[-1],self.big_trans_matrix[...,i],obs_messages[:,i+1],rew_messages[:,i+1]).to(device)
-
             bwd.append(tmp)
             norm = bwd[-1].sum(axis=0) + 1e-20
-            # mask = norm > 0
-            # bwd[-1][:,mask] /= norm[None,mask]
+
             bwd[-1] /= norm[None,:]
             
         bwd.reverse()
@@ -630,13 +629,13 @@ class FittingPerception(object):
         # print(tau,t,fwd_norms[...,0])
         non_zero = norm > 0
         posterior[:,non_zero] /= norm[non_zero]
-            
+
         self.bwd_messages.append(bwd_messages)
         self.fwd_messages.append(fwd_messages)
         self.fwd_norms.append(fwd_norms)
         self.posterior_states.append(posterior)
-        
-        # return posterior
+
+        return posterior
 
 
     def update_beliefs(self, tau, t, observation, reward, response, context=None):
@@ -667,11 +666,9 @@ class FittingPerception(object):
         if t == self.T-1:
             self.update_beliefs_dirichlet_pol_params(tau, t)
 
-
-
         if t>0: #==self.T-1:
         # if self.learn_rew and t>0: #==self.T-1:
-            self.update_beliefs_dirichlet_rew_params(tau, t, self.planets, reward)
+            self.update_beliefs_dirichlet_rew_params(tau, t, reward)
 
 
     def update_beliefs_states(self, tau, t, observation, reward):
@@ -679,12 +676,13 @@ class FittingPerception(object):
         # if t == 0:
         #     self.instantiate_messages(policies)
         self.observations.append(observation)
-        self.rewards.append(reward.to(device))
+        self.rewards.append(reward)
             
         self.update_messages(tau, t)
         
         #return posterior#ar.nan_to_num(posterior)
     
+
     def update_beliefs_policies(self, tau, t):
 
         likelihood = (self.fwd_norms[-1]+ 1e-20).prod(axis=0).to(device)
@@ -734,7 +732,10 @@ class FittingPerception(object):
                 outcome_surprise = (self.posterior_policies[-1] * ln(self.fwd_norms[-1].prod(axis=0))).sum(axis=0)
                 entropy = - (self.posterior_policies[-1] * ln(self.posterior_policies[-1])).sum(axis=0)
                 #policy_surprise = (post_policies[:,ar.newaxis] * scs.digamma(alpha_prime)).sum(axis=0) - scs.digamma(alpha_prime.sum(axis=0))
+                
                 policy_surprise = (self.posterior_policies[-1] * ar.digamma(alpha_prime)).sum(axis=0) - ar.digamma(alpha_prime.sum(axis=0))
+                # if t == 1:
+                #     a=0
             else:
                 outcome_surprise = 0
                 entropy = 0
@@ -753,6 +754,10 @@ class FittingPerception(object):
             posterior /= posterior.sum()
 
             self.posterior_contexts.append(posterior)
+            # self.context_obs_surprise.append(context_obs_suprise)
+            # self.outcome_suprise.append(outcome_surprise)
+            # self.policy_entropy.append(entropy)
+            # self.policy_surprise.append(policy_surprise)
 
         if t<self.T-1:
 
@@ -766,6 +771,7 @@ class FittingPerception(object):
                 
             self.posterior_actions.append(posterior_actions)
     
+
     def update_beliefs_dirichlet_pol_params(self, tau, t):
         assert(t == self.T-1)
         chosen_pol = ar.argmax(self.posterior_policies[-1], axis=0).to(device)
@@ -785,25 +791,29 @@ class FittingPerception(object):
 
         #return dirichlet_pol_params, prior_policies
 
-    def update_beliefs_dirichlet_rew_params(self, tau, t, pl, reward):
+
+    def update_beliefs_dirichlet_rew_params(self, tau, t, reward):
+
         posterior_states = self.posterior_states[-1]
         posterior_policies = self.posterior_policies[-1]
         states = (posterior_states[:,t,:,:] * posterior_policies[None,:,:]).sum(axis=1)
         st = ar.argmax(states, axis=0)
-        # planets = ar.zeros([self.npl, self.nc])
-        # planets[planets[st], ar.arange(self.nc)] = 1
         
-        planets = ar.arange(self.npl).repeat(self.npart,1).T
 
-        try:
-            planets = ar.stack([planets == pl[st[c]].repeat((self.npl,1))\
-                for c in range(self.nc)],dim=1)*self.posterior_contexts[-1][None,:,:]
-        except:
-            planets = ar.stack([planets == ar.tensor(pl[st[c]]).repeat((self.npl,1))\
-                for c in range(self.nc)],dim=1)*self.posterior_contexts[-1][None,:,:]
+        if self.npl != None:
+            pl = self.planets
+            nh = self.npl
+        else:
+            pl = ar.arange(self.nh)
+            nh = self.nh
+        
+        states_mask = ar.arange(nh).repeat(self.npart,1).T
+        
+        states_mask = ar.stack([states_mask == pl[st[c]].repeat((nh,1))\
+            for c in range(self.nc)],dim=1)*self.posterior_contexts[-1][None,:,:]
 
         mask = ar.stack(\
-            [planets if r == self.reward_ind[int(reward)] else ar.zeros(planets.shape) for r in range(self.nr)]\
+            [states_mask if r == self.reward_ind[int(reward)] else ar.zeros(states_mask.shape) for r in range(self.nr)]\
             , dim=0)
 
         dirichlet_rew_params = self.dirichlet_rew_params[-1] + mask
@@ -1177,11 +1187,11 @@ class HierarchicalPerception(object):
         if t<self.T-1:
             self.dirichlet_rew_params[tau,t+1] = dirichlet_rew_params
             self.generative_model_rewards[tau,t+1] = generative_model_rewards
-            self.rew_messages[tau,t+1:,:,t+1:,:] = rew_messages[None,:,t+1:,:]
+            # self.rew_messages[tau,t+1:,:,t+1:,:] = rew_messages[None,:,t+1:,:]
         elif tau<self.trials-1:
             self.dirichlet_rew_params[tau+1,0] = dirichlet_rew_params
             self.generative_model_rewards[tau+1,0] = generative_model_rewards
-            self.rew_messages[tau+1,0:,:,0:,:] = rew_messages[None,:,0:,:]
+            # self.rew_messages[tau+1,0:,:,0:,:] = rew_messages[None,:,0:,:]
 
         if not self.npi is None and t == self.T-1 and tau < self.trials-1:
             self.dirichlet_rew_params[tau+1,1:] = dirichlet_rew_params[None,:]

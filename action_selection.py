@@ -7,7 +7,7 @@ import matplotlib.pylab as plt
 from misc import *
 import torch as ar
 from sim_parameters import deterministic_action
-
+from sim_parameters import arr_type
 '''
 _______   _______   __       __ 
 /       \ /       \ /  \     /  |
@@ -783,17 +783,11 @@ class AveragedSelector(object):
         if deterministic_action:
             u = np.argmax(self.control_probability[tau,t])
         else:
-            u = np.random.choice(self.na, p = self.control_probability[tau, t])
-        
+            if arr_type == "numpy":
+                u = np.random.choice(self.na, p = self.control_probability[tau, t])
+            else:
+                u = ar.distributions.Categorical(posterior_policies).sample() # should be called posterior_actions
         return u
-        ###########
-
-                # generate the desired response from action probability
-    
-        # u = ar.distributions.Categorical(posterior_policies).sample() # should be called posterior_actions
-
-        return u
-
 
     def estimate_action_probability(self, tau, t, posterior_policies, actions, *args):
 
@@ -828,14 +822,15 @@ class FittingAveragedSelector(object):
         #estimate action probability
         # self.estimate_action_probability(tau, t, posterior_policies, actions)
 
-        # #generate the desired response from action probability
-        # if deterministic_action:
-        #     u = ar.argmax(self.control_probability[tau,t])
-        # else:
-        #     u = ar.multinomial(self.control_probability[tau, t],num_samples=1, replacement = True)[0]
-        
-        u = ar.distributions.Categorical(posterior_policies).sample() # should be called posterior_actions
-        return u
+        if deterministic_action:
+            u = ar.argmax(posterior_policies)
+            return u
+        else:
+            if arr_type == "numpy":
+                u = ar.random.choice(self.na, p = posterior_policies)
+            else:
+                u = ar.distributions.Categorical(posterior_policies).sample() # should be called posterior_actions
+            return u
 
 
     def estimate_action_probability(self, tau, t, posterior_policies, actions, *args):

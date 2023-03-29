@@ -34,12 +34,12 @@ class FittingAgent(object):
                  prior_context = None,
                  trials = 1, T = 4, number_of_states = 6,
                  number_of_rewards = 3,
-                 number_of_policies = 8): #not
+                 number_of_policies = 8, number_of_planets = None): #not
 
         #set the modules of the agent
         self.perception = perception
         self.action_selection = action_selection
-
+        self.npl = number_of_planets
         #set parameters of the agent
         self.nh = number_of_states #number of states
         self.npi = number_of_policies #number of policies
@@ -108,42 +108,11 @@ class FittingAgent(object):
         self.set_parameters(locs)
         self.perception.reset()
 
-    # def reset(self, param_dict):
-
-
-    #     self.actions = ar.zeros((self.trials, self.T), dtype = int).to(device)
-    #     self.observations = ar.zeros((self.trials, self.T), dtype = int).to(device)
-    #     self.rewards = ar.zeros((self.trials, self.T), dtype = int).to(device)
-    #     self.posterior_actions = ar.zeros((self.trials, self.T-1, self.na)).to(device)
-    #     self.posterior_rewards = ar.zeros((self.trials, self.T, self.nr)).to(device)
-    #     self.posterior_contexts = ar.zeros((self.trials, self.T, self.nc)).to(device)
-    #     self.control_probs  = ar.zeros((self.trials, self.T, self.na)).to(device)
-    #     self.log_probability = 0
-    #     if hasattr(self.perception, 'generative_model_context'):
-    #         self.context_obs = ar.zeros(self.trials, dtype=int).to(device)
-
-    #     self.set_parameters(**param_dict)
-    #     self.npart = self.perception.alpha_0.shape[0]
-    #     self.perception.reset()
-
-
-    def initiate_planet_rewards(self):
-        
-        # gen_mod_rewards = ar.zeros([self.nr, self.nh, self.nc, self.npart])
-        try:
-            self.perception.curr_gen_mod_rewards.append(\
-                self.perception.generative_model_rewards[-1][:,self.planets,:,:])
-        except:
-            self.perception.curr_gen_mod_rewards.append(\
-                self.perception.generative_model_rewards[-1][:,self.planets.long(),:,:])
-
-        # return gen_mod_rewards
 
     def update_beliefs(self, tau, t, observation, reward, prev_response, context=None):
 
-        self.initiate_planet_rewards()
-        if t == 0:
-            self.perception.planets = self.planets
+        if self.npl is not None:
+            self.initiate_planet_rewards()
 
         self.observations[tau,t] = observation
         self.rewards[tau,t] = reward
@@ -154,6 +123,18 @@ class FittingAgent(object):
         self.perception.update_beliefs(tau, t, observation, reward, prev_response, context)
 
 
+    def initiate_planet_rewards(self):
+        
+        # gen_mod_rewards = ar.zeros([self.nr, self.nh, self.nc, self.npart])
+        try:
+            self.perception.curr_gen_mod_rewards.append(\
+                self.perception.generative_model_rewards[-1][:,self.perception.planets,:,:])
+        except:
+            self.perception.curr_gen_mod_rewards.append(\
+                self.perception.generative_model_rewards[-1][:,self.perception.planets.long(),:,:])
+
+        # return gen_mod_rewards
+
     def generate_response(self, tau, t):
 
         #get response probability
@@ -161,6 +142,9 @@ class FittingAgent(object):
 
         controls = self.policies[:, t]#[non_zero]
         actions = ar.unique(controls)
+        # posterior_policies = posterior_policies[non_zero]
+        # avg_likelihood = avg_likelihood[non_zero]
+        # prior = prior[non_zero]
 
         self.actions[tau, t] = self.action_selection.select_desired_action(tau,
                                         # t, posterior_actions[:,0,0], actions, None, None)
@@ -168,22 +152,6 @@ class FittingAgent(object):
 
 
         return self.actions[tau, t]
-    
-        # #get response probability
-        # posterior_states = self.perception.posterior_states[-1]
-        # posterior_policies = self.perception.posterior_policies[-1]
-        # posterior_context = self.perception.posterior_contexts[-1]
-        # posterior_policies = ar.einsum('pcn,cn->pn', posterior_policies, posterior_context)
-        # posterior_policies /= posterior_policies.sum()
-        # non_zero = posterior_policies > 0
-        # controls = self.policies[:, t]#[non_zero]
-        # actions = ar.unique(controls)
-
-        # self.actions[tau, t] = self.action_selection.select_desired_action(tau,
-        #                                 t, posterior_policies, controls, None, None)
-
-
-        # return self.actions[tau, t]
 
 
     def estimate_action_probability(self, tau, t, post):
@@ -192,7 +160,7 @@ class FittingAgent(object):
         # TODO attention this now only works for one context...
         posterior_policies = post[:].to(device)#self.posterior_policies[tau, t, :, 0]#ar.einsum('pc,c->p', self.posterior_policies[tau, t], self.posterior_context[tau, t])
         #posterior_policies /= posterior_policies.sum()
-        
+
         #estimate action probability
         #control_prob = ar.zeros(self.na)
         for a in range(self.na):
@@ -201,17 +169,15 @@ class FittingAgent(object):
         #return self.control_probs[tau,t]
     
     
-    def set_parameters(self, **kwargs):
-        
-        if 'pol_lambda' in kwargs.keys():
-            self.perception.pol_lambda = kwargs['pol_lambda']
-        if 'r_lambda' in kwargs.keys():
-            self.perception.r_lambda = kwargs['r_lambda']
-        if 'dec_temp' in kwargs.keys():
-            self.perception.dec_temp = kwargs['dec_temp']
-        if 'h' in kwargs.keys():
-            # print(1./kwargs['h'])
-            self.perception.alpha_0 = 1./kwargs['h']
+    def set_parameters(self, locs):
+
+        self.perception.set_parameters(locs)
+
+    def locs_to_pars(self, locs):
+
+        par_dict = self.perception.locs_to_pars(locs)
+
+        return par_dict
 
 
 class BayesianPlanner(object):

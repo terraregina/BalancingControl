@@ -48,19 +48,6 @@ folder = 'temp'
 true_vals = []
 data = []
 
-# h =  [1, 2]#,3,4,5,6,7]#,8,9,10,20,30,40,50,60] #11,12,13,14,15,16,17,18,19,20,30,40,50,60,70,80,90,100,200]
-# cue_ambiguity = [0.9]#,0.8,0.95]                       
-# context_trans_prob = [0.9]#, 0.95]                
-# degradation = [True]
-# cue_switch = [False]
-# reward_naive = [False]
-# training_blocks = [2]
-# degradation_blocks=[2]
-# trials_per_block=[70]
-# dec_temps = [1]#,2,3,4,5,6]
-# conf_folder = ['ordered']
-# infer_h = [True]
-# infer_dec = [True]
 arrays = [cue_switch, degradation, reward_naive, context_trans_prob, cue_ambiguity,h,\
           training_blocks, degradation_blocks, trials_per_block,dec_temps, dec_context, rews, utility, \
           conf, task]

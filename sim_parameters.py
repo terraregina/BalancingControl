@@ -20,16 +20,16 @@ conf = ['shuffled_and_blocked']
 
 
 # non-iterable simulation parameters
-use_fitting = False
-deterministic_action = True
-deterministic_reward = True
+use_fitting = True
+deterministic_action = False
+deterministic_reward = False
 infer_h = True
 infer_dec = True
 init_reward_count_bias = 20
-
 # pooled arguments
+print_thoughts = False
 debugging = False
-repetitions = 10
+repetitions = 1
 
 na = 2                                           # number of unique possible actions
 nc = 4                                           # number of contexts, planning and habit

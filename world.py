@@ -4,12 +4,20 @@ actions generated during a single experiment. To initiate it one needs to
 provide the environment class and the agent class that will be used for the
 experiment.
 """
-import numpy as np
+# import numpy as np
 from misc import ln
-import torch as ar
-# from misc_sia import *
-ar.set_default_dtype(ar.float64)
-ar.set_printoptions(precision=8, threshold=100)
+# import torch as ar
+from sim_parameters import arr_type, print_thoughts
+
+if arr_type == "numpy":
+    import numpy as ar
+    array = ar.array
+else:
+    import torch as ar
+    array = ar.tensor
+    # from misc_sia import *
+    ar.set_default_dtype(ar.float64)
+    ar.set_printoptions(precision=8, threshold=100)
 
 class FittingWorld(object):
 
@@ -42,8 +50,8 @@ class FittingWorld(object):
         else:
             trials = range(self.trials)
         for tau in trials:
-            if tau%3 == 0:
-                print('breaktpoint')
+            # if tau%3 == 0:
+            #     print('breaktpoint')
             for t in range(self.T):
                 # if print_thoughts:
                     # print("tau", tau, ", t", t)
@@ -99,7 +107,7 @@ class FittingWorld(object):
 
         reward = self.rewards[tau, t]
 
-        if self.environment.planet_confs is not None:
+        if self.environment.planet_conf is not None:
             self.agent.perception.planets = self.environment.planet_conf[tau,:]
         # print('planets: ', self.agent.planets)
         # print('start: ', self.environment.starting_position[tau])
@@ -129,8 +137,6 @@ class FittingWorld(object):
             print('\ndirichlet_pol_params')
             print(self.agent.perception.dirichlet_pol_params[-1][...,0].numpy())
 
-        if tau == 200:
-            print('tau == 200')
 
 class World(object):
 
@@ -145,16 +151,16 @@ class World(object):
         self.free_parameters = {}
 
         #container for observations
-        self.observations = np.zeros((self.trials, self.T), dtype = int)
+        self.observations = ar.zeros((self.trials, self.T), dtype = ar.int32)
 
         #container for agents actions
-        self.actions = np.zeros((self.trials, self.T), dtype = int)
+        self.actions = ar.zeros((self.trials, self.T), dtype = ar.int32)
 
         #container for rewards
-        self.rewards = np.zeros((self.trials, self.T), dtype = int)
+        self.rewards = ar.zeros((self.trials, self.T), dtype = ar.int32)
         self.environment.possible_rewards = self.agent.perception.possible_rewards
 
-    def simulate_experiment(self, curr_trials=None, print_thoughts=False):
+    def simulate_experiment(self, curr_trials=None):
         """This methods evolves all the states of the world by iterating
         through all the trials and time steps of each trial.
         """
@@ -164,15 +170,13 @@ class World(object):
             trials = range(self.trials)
         for tau in trials:
             for t in range(self.T):
-                if print_thoughts:
-                    print("tau", tau, ", t", t)
-                self.__update_world(tau, t, print_thoughts=print_thoughts)
+                self.__update_world(tau, t)
                 # print('tau: ', tau, ' t:', t)
                 # print(self.agent.posterior_dirichlet_rew[tau,t])
 
 
     #this is a private method do not call it outside of the class
-    def __update_world(self, tau, t, print_thoughts = False):
+    def __update_world(self, tau, t):
         """This private method performs a signel time step update of the
         whole world. Here we update the hidden state(s) of the environment,
         the perceptual and planning states of the agent, and in parallel we
@@ -182,17 +186,16 @@ class World(object):
         if t==0:
             self.environment.set_initial_states(tau)
             response = None
-            if hasattr(self.environment, 'Chi') or \
-               self.agent.perception.generative_model_context is not None:
-
-                context = self.environment.generate_context_obs(tau)
-            else:
-                context = None
         else:
             response = self.actions[tau, t-1]
             self.environment.update_hidden_states(tau, t, response)
-            context = None
 
+        if hasattr(self.environment, 'Chi') or \
+            self.agent.perception.generative_model_context is not None:
+
+            context = self.environment.generate_context_obs(tau)
+        else:
+            context = None
 
         self.observations[tau, t] = \
             self.environment.generate_observations(tau, t)
@@ -220,48 +223,82 @@ class World(object):
         else:
             self.actions[tau, t] = -1
         
-
-        # print('\n\n----------')
-        # print('tau,t:',tau,t)
-        # print('reward, action', self.rewards[tau,t], self.actions[tau,t])
-        # print('\nfwd_norms:')
-        # for i in range(5):
-        #     print('\n', self.agent.perception.fwd_norms[tau,t,i,...])
-        # print('\nposterior_states')
-        # print(self.agent.posterior_states[tau,t,:,:,0,0])
-        # print('\nposterior_policies')
-        # print(self.agent.posterior_policies[tau,t])
-        # print('\nprior_context')
-        # print((self.agent.prior_context_log[tau,t]))
-        # print('\nposterior_context')
-        # print(self.agent.posterior_context[tau,t])
-        # print('\noutcome_suprise')
-        # print(self.agent.outcome_suprise[tau,t])
-        # print('\npolicy_entropy')
-        # print(self.agent.policy_entropy[tau,t])
-        # print('\npolicy_surprise')
-        # print(self.agent.policy_surprise[tau,t])
-        # print('\ncontext_obs_suprise')
-        # print(self.agent.context_obs_suprise[tau,t])
-        # print('\nposterior_rewards')
-        # print(self.agent.posterior_dirichlet_rew[tau,t])
-        # print('\ngenerative_model_rewards')
-        # print(self.agent.perception.generative_model_rewards[tau,t])
-        # print('\ncurr_gen_mod_rewards')
-        # print(self.agent.perception.current_gen_model_rewards)
-        # print('\prior_policy')
-        # print(self.agent.perception.prior_policies[tau])
         if print_thoughts:
-            print("response", response)
-            if t>0:
-                print("rewards", self.rewards[tau, t])
-            # print("posterior policies: ", self.agent.posterior_policies[tau,t])
-            # print("posterior context: ", self.agent.posterior_context[tau,t])
-            if t<self.T-1:
-                print("prior actions: ", self.agent.prior_actions)
-                print("posterior actions: ", self.agent.posterior_actions[tau,t])
-                print("\n")
+            if arr_type == "numpy": 
+                print('\n\n----------')
+                print('tau,t:',tau,t)
+                print('reward, action', self.rewards[tau,t], self.actions[tau,t])
+                print('\nfwd_norms:')
+                for i in range(5):
+                    print('\n', self.agent.perception.fwd_norms[tau,t,i,...])
+                print('\nposterior_states')
+                print(self.agent.posterior_states[tau,t,:,:,0,0])
+                print('\nposterior_policies')
+                print(self.agent.posterior_policies[tau,t])
+                # print('\nprior_context')
+                # print((self.agent.prior_context_log[tau,t]))
+                print('\nposterior_context')
+                print(self.agent.posterior_context[tau,t])
+                print('\noutcome_suprise')
+                print(self.agent.outcome_suprise[tau,t])
+                print('\npolicy_entropy')
+                print(self.agent.policy_entropy[tau,t])
+                print('\npolicy_surprise')
+                print(self.agent.policy_surprise[tau,t])
+                print('\ncontext_obs_suprise')
+                print(self.agent.context_obs_suprise[tau,t])
+                print('\nposterior_rewards')
+                print(self.agent.posterior_dirichlet_rew[tau,t])
+                print('\ngenerative_model_rewards')
+                print(self.agent.perception.generative_model_rewards[tau,t])
+                print('\ncurr_gen_mod_rewards')
+                print(self.agent.perception.current_gen_model_rewards)
+                print('\prior_policy')
+                print(self.agent.perception.prior_policies[tau])
+            else:
 
+                print('\n\n----------')
+                print('tau,t:',tau,t)
+                print('reward, action', self.rewards[tau,t].numpy(), self.actions[tau,t].numpy())
+                print('\nfwd_norms:')
+                for i in range(5):
+                    print('\n', self.agent.perception.fwd_norms[-1][i,:,:,0].numpy())
+                print('\nposterior_states')
+                print(self.agent.perception.posterior_states[-1][:,:,0,0,0])
+                print('\nposterior_policies')
+                print(self.agent.perception.posterior_policies[-1][...,0].numpy())
+                print('\nposterior_context')
+                print(self.agent.perception.posterior_contexts[-1][...,0].numpy())
+                # try:
+                #     print('\noutcome_suprise')
+                #     print(self.agent.perception.outcome_suprise[-1][...,0].numpy())
+                #     print('\npolicy_entropy')
+                #     print(self.agent.perception.policy_entropy[-1][...,0].numpy())
+                #     print('\npolicy_surprise')
+                #     print(self.agent.perception.policy_surprise[-1][...,0].numpy())
+                # except:
+                #     print(self.agent.perception.outcome_suprise[-1])
+                #     print('\npolicy_entropy')
+                #     print(self.agent.perception.policy_entropy[-1])
+                #     print('\npolicy_surprise')
+                #     print(self.agent.perception.policy_surprise[-1])
+                # print('\ncontext_obs_suprise')
+                # print(self.agent.perception.context_obs_surprise[-1][...,0].numpy())
+                print('\nposterior_rewards')
+                if tau == 0 and t==0:
+                    print('zeros')
+                elif t != 0:
+                    print(self.agent.perception.dirichlet_rew_params[-1][...,0].numpy())
+                else:
+                    a = self.agent.perception.dirichlet_rew_params[-1][...,0].numpy().copy()
+                    a[:] = 0
+                    print(a)
+                print('\ngenerative_model_rewards')
+                print(self.agent.perception.generative_model_rewards[-1][...,0].numpy())
+                print('\ncurr_gen_mod_rewards')
+                print(self.agent.perception.curr_gen_mod_rewards[-1][...,0].numpy())
+                # print('\prior_policy')
+                # print(self.agent.perception.prior_policies[tau])
 class World_old(object):
 
     def __init__(self, environment, agent, trials = 1, T = 10):
@@ -275,13 +312,13 @@ class World_old(object):
         self.free_parameters = {}
 
         #container for observations
-        self.observations = np.zeros((self.trials, self.T), dtype = int)
+        self.observations = ar.zeros((self.trials, self.T), dtype = int)
 
         #container for agents actions
-        self.actions = np.zeros((self.trials, self.T), dtype = int)
+        self.actions = ar.zeros((self.trials, self.T), dtype = int)
 
         #container for rewards
-        self.rewards = np.zeros((self.trials, self.T), dtype = int)
+        self.rewards = ar.zeros((self.trials, self.T), dtype = int)
 
     def simulate_experiment(self, curr_trials=None):
         """This methods evolves all the states of the world by iterating
@@ -299,7 +336,7 @@ class World_old(object):
     def estimate_par_evidence(self, params, method='MLE'):
 
 
-        val = np.zeros(params.shape[0])
+        val = ar.zeros(params.shape[0])
         for i, par in enumerate(params):
             if method == 'MLE':
                 val[i] = self.__get_log_likelihood(par)
@@ -315,7 +352,7 @@ class World_old(object):
         """
 
         inference = Inference(ftol = 1e-4, xtol = 1e-8, bounds = bounds,
-                           opts = {'np': n_pars})
+                           opts = {'ar': n_pars})
 
         if method == 'MLE':
             return inference.infer_posterior(self.__get_log_likelihood)
@@ -329,8 +366,8 @@ class World_old(object):
         self.agent.reset_beliefs(self.actions)
         self.__update_model()
 
-        p1 = np.tile(np.arange(self.trials), (self.T, 1)).T
-        p2 = np.tile(np.arange(self.T), (self.trials, 1))
+        p1 = ar.tile(ar.arange(self.trials), (self.T, 1)).T
+        p2 = ar.tile(ar.arange(self.T), (self.trials, 1))
         p3 = self.actions.astype(int)
 
         return ln(self.agent.asl.control_probability[p1, p2, p3]).sum()
@@ -340,8 +377,8 @@ class World_old(object):
         self.agent.reset_beliefs(self.actions)
         self.__update_model()
 
-        p1 = np.tile(np.arange(self.trials), (self.T, 1)).T
-        p2 = np.tile(np.arange(self.T), (self.trials, 1))
+        p1 = ar.tile(ar.arange(self.trials), (self.T, 1)).T
+        p2 = ar.tile(ar.arange(self.T), (self.trials, 1))
         p3 = self.actions.astype(int)
 
         ll = ln(self.agent.asl.control_probability[p1, p2, p3]).sum()
@@ -537,8 +574,8 @@ class FakeWorld(object):
                 # print(self.agent.posterior_policies[tau,t].round(4))
 
 
-                # self.log_context.append(int(np.argmax(self.agent.posterior_context[tau,t,:])))
-                # self.log_policies.append(np.argmax(self.agent.posterior_policies[tau,t,:],axis=0).tolist())
+                # self.log_context.append(int(ar.argmax(self.agent.posterior_context[tau,t,:])))
+                # self.log_policies.append(ar.argmax(self.agent.posterior_policies[tau,t,:],axis=0).tolist())
                 # self.log_post_pols.append(self.agent.posterior_policies[tau,0,:].tolist())
                 # self.log_prior_pols.append(self.agent.prior_policies[:,:,0].tolist())
                 # print(self.agent.posterior_actions.shape)
