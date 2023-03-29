@@ -70,7 +70,7 @@ def run_single_inference(fname):
         data["rewards"] = ar.tensor(world.rewards)
         data["observations"] = ar.tensor(world.observations)    
         data["context_obs"] = ar.tensor(world.environment.context_cues)
-        data["planets"] = ar.tensor(world.environment.planet_conf)
+        data["planets"] = ar.tensor(world.environment.planet_conf, dtype=ar.long)
 
         # data["actions"] = world.actions
         # data["rewards"] = world.rewards
@@ -109,15 +109,15 @@ def run_single_inference(fname):
         Rho = array(world.environment.R)
 
         if learn_rew:
-            C_alphas = ar.ones([nr, npl, nc])
+            C_beta = ar.ones([nr, npl, nc])
         else:
-            # C_alphas = ar.as_tensor(np.tile(planet_reward_probs.T[:,:,None]*5,(1,1,nc))+1)
-            C_alphas = array(world.agent.perception.dirichlet_rew_params_init)
+            # C_beta = ar.as_tensor(np.tile(planet_reward_probs.T[:,:,None]*5,(1,1,nc))+1)
+            C_beta = array(world.agent.perception.dirichlet_rew_params_init)
 
         C_agent = ar.zeros((nr, npl, nc))
         for c in range(nc):
             for pl in range(npl):
-                C_agent[:,pl,c] = C_alphas[:,pl,c]/ C_alphas[:,pl,c].sum() 
+                C_agent[:,pl,c] = C_beta[:,pl,c]/ C_beta[:,pl,c].sum() 
 
 
         transition_matrix_context =array(world.agent.perception.transition_matrix_context)
@@ -152,7 +152,7 @@ def run_single_inference(fname):
         """
         #bethe agent
 
-        pol_par = alphas
+        alphas
         # dec_temp_cont = array(world.agent.perception.dec_temp_cont)
 
         if infer_dec:
@@ -165,31 +165,28 @@ def run_single_inference(fname):
             A, 
             B, 
             C_agent, 
-            transition_matrix_context, 
             state_prior, 
             utility, 
             prior_pi, 
             pol,
-            pol_par,
-            C_alphas,
-            generative_model_context=C,
-            T=T, 
-            trials=trials,npart=n_part,dec_temp=dec_temp, dec_temp_cont=2, r_lambda=rew)
+            alphas,
+            C_beta,
+            transition_matrix_context = transition_matrix_context, 
+            generative_model_context=C, prior_context=prior_context, number_of_planets = npl,
+            T=T, trials=trials, dec_temp=dec_temp, dec_temp_cont=dec_temp_cont, r_lambda=rew, npart=n_part)
 
         ac_sel = asl.AveragedSelector(trials = trials, T = T,
                                             number_of_actions = na)
 
-        agent = agt.FittingAgent(bayes_prc, ac_sel, pol,
-                        trials = trials, T = T,
+        agent = agt.FittingAgent(bayes_prc,
+                        ac_sel,
+                        pol,
                         prior_states = state_prior,
                         prior_policies = prior_pi,
+                        prior_context = prior_context, number_of_planets=npl,
+                        number_of_policies = npi, number_of_rewards = nr, trials = trials, T=T,
                         number_of_states = ns,
-                        prior_context = prior_context,
-                        learn_habit = learn_habit,
-                        learn_rew = True,
-                        #save_everything = True,
-                        number_of_policies = npi,
-                        number_of_rewards = nr, npart=n_part)
+                        )
         lr = .01
         param_file = inference_file[:-5]   + '_' + str(int(infer_h)) + str(int(infer_dec))+'_'+ str(lr)+ '.save'
         if sys.platform == 'win32':
@@ -268,12 +265,12 @@ def pooled(files_to_fit):
     # 17; 20
     
     if __name__ == '__main__':
-        with Pool(2) as pool:
+        # with Pool(2) as pool:
 
-            for _ in tqdm.tqdm(pool.map(run_single_inference, files_to_fit),\
-                            total=len(files_to_fit)):
-                pass
-
+            # for _ in tqdm.tqdm(pool.map(run_single_inference, files_to_fit),\
+            #                 total=len(files_to_fit)):
+                # pass
+        run_single_inference(files_to_fit[0])
 
 task = ['multiple_']
 
@@ -306,9 +303,9 @@ for l in lst:
             "_q"+str(q) + "_h"+str(h)  + "_" + str(tpb) +  "_" + str(tb) + str(db) + '_decp' + str(dec_temp) + \
             '_decc' + str(dec_temp_cont) + '_rew' + str(rew) + '_u' + '-'.join([str(u) for u in utility]) + '_'+ str(nr) +  '_' + config
     
-    fit_run_name = name + '_rep' + str(repetitions) +  "_extinguish.json"
+    fit_run_name = name + '_rep' + str(repetitions) +  ".json"
 
-    fname = os.getcwd()  + '/' + data_folder + '/' + config + '/' + name +  "_extinguish.json"
+    fname = os.getcwd()  + '/' + data_folder + '/' + config + '/' + name +  ".json"
     if sys.platform == "win32":
         fname = fname.replace('/','\\')
     
@@ -321,7 +318,7 @@ for l in lst:
 
     for wi, world in enumerate(worlds[:-1]):
         individual_world = [world,meta]
-        fname = os.path.join(os.getcwd(), data_folder + '/' + name  + '_rep' + str(wi) +  "_extinguish.json")
+        fname = os.path.join(os.getcwd(), data_folder + '/' + name  + '_rep' + str(wi) +  ".json")
         if sys.platform == "win32":
             fname = fname.replace('/','\\')
         # files_to_fit.append(l + [wi])

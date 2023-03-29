@@ -361,6 +361,7 @@ class GeneralGroupInference(object):
     def load_parameters(self, fname):
 
         pyro.get_param_store().load(fname)
+
 class SingleInference(object):
 
     def __init__(self, agent, data, params):
@@ -411,7 +412,7 @@ class SingleInference(object):
         
                 observation = self.data["observations"][tau, t]
                 reward = self.data["rewards"][tau, t] 
-                self.agent.planets = self.data["planets"][tau]
+                self.agent.perception.planets = self.data["planets"][tau]
                 self.agent.update_beliefs(tau, t, observation, reward, prev_response, context)
         
                 if t < self.T-1:

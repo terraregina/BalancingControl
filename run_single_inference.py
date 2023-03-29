@@ -2,12 +2,18 @@
 # -*- coding: utf-8 -*-
 """
 Created on Mon Sep 13 14:09:11 2021
-@author: sarah
+@author: sia
 """
 
 
 import torch as ar
+import numpy as np
+import scipy as sc
 array = ar.tensor
+
+import itertools
+import os
+import gc
 
 import pyro
 import pyro.distributions as dist
@@ -16,53 +22,51 @@ import perception as prc
 import action_selection as asl
 import inference_habit as inf
 import action_selection as asl
-import numpy as np
-import itertools
+
 import matplotlib.pylab as plt
-from matplotlib.animation import FuncAnimation
-from multiprocessing import Pool
-from matplotlib.colors import LinearSegmentedColormap
+
 import jsonpickle as pickle
 import jsonpickle.ext.numpy as jsonpickle_numpy
 import json
-import seaborn as sns
-import pandas as pd
-import os
-import scipy as sc
-import scipy.signal as ss
-import gc
-from environment import PlanetWorld
-from world import World
-import jsonpickle as pickle
-import jsonpickle.ext.numpy as jsonpickle_numpy
+from sim_parameters import *
+
 
 #ar.autograd.set_detect_anomaly(True)
 ###################################
 
 """load data"""
 ar.set_num_threads(1)
-switch = 0
-degr = 1
-p = 0.65
-learn_rew  = 0
-q = 0.8
-h = 10
-db = 2
-tb = 4
-tpb = 70
-n_part = 1
-iss = 600
-dec_temp = 1
-config = 'ordered'
-folder = "temp"
+switch = cue_switch[0]
+degr = degradation[0]
+p = cue_ambiguity[0]
+learn_rew  = reward_naive[0]
+q = context_trans_prob[0]
+h = h[0]
+db = degradation_blocks[0]
+tb = training_blocks[0]
+tpb = trials_per_block[0]
+n_part = 5
 
-infer_h = False
-infer_dec = True
+
+
+
+
+iss = 600
+dec_temp = dec_temps[0]
+dec_temp_cont = dec_temp_cont[0]
+config = conf[0]
+folder = "temp"
+nr = 3
+
 infer_both = infer_h and infer_dec
 
-prefix = 'shuffled/multiple_'
-run_name = prefix+"hier_switch"+str(switch) +"_degr"+str(degr) +"_p"+str(p)+ "_learn_rew"+str(learn_rew)+\
-           "_q"+str(q) + "_h"+str(h)  + "_" + str(tpb) +  "_" + str(tb) + str(db) + '_dec' + str(dec_temp) + '_' + config + "_extinguish.json"
+if use_fitting:
+    prefix = config + '/multiple_fitt'
+else:
+    prefix = config + '/multiple_hier'
+run_name = prefix+"_switch"+str(switch) +"_degr"+str(degr) +"_p"+str(p)+ "_learn_rew"+str(learn_rew)+\
+           "_q"+str(q) + "_h"+str(h)  + "_" + str(tpb) +  "_" + str(tb) + str(db) +\
+           "_decp" + str(dec_temp)+ "_decc" + str(dec_temp_cont) + "_" + config + ".json"
 fname = os.path.join(folder, run_name)
 jsonpickle_numpy.register_handlers()
 print(run_name)  

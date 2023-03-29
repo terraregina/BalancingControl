@@ -29,7 +29,6 @@ else:
         device = ar.device("cpu")
     ar.set_default_dtype(ar.float64)
 
-
 class GroupPerception(object):
     def __init__(self,
                  generative_model_observations,
@@ -500,13 +499,6 @@ class FittingPerception(object):
 
 
     def reset(self):
-        # print(self.alpha_0)
-        # ds = self.dec_temp.shape[0]
-        # hs = self.alpha_0.shape[0]
-        # if hs > ds:
-        #     self.npart = hs
-        # else:
-        #     self.npart = ds
         self.dirichlet_pol_params_init = ar.zeros((self.npi, self.nc, self.npart)).to(device) + self.alpha_0.to(device)
 
         self.dirichlet_rew_params = [ar.stack([self.dirichlet_rew_params_init]*self.npart, dim=-1).to(device)]
@@ -540,7 +532,7 @@ class FittingPerception(object):
         
     def make_current_messages(self, tau, t):
 
-        if self.npl is not None:
+        if self.npl != None:
             generative_model_rewards = self.curr_gen_mod_rewards
         else:
             generative_model_rewards = self.generative_model_rewards
@@ -552,8 +544,6 @@ class FittingPerception(object):
         obs = [ar.stack(obs,dim=-1).to(device).to(device)]*self.npart
         obs_messages = ar.stack(obs,dim=-1).to(device)
 
-
-
         rew_messages = ar.stack(\
             [
                 ar.stack(
@@ -563,29 +553,19 @@ class FittingPerception(object):
                 ,dim=-2).to(device)\
             for i in range(self.npart)], dim=-1).to(device)
 
-        # for i in range(t):
-        #     tp = -t-1+i
-            # observation = self.observations[tp]
-            # obs_messages[:,i] = self.generative_model_observations[observation]
-
-            # reward = self.rewards[tp]
-            # rew_messages[:,i] = generative_model_rewards[reward]
-        if self.npl is not None:
+        if self.npl != None:
             rew_messages[:,0,:,:] = 1/self.possible_rewards.size()[0]
+
         self.obs_messages.append(obs_messages)
         self.rew_messages.append(rew_messages)
 
 
     def update_messages(self, tau, t):
         
-        # bwd_messages = ar.zeros((self.nh, self.T,self.npi)) #+ 1./self.nh
-        # bwd_messages[:,-1,:] = 1./self.nh
+
         bwd = [ar.zeros((self.nh, self.npi, self.nc, self.npart)).to(device)+1./self.nh]
-        # fwd_messages = ar.zeros((self.nh, self.T, self.npi))
-        # fwd_messages[:,0,:] = self.prior_states[:,None]
         fwd = [ar.zeros((self.nh, self.npi, self.nc, self.npart)).to(device)+self.prior_states[:,None,None,None]]
-        # fwd_norms = ar.zeros((self.T+1, self.npi))
-        # fwd_norms[0,:] = 1.
+
         fwd_norm = [ar.ones(self.npi, self.nc, self.npart).to(device)]
 
         self.make_current_messages(tau,t)
@@ -602,17 +582,10 @@ class FittingPerception(object):
             
         bwd.reverse()
         bwd_messages = ar.stack(bwd).permute(1,0,2,3,4).to(device)
-
  
         for i in range(self.T-1):
             tmp = ar.einsum('spcn,shpc,scn,scn->hpcn',fwd[-1],self.big_trans_matrix[...,i],obs_messages[:,i,:],rew_messages[:,i,:]).to(device)
             fwd.append(tmp)
-
-            # norm = fwd[-1].sum(axis=0)
-            # mask = norm > 0
-            # fwd[-1][:,mask] /= norm[None,mask]
-            # fwd_norm.append((ar.zeros((self.npi,self.nc, self.npart)) + 1e-10).to(device))
-            # fwd_norm[-1][possible_policies] = norm[possible_policies]
 
             norm = fwd[-1].sum(axis=0) + 1e-20
             fwd[-1] /= norm[None,:] 
@@ -623,10 +596,8 @@ class FittingPerception(object):
                 
         posterior = fwd_messages*bwd_messages*obs_messages[:,:,None,:,:]*rew_messages[:,:,None,:,:]
         norm = posterior.sum(axis = 0)
-        #fwd_norms[-1] = norm[-1]
         fwd_norm.append(norm[-1])
         fwd_norms = ar.stack(fwd_norm).to(device)
-        # print(tau,t,fwd_norms[...,0])
         non_zero = norm > 0
         posterior[:,non_zero] /= norm[non_zero]
 
@@ -645,8 +616,7 @@ class FittingPerception(object):
                                     reward)
 
 
-        #update beliefs about policies
-        self.update_beliefs_policies(tau, t) #self.posterior_policies[tau, t], self.likelihood[tau,t]
+        self.update_beliefs_policies(tau, t) 
 
         if tau == 0:
             prior_context = self.prior_context[:,None].repeat(1,self.npart)
@@ -662,34 +632,27 @@ class FittingPerception(object):
                                     prior_context, \
                                     context=context)
 
-        # if t == self.T-1 and self.learn_habit:
         if t == self.T-1:
             self.update_beliefs_dirichlet_pol_params(tau, t)
 
-        if t>0: #==self.T-1:
-        # if self.learn_rew and t>0: #==self.T-1:
+        if t>0:
             self.update_beliefs_dirichlet_rew_params(tau, t, reward)
 
 
     def update_beliefs_states(self, tau, t, observation, reward):
-        #estimate expected state distribution
-        # if t == 0:
-        #     self.instantiate_messages(policies)
+    
         self.observations.append(observation)
         self.rewards.append(reward)
             
         self.update_messages(tau, t)
         
-        #return posterior#ar.nan_to_num(posterior)
-    
 
     def update_beliefs_policies(self, tau, t):
 
         likelihood = (self.fwd_norms[-1]+ 1e-20).prod(axis=0).to(device)
-        # print('\n', tau,t,likelihood[...,0])
         norm = likelihood.sum(axis=0)
         likelihood = ar.pow(likelihood/norm[None,:,:],self.dec_temp[None,None,:]).to(device) #* ar.pow(norm,self.dec_temp)
-        # likelihood /= likelihood.sum(axis=0)
+
 
         posterior= likelihood * self.prior_policies[-1]
         posterior /= posterior.sum(axis=0)
@@ -731,11 +694,7 @@ class FittingPerception(object):
             if t>0:
                 outcome_surprise = (self.posterior_policies[-1] * ln(self.fwd_norms[-1].prod(axis=0))).sum(axis=0)
                 entropy = - (self.posterior_policies[-1] * ln(self.posterior_policies[-1])).sum(axis=0)
-                #policy_surprise = (post_policies[:,ar.newaxis] * scs.digamma(alpha_prime)).sum(axis=0) - scs.digamma(alpha_prime.sum(axis=0))
-                
                 policy_surprise = (self.posterior_policies[-1] * ar.digamma(alpha_prime)).sum(axis=0) - ar.digamma(alpha_prime.sum(axis=0))
-                # if t == 1:
-                #     a=0
             else:
                 outcome_surprise = 0
                 entropy = 0

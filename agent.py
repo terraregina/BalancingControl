@@ -91,7 +91,26 @@ class FittingAgent(object):
             self.context_obs = ar.zeros(trials, dtype=int).to(device)
 
 
-    def reset(self, locs):
+    def reset(self, param_dict):
+
+        self.actions = ar.zeros((self.trials, self.T), dtype = int).to(device)
+        self.observations = ar.zeros((self.trials, self.T), dtype = int).to(device)
+        self.rewards = ar.zeros((self.trials, self.T), dtype = int).to(device)
+        self.posterior_actions = ar.zeros((self.trials, self.T-1, self.na)).to(device)
+        self.posterior_rewards = ar.zeros((self.trials, self.T, self.nr)).to(device)
+        if self.nc != 1:
+            self.posterior_contexts = ar.zeros((self.trials, self.T, self.nc)).to(device)
+        self.control_probs  = ar.zeros((self.trials, self.T, self.na)).to(device)
+        self.log_probability = 0
+        if hasattr(self.perception, 'generative_model_context'):
+            self.context_obs = ar.zeros(self.trials, dtype=int).to(device)
+
+        self.set_parameters(**param_dict)
+        # self.npart = self.perception.alpha_0.shape[0]
+        self.perception.reset()
+
+
+    def reset_new(self, locs):
 
         self.actions = ar.zeros((self.trials, self.T), dtype = int).to(device)
         self.observations = ar.zeros((self.trials, self.T), dtype = int).to(device)
@@ -125,15 +144,14 @@ class FittingAgent(object):
 
     def initiate_planet_rewards(self):
         
-        # gen_mod_rewards = ar.zeros([self.nr, self.nh, self.nc, self.npart])
-        try:
-            self.perception.curr_gen_mod_rewards.append(\
-                self.perception.generative_model_rewards[-1][:,self.perception.planets,:,:])
-        except:
-            self.perception.curr_gen_mod_rewards.append(\
-                self.perception.generative_model_rewards[-1][:,self.perception.planets.long(),:,:])
+        # try:
+        self.perception.curr_gen_mod_rewards.append(\
+            self.perception.generative_model_rewards[-1][:,self.perception.planets,:,:])
+        # except:
+            # self.perception.curr_gen_mod_rewards.append(\
+            #     self.perception.generative_model_rewards[-1][:,self.perception.planets.long(),:,:])
 
-        # return gen_mod_rewards
+
 
     def generate_response(self, tau, t):
 
@@ -167,11 +185,18 @@ class FittingAgent(object):
             self.posterior_actions[tau,t,a] = posterior_policies[self.policies[:,t] == a].sum()
 
         #return self.control_probs[tau,t]
-    
-    
-    def set_parameters(self, locs):
 
-        self.perception.set_parameters(locs)
+    def set_parameters(self, **kwargs):
+        
+        if 'pol_lambda' in kwargs.keys():
+            self.perception.pol_lambda = kwargs['pol_lambda']
+        if 'r_lambda' in kwargs.keys():
+            self.perception.r_lambda = kwargs['r_lambda']
+        if 'dec_temp' in kwargs.keys():
+            self.perception.dec_temp = kwargs['dec_temp']
+        if 'h' in kwargs.keys():
+            # print(1./kwargs['h'])
+            self.perception.alpha_0 = 1./kwargs['h']
 
     def locs_to_pars(self, locs):
 

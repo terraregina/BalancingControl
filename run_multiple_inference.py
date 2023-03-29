@@ -57,6 +57,7 @@ for i in product(*arrays):
 
 
 n_part = 5
+
 for li, l in enumerate(lst):
 
     """load data"""
@@ -72,7 +73,7 @@ for li, l in enumerate(lst):
 
     run_name = prefix+str(int(switch)) +"_degr"+str(int(degr)) +"_p"+str(p)+ "_learn_rew"+str(int(learn_rew))+\
             "_q"+str(q) + "_h"+str(h)  + "_" + str(tpb) +  "_" + str(tb) + str(db) + '_decp' + str(dec_temp) + \
-            '_decc' + str(dec_temp_cont) + '_rew' + str(rew) + '_u' + '-'.join([str(u) for u in utility]) + '_'+ str(nr) +  '_' + config + '_extinguish.json'
+            '_decc' + str(dec_temp_cont) + '_rew' + str(rew) + '_u' + '-'.join([str(u) for u in utility]) + '_'+ str(nr) +  '_' + config + '.json'
     
     fname = os.getcwd() + '/' + folder + '/' + config +  '/' +  run_name
 
