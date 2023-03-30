@@ -163,10 +163,13 @@ class FittingAgent(object):
         # posterior_policies = posterior_policies[non_zero]
         # avg_likelihood = avg_likelihood[non_zero]
         # prior = prior[non_zero]
-
+        if len(posterior_actions.shape) == 3:
+            post = posterior_actions[...,0,0]
+        elif len(posterior_actions.shape) == 2:
+            post = posterior_actions[...,0]
         self.actions[tau, t] = self.action_selection.select_desired_action(tau,
                                         # t, posterior_actions[:,0,0], actions, None, None)
-                                                t, posterior_actions[...,0], actions, None, None)
+                                                t, post, actions, None, None)
 
 
         return self.actions[tau, t]

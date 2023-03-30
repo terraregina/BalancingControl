@@ -174,7 +174,6 @@ class World(object):
                 # print('tau: ', tau, ' t:', t)
                 # print(self.agent.posterior_dirichlet_rew[tau,t])
 
-
     #this is a private method do not call it outside of the class
     def __update_world(self, tau, t):
         """This private method performs a signel time step update of the
@@ -205,10 +204,10 @@ class World(object):
 
         if hasattr(self, 'trial_type'):
             if self.trial_type[tau] == 2:
-                reward = 0
+                # reward = 0
+                self.rewards[tau, t] = 0
 
         observation = self.observations[tau, t]
-
         reward = self.rewards[tau, t]
 
 
@@ -299,6 +298,208 @@ class World(object):
                 print(self.agent.perception.curr_gen_mod_rewards[-1][...,0].numpy())
                 # print('\prior_policy')
                 # print(self.agent.perception.prior_policies[tau])
+
+
+class GroupWorld(object):
+
+    def __init__(self, environment, agent, trials = 1, T = 10):
+        #set inital elements of the world to None
+        self.environment = environment
+        self.agent = agent
+
+        self.trials = trials # number of trials in the experiment
+        self.T = T # number of time steps in each trial
+
+        self.free_parameters = {}
+
+        #container for observations
+        self.observations = ar.zeros((self.trials, self.T), dtype = int)
+
+        #container for agents actions
+        self.actions = ar.zeros((self.trials, self.T), dtype = int)
+
+        #container for rewards
+        self.rewards = ar.zeros((self.trials, self.T), dtype = int)
+        self.environment.possible_rewards = self.agent.perception.possible_rewards
+        
+    def simulate_experiment(self, curr_trials=None):
+        """This methods evolves all the states of the world by iterating
+        through all the trials and time steps of each trial.
+        """
+        if curr_trials is not None:
+            trials = curr_trials
+        else:
+            trials = range(self.trials)
+        for tau in trials:
+            for t in range(self.T):
+                self.__update_world(tau, t)
+
+
+    def estimate_par_evidence(self, params, method='MLE'):
+
+
+        val = ar.zeros(params.shape[0])
+        for i, par in enumerate(params):
+            if method == 'MLE':
+                val[i] = self.__get_log_likelihood(par)
+            else:
+                val[i] = self.__get_log_jointprobability(par)
+
+        return val
+
+    def fit_model(self, bounds, n_pars, method='MLE'):
+        """This method uses the existing observation and response data to
+        determine the set of parameter values that are most likely to cause
+        the meassured behavior.
+        """
+
+        inference = Inference(ftol = 1e-4, xtol = 1e-8, bounds = bounds,
+                           opts = {'np': n_pars})
+
+        if method == 'MLE':
+            return inference.infer_posterior(self.__get_log_likelihood)
+        else:
+            return inference.infer_posterior(self.__get_log_jointprobability)
+
+
+    #this is a private method do not call it outside of the class
+    def __get_log_likelihood(self, params):
+        self.agent.set_free_parameters(params)
+        self.agent.reset_beliefs(self.actions)
+        self.__update_model()
+
+        p1 = ar.tile(ar.arange(self.trials), (self.T, 1)).T
+        p2 = ar.tile(ar.arange(self.T), (self.trials, 1))
+        p3 = self.actions.astype(int)
+
+        return ln(self.agent.asl.control_probability[p1, p2, p3]).sum()
+
+    def __get_log_jointprobability(self, params):
+        self.agent.set_free_parameters(params)
+        self.agent.reset_beliefs(self.actions)
+        self.__update_model()
+
+        p1 = ar.tile(ar.arange(self.trials), (self.T, 1)).T
+        p2 = ar.tile(ar.arange(self.T), (self.trials, 1))
+        p3 = self.actions.astype(int)
+
+        ll = ln(self.agent.asl.control_probability[p1, p2, p3]).sum()
+
+        return  ll + self.agent.log_prior()
+
+    #this is a private method do not call it outside of the class
+    def __update_model(self):
+        """This private method updates the internal states of the behavioral
+        model given the avalible set of observations and actions.
+        """
+
+        for tau in range(self.trials):
+            for t in range(self.T):
+                if t == 0:
+                    response = None
+                else:
+                    response = self.actions[tau, t-1]
+
+                observation = self.observations[tau,t]
+
+                self.agent.update_beliefs(tau, t, observation, response)
+                self.agent.plan_behavior(tau, t)
+                self.agent.estimate_response_probability(tau, t)
+
+    #this is a private method do not call it outside of the class
+    def __update_world(self, tau, t):
+        """This private method performs a signel time step update of the
+        whole world. Here we update the hidden state(s) of the environment,
+        the perceptual and planning states of the agent, and in parallel we
+        generate observations and actions.
+        """
+
+        if t==0:
+            self.environment.set_initial_states(tau)
+            response = None
+        else:
+            response = self.actions[tau, t-1]
+            self.environment.update_hidden_states(tau, t, response)
+
+        if hasattr(self.environment, 'Chi') or \
+            self.agent.perception.generative_model_context is not None:
+
+            context = self.environment.generate_context_obs(tau)
+        else:
+            context = None
+
+        self.observations[tau, t] = \
+            self.environment.generate_observations(tau, t)
+
+        if t>0:
+            self.rewards[tau, t] = self.environment.generate_rewards(tau, t)
+
+        if hasattr(self, 'trial_type'):
+            if self.trial_type[tau] == 2:
+                # reward = 0
+                self.rewards[tau, t] = 0
+
+        observation = self.observations[tau, t]
+
+        reward = self.rewards[tau, t]
+	
+        if self.environment.planet_conf is not None:
+            self.agent.perception.planets = self.environment.planet_conf[tau,:]   
+
+        self.agent.update_beliefs(tau, t, ar.tensor([observation]), ar.tensor([reward]), response, context)
+
+
+        if t < self.T-1:
+            self.actions[tau, t] = self.agent.generate_response(tau, t)
+        else:
+            self.actions[tau, t] = -1
+
+        if print_thoughts:
+            print('\n\n----------')
+            print('tau,t:',tau,t)
+            print('reward, action', self.rewards[tau,t].numpy(), self.actions[tau,t].numpy())
+            print('\nfwd_norms:')
+            for i in range(5):
+                print('\n', self.agent.perception.fwd_norms[-1][i,:,:,0,0].numpy())
+            print('\nposterior_states')
+            print(self.agent.perception.posterior_states[-1][:,:,0,0,0,0])
+            print('\nposterior_policies')
+            print(self.agent.perception.posterior_policies[-1][...,0,0].numpy())
+            print('\nposterior_context')
+            print(self.agent.perception.posterior_contexts[-1][...,0,0].numpy())
+            # try:
+            #     print('\noutcome_suprise')
+            #     print(self.agent.perception.outcome_suprise[-1][...,0].numpy())
+            #     print('\npolicy_entropy')
+            #     print(self.agent.perception.policy_entropy[-1][...,0].numpy())
+            #     print('\npolicy_surprise')
+            #     print(self.agent.perception.policy_surprise[-1][...,0].numpy())
+            # except:
+            #     print(self.agent.perception.outcome_suprise[-1])
+            #     print('\npolicy_entropy')
+            #     print(self.agent.perception.policy_entropy[-1])
+            #     print('\npolicy_surprise')
+            #     print(self.agent.perception.policy_surprise[-1])
+            # print('\ncontext_obs_suprise')
+            # print(self.agent.perception.context_obs_surprise[-1][...,0].numpy())
+            print('\nposterior_rewards')
+            if tau == 0 and t==0:
+                print('zeros')
+            elif t != 0:
+                print(self.agent.perception.dirichlet_rew_params[-1][...,0,0].numpy())
+            else:
+                a = self.agent.perception.dirichlet_rew_params[-1][...,0,0].numpy().copy()
+                a[:] = 0
+                print(a)
+            print('\ngenerative_model_rewards')
+            print(self.agent.perception.generative_model_rewards[-1][...,0,0].numpy())
+            print('\ncurr_gen_mod_rewards')
+            print(self.agent.perception.curr_gen_mod_rewards[-1][...,0,0].numpy())
+            # print('\prior_policy')
+            # print(self.agent.perception.prior_policies[tau])
+
+
+
 class World_old(object):
 
     def __init__(self, environment, agent, trials = 1, T = 10):
@@ -435,6 +636,7 @@ class World_old(object):
             self.actions[tau, t] = self.agent.generate_response(tau, t)
         else:
             self.actions[tau, t] = -1
+
 
 class FakeWorld(object):
 

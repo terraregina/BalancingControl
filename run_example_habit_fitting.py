@@ -156,6 +156,9 @@ def run_agent(par_list, trials, T, ns=6, na=2, nr=3, nc=2, npl=2, trial_type=Non
 
     nr = len(possible_rewards)
 
+        
+
+
 
     if use_fitting == True:
 
@@ -183,7 +186,7 @@ def run_agent(par_list, trials, T, ns=6, na=2, nr=3, nc=2, npl=2, trial_type=Non
         ac_sel = asl.FittingAveragedSelector(trials = trials, T = T,
                                       number_of_actions = na)
 
-        bayes_prc = prc.GroupFittingPerception(\
+        bayes_prc = prc.FittingPerception(\
                                A, 
                                B, 
                                C_agent, 
@@ -251,7 +254,7 @@ def run_agent(par_list, trials, T, ns=6, na=2, nr=3, nc=2, npl=2, trial_type=Non
                     nr,
                     na)
                                     
-    w = GroupWorld(environment, bayes_pln, trials = trials, T = T)
+    w = World(environment, bayes_pln, trials = trials, T = T)
 
     """
     create world
@@ -270,8 +273,8 @@ def run_agent(par_list, trials, T, ns=6, na=2, nr=3, nc=2, npl=2, trial_type=Non
     simulate experiment
     """
 
-    # w.simulate_experiment(range(trials))
-    w.simulate_experiment(range(2))
+    w.simulate_experiment(range(trials))
+    # w.simulate_experiment(range(10))
 
     w.h = learn_pol
     w.q = context_trans_prob
@@ -306,11 +309,13 @@ def run_agent(par_list, trials, T, ns=6, na=2, nr=3, nc=2, npl=2, trial_type=Non
         keys = ['big_trans_matrix', 'generative_model_observations','generative_model_states',\
                 'generative_model_context','transition_matrix_context','prior_rewards','prior_states',\
                 'dec_temp','dec_temp_cont','policies','actions','alpha_0','dirichlet_rew_params_init',\
-                'dirichlet_pol_params_init','prior_context'] # ,'context_obs_surprise', 'outcome_suprise','policy_entropy', 'policy_surprise']
+                'dirichlet_pol_params_init','prior_context' ,'context_obs_surprise', 'outcome_suprise','policy_entropy',\
+                'policy_surprise']
         
         for key in keys:
             wn.agent.perception.__dict__[key] =  np.array(wn.agent.perception.__dict__[key])
 
+        #  FIX properlt
         # wn.dec_temp = 2
         wn.agent.perception.generative_model_rewards =  0
         wn.agent.perception.prior_policies =  0

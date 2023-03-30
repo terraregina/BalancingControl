@@ -196,6 +196,7 @@ def run_single_inference(fname):
 
         params_dict = {'infer_h':infer_h, 'infer_dec': infer_dec, 'infer_both': infer_both}
         print('\n\ninference for:')
+        print(param_file)
         print('\ninferring:')
         print(params_dict)
         print('agent vals pre inference ', 'dec: ', bayes_prc.dec_temp, ' h: ', bayes_prc.alpha_0)
@@ -206,7 +207,7 @@ def run_single_inference(fname):
             inferrer.init_svi(num_particles=n_part,optim_kwargs={'lr':lr})
             inferrer.load_parameters(param_file)
             
-        num_steps = 2500
+        num_steps = 750
         size_chunk = 50
         converged = False
         max_steps = False
@@ -265,7 +266,7 @@ def pooled(files_to_fit):
     # 17; 20
     
     if __name__ == '__main__':
-        with Pool(20) as pool:
+        with Pool(2) as pool:
 
             for _ in tqdm.tqdm(pool.map(run_single_inference, files_to_fit),\
                             total=len(files_to_fit)):
@@ -279,11 +280,12 @@ arrays = [cue_switch, degradation, reward_naive, context_trans_prob, cue_ambigui
           conf, task]
 
 lst = []
+
 for i in product(*arrays):
     lst.append(list(i))
 
 
-n_part = 1
+n_part = 20
 repetitions = 1
 files_to_fit = []
 data_folder = 'temp'
@@ -330,5 +332,5 @@ for l in lst:
 
 
 if __name__ == '__main__':
-    # run_single_inference(files_to_fit[0])
-    pooled(files_to_fit)
+    run_single_inference(files_to_fit[0])
+    # pooled(files_to_fit)
