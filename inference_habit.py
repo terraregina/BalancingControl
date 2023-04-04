@@ -34,12 +34,14 @@ class GeneralGroupInference(object):
         self.trials = agent.trials
         self.T = agent.T
         self.data = data
-        self.nsubs = data[data.keys()[0]].shape[-1]
+        self.nsubs = data[list(data.keys())[0]].shape[-1]
         self.svi = None
         self.loss = []
         self.npars = self.agent.perception.npars
-        self.mask = agent.perception.mask
+        if agent.perception.mask is None:
+            self.mask = ar.ones(data['actions'].shape) == 1
 
+        
     def model(self):
 
         """
@@ -62,8 +64,6 @@ class GeneralGroupInference(object):
 
         #for ind in range(self.nsubs):#pyro.plate("subject", len(self.data)):
         with pyro.plate('subject', self.nsubs) as ind:
-            # print(ind)
-
 
             base_dist = dist.Normal(0., 1.).expand_by([self.npars]).to_event(1)
             transform = dist.transforms.AffineTransform(mu, sig)
@@ -75,18 +75,18 @@ class GeneralGroupInference(object):
             # print(self.agent.perception.dirichlet_pol_params_init)
 
             for tau in pyro.markov(range(self.trials)):
+            # for tau in pyro.markov(range(20)):
                 for t in range(self.T):
 
                     if t==0:
                         prev_response = None
-                        context = None
                     else:
                         prev_response = self.data["actions"][tau, t-1]
-                        context = None
 
+                    self.agent.perception.planets = self.data["planets"][tau]
                     observation = self.data["observations"][tau, t]
-
                     reward = self.data["rewards"][tau, t]
+                    context = self.data['context_obs'][tau]
 
                     self.agent.update_beliefs(tau, t, observation, reward, prev_response, context)
 
@@ -106,29 +106,7 @@ class GeneralGroupInference(object):
                         # print(curr_response.shape)
                         # print(probs.shape)
 
-                        pyro.sample('res_{}_{}'.format(tau, t), dist.Categorical(probs.permute(1,2,0)).mask(self.mask[tau]), obs=curr_response)
-
-            # for tau in pyro.markov(range(self.trials)):
-            #     for t in range(self.T):
-
-            #         self.agent.update_beliefs(tau, t)
-
-            #         if t < self.T-1:
-
-            #             probs = self.agent.perception.posterior_actions[-1]
-            #             #print(probs)
-            #             if ar.any(ar.isnan(probs)):
-            #                 print(probs)
-            #                 print(dec_temp, lamb_pi, lamb_r)
-
-            #             curr_response = self.agent.perception.responses[:,tau,t]
-            #             #print(curr_response)
-            #             # print(tau, t, probs, curr_response)
-            #             #print(tau,t,param_dict)
-            #             draw_probs = probs.permute(2,0,1)
-
-            #             pyro.sample('res_{}_{}'.format(tau, t), dist.Categorical(draw_probs), obs=curr_response)
-
+                        pyro.sample('res_{}_{}'.format(tau, t), dist.Categorical(probs.permute(1,2,0)), obs=curr_response)
 
     def guide(self):
         # approximate posterior. assume MF: each param has his own univariate Normal.
@@ -164,6 +142,7 @@ class GeneralGroupInference(object):
             locs = pyro.sample("locs", dist.MultivariateNormal(m_locs, scale_tril=st_locs))
 
         return {'tau': tau, 'mu': mu, 'locs': locs}
+
 
     def init_svi(self, optim_kwargs={'lr': .01},
                  num_particles=10):
@@ -213,6 +192,7 @@ class GeneralGroupInference(object):
         #               "concentration_dec_temp": concentration_dec_temp, "rate_dec_temp": rate_dec_temp}
 
         # return self.loss#, param_dict
+
 
     def sample_posterior_predictive(self, n_samples=5):
 
@@ -264,6 +244,7 @@ class GeneralGroupInference(object):
 
         return sample_df
 
+
     def sample_posterior(self, n_samples=5):
         # keys = ["lamb_pi", "lamb_r", "h", "dec_temp"]
 
@@ -286,6 +267,7 @@ class GeneralGroupInference(object):
         sample_df = pd.DataFrame(sample_dict)
 
         return sample_df
+
 
     def analytical_posteriors(self):
 
@@ -353,9 +335,11 @@ class GeneralGroupInference(object):
 
         return sample_df
 
+
     def save_parameters(self, fname):
 
         pyro.get_param_store().save(fname)
+
 
     def load_parameters(self, fname):
 

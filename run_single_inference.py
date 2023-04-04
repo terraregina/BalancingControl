@@ -167,15 +167,15 @@ for i, pl in enumerate(planets):
 Rho = ar.as_tensor(Rho)
 
 if learn_rew:
-    C_alphas = ar.ones([nr, npl, nc])
+    C_beta = ar.ones([nr, npl, nc])
 else:
-    C_alphas = ar.as_tensor(np.tile(planet_reward_probs.T[:,:,None]*20,(1,1,nc))+1)
+    C_beta = ar.as_tensor(np.tile(planet_reward_probs.T[:,:,None]*20,(1,1,nc))+1)
     
 C_agent = ar.zeros((nr, npl, nc))
 for c in range(nc):
     for pl in range(npl):
-        C_agent[:,pl,c] = C_alphas[:,pl,c]/ C_alphas[:,pl,c].sum() 
-#         array([(C_alphas[:,i,c])/(C_alphas[:,i,c]).sum() for i in range(npl)]).T
+        C_agent[:,pl,c] = C_beta[:,pl,c]/ C_beta[:,pl,c].sum() 
+#         array([(C_beta[:,i,c])/(C_beta[:,i,c]).sum() for i in range(npl)]).T
 
 
 r = (1-q)/(nc-1)
@@ -238,7 +238,7 @@ bayes_prc = prc.FittingPerception(
     prior_pi, 
     pol,
     pol_par,
-    C_alphas,
+    C_beta,
     generative_model_context=C,
     T=T, 
     trials=trials,npart=n_part,dec_temp=dec_temp)

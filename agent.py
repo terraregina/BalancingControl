@@ -91,7 +91,7 @@ class FittingAgent(object):
             self.context_obs = ar.zeros(trials, dtype=int).to(device)
 
 
-    def reset(self, param_dict):
+    def reset_old(self, param_dict):
 
         self.actions = ar.zeros((self.trials, self.T), dtype = int).to(device)
         self.observations = ar.zeros((self.trials, self.T), dtype = int).to(device)
@@ -110,7 +110,7 @@ class FittingAgent(object):
         self.perception.reset()
 
 
-    def reset_new(self, locs):
+    def reset(self, locs):
 
         self.actions = ar.zeros((self.trials, self.T), dtype = int).to(device)
         self.observations = ar.zeros((self.trials, self.T), dtype = int).to(device)
@@ -133,11 +133,11 @@ class FittingAgent(object):
         if self.npl is not None:
             self.initiate_planet_rewards()
 
-        self.observations[tau,t] = observation
-        self.rewards[tau,t] = reward
+        # # self.observations[tau,t] = observation
+        # # self.rewards[tau,t] = reward
 
-        if context is not None:
-            self.context_obs[tau] = context
+        # if context is not None:
+        #     self.context_obs[tau] = context
 
         self.perception.update_beliefs(tau, t, observation, reward, prev_response, context)
 
@@ -146,11 +146,11 @@ class FittingAgent(object):
         
         # try:
         self.perception.curr_gen_mod_rewards.append(\
-            self.perception.generative_model_rewards[-1][:,self.perception.planets,:,:])
+            # self.perception.generative_model_rewards[-1][:,self.perception.planets,:,:])            
+            self.perception.generative_model_rewards[-1][:,self.perception.planets[:,0],:,:])
         # except:
             # self.perception.curr_gen_mod_rewards.append(\
             #     self.perception.generative_model_rewards[-1][:,self.perception.planets.long(),:,:])
-
 
 
     def generate_response(self, tau, t):
@@ -189,7 +189,28 @@ class FittingAgent(object):
 
         #return self.control_probs[tau,t]
 
-    def set_parameters(self, **kwargs):
+
+    def set_parameters(self, locs):
+        self.perception.set_parameters(locs)
+
+
+    def set_parameters_old(self, locs):
+
+        par_dict = self.locs_to_pars(locs)
+
+        if 'pol_lambda' in par_dict.keys():
+            self.pol_lambda = par_dict['pol_lambda']
+        if 'r_lambda' in par_dict.keys():
+            self.r_lambda = par_dict['r_lambda']
+        if 'dec_temp' in par_dict.keys():
+            self.dec_temp = par_dict['dec_temp']
+        if 'h' in par_dict.keys():
+            self.alpha_0 = 1./par_dict['h']
+        elif 'alpha_0' in par_dict.keys():
+            self.alpha_0 = par_dict['alpha_0']
+
+
+    def set_parameters_old(self, **kwargs):
         
         if 'pol_lambda' in kwargs.keys():
             self.perception.pol_lambda = kwargs['pol_lambda']
@@ -200,6 +221,7 @@ class FittingAgent(object):
         if 'h' in kwargs.keys():
             # print(1./kwargs['h'])
             self.perception.alpha_0 = 1./kwargs['h']
+
 
     def locs_to_pars(self, locs):
 

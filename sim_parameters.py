@@ -3,7 +3,7 @@ import numpy as np
 
 h = [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]
 # h = [1,2,3,4,5,6,7,8,9,100]
-# h=[100]
+h=[1,10,20,100]
 cue_ambiguity = [0.5]
 context_trans_prob = [0.7]
 cue_switch = [False]
@@ -12,24 +12,23 @@ training_blocks = [2]
 degradation_blocks=[2]
 degradation = [True]
 trials_per_block=[42]
-dec_temps = [2]
+dec_temps = [1,2,3]
 rews = [0]
 rewards = [[-1,0,1]]#[[-1,1]]
 dec_context = [2]#[100]
 conf = ['shuffled_and_blocked']
 
 
-# non-iterable simulation parameters
 use_fitting = True
-deterministic_action = True
-deterministic_reward = True
+deterministic_action = False
+deterministic_reward = False
+print_thoughts = False
+debugging = False
+repetitions = 1
+
 infer_h = True
 infer_dec = True
 init_reward_count_bias = 20
-# pooled arguments
-print_thoughts = True
-debugging = True
-repetitions = 1
 
 na = 2                                           # number of unique possible actions
 nc = 4                                           # number of contexts, planning and habit

@@ -29,8 +29,10 @@ else:
         device = ar.device("cpu")
     ar.set_default_dtype(ar.float64)
 
+
 class GroupFittingPerception(object):
     
+
     def __init__(self,
                  generative_model_observations,
                  generative_model_states,
@@ -45,7 +47,7 @@ class GroupFittingPerception(object):
                  transition_matrix_context = None,
                  number_of_planets = None,
                  T=5, trials=10, pol_lambda=0, r_lambda=0, non_decaying=0,
-                 dec_temp=array([1]), dec_temp_cont = 1, npl=3, nr=3,
+                 dec_temp=array([1]), dec_temp_cont = 1, nr=3,
                  possible_rewards=[-1,0,1], prior_context=None, npart=1, nsubs=1):
         
         self.generative_model_observations = generative_model_observations
@@ -57,7 +59,6 @@ class GroupFittingPerception(object):
         self.T = T
         self.trials = trials
         self.nh = prior_states.shape[0]
-        self.npl = npl
         self.pol_lambda = pol_lambda
         self.r_lambda = r_lambda
         self.non_decaying = non_decaying
@@ -113,6 +114,33 @@ class GroupFittingPerception(object):
         self.big_trans_matrix = ar.stack([ar.stack([generative_model_states[:,:,policies[pi,t],:] for pi in range(self.npi)]) for t in range(self.T-1)]).T.to(device)
         self.big_trans_matrix = ar.moveaxis(self.big_trans_matrix, (0,1,2,3,4), (3,0,1,2,4))
 
+
+    def locs_to_pars(self, locs):
+
+        par_dict = {"h": ar.sigmoid(locs[...,0]),
+                    # "pol_lambda": ar.sigmoid(locs[...,0]),
+                    # "r_lambda": ar.sigmoid(locs[...,1]),
+                    "dec_temp": 10*ar.sigmoid(locs[...,1])}
+        
+        # if self.infer_alpha_0:
+        #     if self.use_h:
+        #         par_dict = {"pol_lambda": ar.sigmoid(locs[...,0]),
+        #                     "r_lambda": ar.sigmoid(locs[...,1]),
+        #                     "dec_temp": 10*ar.sigmoid(locs[...,2]),
+        #                     "h": ar.sigmoid(locs[...,3])}
+        #     else:
+        #         par_dict = {"pol_lambda": ar.sigmoid(locs[...,0]),
+        #                     "r_lambda": ar.sigmoid(locs[...,1]),
+        #                     "dec_temp": 10*ar.sigmoid(locs[...,2]),
+        #                     "alpha_0": ar.exp(locs[...,3])+1}
+        # else:
+        #     par_dict = {"pol_lambda": ar.sigmoid(locs[...,0]),
+        #                 "r_lambda": ar.sigmoid(locs[...,1]),
+        #                 "dec_temp": 10*ar.sigmoid(locs[...,2])}
+
+        return par_dict
+
+
     def reset(self):
     
         if len(self.dec_temp.shape) > 1:
@@ -155,6 +183,22 @@ class GroupFittingPerception(object):
         self.posterior_actions = []
         self.posterior_contexts = []
         self.curr_gen_mod_rewards = []
+
+
+    def set_parameters(self, locs):
+
+        par_dict = self.locs_to_pars(locs)
+
+        if 'pol_lambda' in par_dict.keys():
+            self.pol_lambda = par_dict['pol_lambda']
+        if 'r_lambda' in par_dict.keys():
+            self.r_lambda = par_dict['r_lambda']
+        if 'dec_temp' in par_dict.keys():
+            self.dec_temp = par_dict['dec_temp']
+        if 'h' in par_dict.keys():
+            self.alpha_0 = 1./par_dict['h']
+        elif 'alpha_0' in par_dict.keys():
+            self.alpha_0 = par_dict['alpha_0']
 
 
     def make_current_messages(self, tau, t):
@@ -302,6 +346,7 @@ class GroupFittingPerception(object):
         self.posterior_policies.append(posterior)
         self.likelihoods.append(likelihood)
 
+
     def update_beliefs_context(self, tau, t, reward,\
                                 # posterior_states,\
                                 # posterior_policies,\
@@ -341,7 +386,8 @@ class GroupFittingPerception(object):
                 policy_surprise = 0
     
             if context is not None:
-                context_obs_suprise = ar.stack([ln(self.generative_model_context[context].T+1e-10) for n in range(self.npart)],dim=-1).to(device)
+                # context_obs_suprise = ar.stack([ln(self.generative_model_context[context].T+1e-10) for n in range(self.npart)],dim=-1).to(device)
+                context_obs_suprise = ar.stack([ln(self.generative_model_context[context[0]].T+1e-10) for n in range(self.npart)],dim=-1).to(device)
                 # NOT GONNA WORK DURING FITTING!
                 context_obs_suprise = ar.stack([context_obs_suprise for sub in range(self.nsubs)],dim=-1).to(device)
             else:
@@ -366,6 +412,7 @@ class GroupFittingPerception(object):
                 
             self.posterior_actions.append(posterior_actions)
     
+
     def update_beliefs_dirichlet_pol_params(self, tau, t):
         assert(t == self.T-1)
         chosen_pol = ar.argmax(self.posterior_policies[-1], axis=0).to(device)
@@ -391,6 +438,7 @@ class GroupFittingPerception(object):
 
         #return dirichlet_pol_params, prior_policies
 
+
     def update_beliefs_dirichlet_rew_params(self, tau, t, reward):
         posterior_states = self.posterior_states[-1]
         posterior_policies = self.posterior_policies[-1]
@@ -398,7 +446,7 @@ class GroupFittingPerception(object):
         st = ar.argmax(states, axis=0)
         # planets = ar.zeros([self.npl, self.nc])
         # planets[planets[st], ar.arange(self.nc)] = 1
-        pl = self.planets.clone()
+        pl = self.planets[:,0].clone()
         planets = ar.arange(self.npl).repeat(self.npart,self.nsubs, 1).permute(2,0,1)
 
 
