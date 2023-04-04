@@ -262,8 +262,8 @@ def run_group_inference(fnames):
         
     num_steps = 2500
     size_chunk = 50
-    # num_steps = 1
-    # size_chunk = 1
+    num_steps = 10
+    size_chunk = 5
     converged = False
     max_steps = False
     i = 0
