@@ -146,8 +146,8 @@ class FittingAgent(object):
         
         # try:
         self.perception.curr_gen_mod_rewards.append(\
-            # self.perception.generative_model_rewards[-1][:,self.perception.planets,:,:])            
-            self.perception.generative_model_rewards[-1][:,self.perception.planets[:,0],:,:])
+            self.perception.generative_model_rewards[-1][:,self.perception.planets,:,:])            
+            # self.perception.generative_model_rewards[-1][:,self.perception.planets[:,0],:,:])
         # except:
             # self.perception.curr_gen_mod_rewards.append(\
             #     self.perception.generative_model_rewards[-1][:,self.perception.planets.long(),:,:])

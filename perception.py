@@ -386,8 +386,8 @@ class GroupFittingPerception(object):
                 policy_surprise = 0
     
             if context is not None:
-                # context_obs_suprise = ar.stack([ln(self.generative_model_context[context].T+1e-10) for n in range(self.npart)],dim=-1).to(device)
-                context_obs_suprise = ar.stack([ln(self.generative_model_context[context[0]].T+1e-10) for n in range(self.npart)],dim=-1).to(device)
+                context_obs_suprise = ar.stack([ln(self.generative_model_context[context].T+1e-10) for n in range(self.npart)],dim=-1).to(device)
+                # context_obs_suprise = ar.stack([ln(self.generative_model_context[context[0]].T+1e-10) for n in range(self.npart)],dim=-1).to(device)
                 # NOT GONNA WORK DURING FITTING!
                 context_obs_suprise = ar.stack([context_obs_suprise for sub in range(self.nsubs)],dim=-1).to(device)
             else:
@@ -446,7 +446,7 @@ class GroupFittingPerception(object):
         st = ar.argmax(states, axis=0)
         # planets = ar.zeros([self.npl, self.nc])
         # planets[planets[st], ar.arange(self.nc)] = 1
-        pl = self.planets[:,0].clone()
+        pl = self.planets.clone()
         planets = ar.arange(self.npl).repeat(self.npart,self.nsubs, 1).permute(2,0,1)
 
 

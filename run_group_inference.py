@@ -114,6 +114,9 @@ def load_structured_data(fname):
     for key in data.keys():
         data[key] = ar.stack(data[key],dim=-1)
     
+    data['context_obs'] = data['context_obs'][...,0]
+    data['planets'] = data['planets'][...,0]
+    
     return data
 
 
