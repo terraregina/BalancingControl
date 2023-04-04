@@ -23,7 +23,7 @@ import distributions as analytical_dists
 device = ar.device("cpu")
 ar.set_default_dtype(ar.float64)
 
-ar.set_num_threads(1)
+# ar.set_num_threads(1)
 
 
 class GeneralGroupInference(object):

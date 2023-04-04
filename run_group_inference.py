@@ -59,8 +59,10 @@ def sample_posterior(inferrer, prefix, total_num_iter_so_far, n_samples=500,data
     sample_df['true_dec_temp'] = ar.tensor(true_dt).repeat(n_samples)
     sample_df['true_h'] = ar.tensor(true_h).repeat(n_samples)
 
-    sample_file = prefix+'recovered_samples_'+str(total_num_iter_so_far)+'_'+str(20)+'agents.csv'
-    fname = os.path.join(os.getcwd()+ "\\" + "inferences" + "\\" , sample_file)
+    sample_file = prefix+'recovered_samples_'+str(total_num_iter_so_far)+'_'+str(sample_df.subject.unique().size)+'agents.csv'
+    fname = os.path.join(os.getcwd()+ "/" + "inferences" + "/" , sample_file)
+    if sys.platform == 'win32':
+        fname = fname.replace('/','\\')
     sample_df.to_csv(fname)
 
     return sample_df
