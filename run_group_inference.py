@@ -70,13 +70,18 @@ def sample_posterior(inferrer, prefix, total_num_iter_so_far, n_samples=500,data
 
 def plot_posterior(total_df, total_num_iter_so_far, prefix):
 
+    if sys.platform == 'win32':
+        splitter = '\\'
+    else:
+        splitter = '/'
+    
     plt.figure()
     sns.scatterplot(data=total_df, x="true_dec_temp", y="inferred_dec_temp")
     plt.xlim([0,10])
     plt.ylim([0,10])
     plt.xlabel("true dec_temp")
     plt.ylabel("inferred dec_temp")
-    plt.savefig(prefix+"recovered_"+str(total_num_iter_so_far)+"_"+str(total_df.subject.unique().size)+"agents_dec_temp.png")
+    plt.savefig(os.getcwd() + splitter + 'inferences' + splitter + prefix+"recovered_"+str(total_num_iter_so_far)+"_"+str(total_df.subject.unique().size)+"agents_dec_temp.png")
     plt.show()
 
     plt.figure()
@@ -85,7 +90,7 @@ def plot_posterior(total_df, total_num_iter_so_far, prefix):
     plt.ylim([-0.1, 1.1])
     plt.xlabel("true h")
     plt.ylabel("inferred h")
-    plt.savefig(prefix+"recovered_"+str(total_num_iter_so_far)+"_"+str(total_df.subject.unique().size)+"agents_h.png")
+    plt.savefig(os.getcwd() + splitter + 'inferences' + splitter + prefix+"recovered_"+str(total_num_iter_so_far)+"_"+str(total_df.subject.unique().size)+"agents_h.png")
     plt.show()
 
 
@@ -254,10 +259,10 @@ def run_inference(fnames):
         inferrer.init_svi(num_particles=n_part,optim_kwargs={'lr':lr})
         inferrer.load_parameters(param_file)
         
-    num_steps = 2500
+    num_steps = 750
     size_chunk = 50
-    num_steps = 2
-    size_chunk = 1
+    # num_steps = 2
+    # size_chunk = 1
     converged = False
     max_steps = False
     i = 0
@@ -266,16 +271,16 @@ def run_inference(fnames):
     # for i in range(num_steps//size_chunk):
         # loss = inferrer.infer_posterior(iter_steps=size_chunk, num_particles=n_part,optim_kwargs={'lr':0.05})#, param_dict
         loss = inferrer.infer_posterior(iter_steps=size_chunk, num_particles=n_part,optim_kwargs={'lr':lr})#,total_num_iter_so_far = (i+1)*size_chunk
+        its = i*size_chunk
         total_num_iter_so_far = (i+1)*size_chunk
         print('total steps:', total_num_iter_so_far)
         inferrer.save_parameters(param_file)
         # converged = inferrer.check_convergence(loss)
         converged = False
         inferrer.agent.perception.param_names = list(inferrer.agent.perception.locs_to_pars(ar.zeros(2)).keys())
-        full_df = sample_posterior(inferrer, prefix, 100, data=data)
+        full_df = sample_posterior(inferrer, str(its) + '_'+prefix, 100, data=data)
         plot_posterior(full_df, 100, prefix)
         i += 1
-        its = i*size_chunk
         if converged:
             # inferred_params = inferrer.return_inferred_parameters()
             converged = True

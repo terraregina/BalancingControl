@@ -75,7 +75,7 @@ class GeneralGroupInference(object):
             # print(self.agent.perception.dirichlet_pol_params_init)
 
             # for tau in pyro.markov(range(self.trials)):
-            for tau in pyro.markov(range(10)):
+            for tau in pyro.markov(range(80)):
                 for t in range(self.T):
 
                     if t==0:
@@ -134,7 +134,7 @@ class GeneralGroupInference(object):
                         constraint=constraints.lower_cholesky)
 
         with pyro.plate('subject', self.nsubs):
-            locs = pyro.sample("locs", dist.MultivariateNormal(m_locs, scale_tril=st_locs))
+                locs = pyro.sample("locs", dist.MultivariateNormal(m_locs, scale_tril=st_locs))
 
         return {'tau': tau, 'mu': mu, 'locs': locs}
 
@@ -152,6 +152,8 @@ class GeneralGroupInference(object):
                                   vectorize_particles=True))
 
 
+        # pyro.render_model(self.model, filename='model.pdf', render_params=True,render_distributions=True)
+        # pyro.render_model(self.guide, filename='guide.pdf', render_params=True ,render_distributions=True)
     def infer_posterior(self,
                         iter_steps=1000, optim_kwargs={'lr': .01},
                                      num_particles=10):
