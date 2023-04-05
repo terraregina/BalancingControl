@@ -23,7 +23,7 @@ import distributions as analytical_dists
 device = ar.device("cpu")
 ar.set_default_dtype(ar.float64)
 
-# ar.set_num_threads(1)
+ar.set_num_threads(1)
 
 
 class GeneralGroupInference(object):
@@ -74,8 +74,8 @@ class GeneralGroupInference(object):
             # print(self.agent.perception.alpha_0)
             # print(self.agent.perception.dirichlet_pol_params_init)
 
-            for tau in pyro.markov(range(self.trials)):
-            # for tau in pyro.markov(range(20)):
+            # for tau in pyro.markov(range(self.trials)):
+            for tau in pyro.markov(range(10)):
                 for t in range(self.T):
 
                     if t==0:
@@ -100,11 +100,6 @@ class GeneralGroupInference(object):
                             print(tau,t)
 
                         curr_response = self.data["actions"][tau, t]
-                        #print(curr_response)
-                        # print(tau, t, probs, curr_response)
-                        #print(tau,t,param_dict)
-                        # print(curr_response.shape)
-                        # print(probs.shape)
 
                         pyro.sample('res_{}_{}'.format(tau, t), dist.Categorical(probs.permute(1,2,0)), obs=curr_response)
 
@@ -195,9 +190,6 @@ class GeneralGroupInference(object):
 
 
     def sample_posterior_predictive(self, n_samples=5):
-
-        elbo = pyro.infer.Trace_ELBO()
-        post_sample_dict = {}
 
         predictive = pyro.infer.Predictive(model=self.model, guide=self.guide, num_samples=n_samples)
         samples = predictive.get_samples()

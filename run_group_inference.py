@@ -76,7 +76,7 @@ def plot_posterior(total_df, total_num_iter_so_far, prefix):
     plt.ylim([0,10])
     plt.xlabel("true dec_temp")
     plt.ylabel("inferred dec_temp")
-    plt.savefig(prefix+"recovered_"+str(total_num_iter_so_far)+"_"+str(20)+"agents_dec_temp.svg")
+    plt.savefig(prefix+"recovered_"+str(total_num_iter_so_far)+"_"+str(total_df.subject.unique().size)+"agents_dec_temp.png")
     plt.show()
 
     plt.figure()
@@ -85,7 +85,7 @@ def plot_posterior(total_df, total_num_iter_so_far, prefix):
     plt.ylim([-0.1, 1.1])
     plt.xlabel("true h")
     plt.ylabel("inferred h")
-    plt.savefig(prefix+"recovered_"+str(total_num_iter_so_far)+"_"+str(20)+"agents_h.svg")
+    plt.savefig(prefix+"recovered_"+str(total_num_iter_so_far)+"_"+str(total_df.subject.unique().size)+"agents_h.png")
     plt.show()
 
 
@@ -122,7 +122,7 @@ def load_structured_data(fname):
     return data
 
 
-def run_group_inference(fnames):
+def run_inference(fnames):
 
     if sys.platform == 'win32':
         splitter = '\\'
@@ -209,8 +209,6 @@ def run_group_inference(fnames):
     else:
         dec_temp = array([dec_temp])
 
-    context_obs = array(world.environment.context_cues)
-
     # perception
     bayes_prc = prc.GroupFittingPerception(
         A, 
@@ -230,9 +228,6 @@ def run_group_inference(fnames):
     
     bayes_prc.npars = 2
     bayes_prc.mask = None
-    
-    ac_sel = asl.AveragedSelector(trials = trials, T = T,
-                                        number_of_actions = na)
 
     agent = agt.FittingAgent(bayes_prc, [], pol,
                     prior_states = state_prior,
@@ -242,8 +237,7 @@ def run_group_inference(fnames):
                     number_of_states = ns)
     
     inferrer = inf.GeneralGroupInference(agent, data)
-    lr = .01
-    param_file = inference_file + str(int(infer_h)) + str(int(infer_dec)) +'_' + str(lr)+ '.save'
+    param_file = inference_file + '_infh' + str(int(infer_h)) + '_infd' +  str(int(infer_dec)) +'_' + str(lr)+ '.save'
     if sys.platform == 'win32':
         param_file =  param_file.replace('/','\\')
     ###################################
@@ -262,8 +256,8 @@ def run_group_inference(fnames):
         
     num_steps = 2500
     size_chunk = 50
-    num_steps = 10
-    size_chunk = 5
+    num_steps = 2
+    size_chunk = 1
     converged = False
     max_steps = False
     i = 0
@@ -283,24 +277,38 @@ def run_group_inference(fnames):
         i += 1
         its = i*size_chunk
         if converged:
-            inferred_params = inferrer.return_inferred_parameters()
+            # inferred_params = inferrer.return_inferred_parameters()
             converged = True
+            print('inference finished')
         elif (its >= num_steps):
-            inferred_params = inferrer.return_inferred_parameters()
+            # inferred_params = inferrer.return_inferred_parameters()
             max_steps = True
+            print('ínference finished')
         else:
             inferrer.load_parameters(param_file)
+        
 
-
-def run(files_to_fit,pooled=False):
-
+def start_inference(files_to_fit,pooled=False):
+    # pooled artifact from before
     if pooled:
         with Pool(2) as pool:
-            for _ in tqdm.tqdm(pool.map(run_group_inference, files_to_fit),\
+            for _ in tqdm.tqdm(pool.map(run_inference, files_to_fit),\
                             total=len(files_to_fit)):
                     pass
     else:
-        run_group_inference(files_to_fit)
+        run_inference(files_to_fit)
+
+
+''' Unpack simulation files and load true values '''
+
+lr = .01
+n_part = 10
+repetitions = 1
+data_folder = 'temp'
+
+lst = []
+files_to_fit = []
+true_vals = []
 
 task = ['multiple_']
 
@@ -309,18 +317,9 @@ arrays = [cue_switch, degradation, reward_naive, context_trans_prob, cue_ambigui
           conf, task]
 
 
-lst = []
-
 for i in product(*arrays):
     lst.append(list(i))
 
-
-n_part = 10
-repetitions = 1
-files_to_fit = []
-data_folder = 'temp'
-
-true_vals = []
 
 for l in lst:
     switch, degr,learn_rew, q, p, h, tb, db, tpb, dec_temp, dec_temp_cont, rew, utility, config, task = l
@@ -365,8 +364,7 @@ for l in lst:
 
         true_vals.append({"dec_temp": ar.tensor(dec_temp), "h": ar.tensor(1./h)})
 
-# true_values_tensor = ar.stack(true_values_tensor)
 
 if __name__ == '__main__':
-    run(files_to_fit,pooled=False)
-    # run(files_to_fit,pooled=True)
+    start_inference(files_to_fit,pooled=False)
+    # start_inference(files_to_fit,pooled=True)

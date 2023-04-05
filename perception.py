@@ -121,23 +121,7 @@ class GroupFittingPerception(object):
                     # "pol_lambda": ar.sigmoid(locs[...,0]),
                     # "r_lambda": ar.sigmoid(locs[...,1]),
                     "dec_temp": 10*ar.sigmoid(locs[...,1])}
-        
-        # if self.infer_alpha_0:
-        #     if self.use_h:
-        #         par_dict = {"pol_lambda": ar.sigmoid(locs[...,0]),
-        #                     "r_lambda": ar.sigmoid(locs[...,1]),
-        #                     "dec_temp": 10*ar.sigmoid(locs[...,2]),
-        #                     "h": ar.sigmoid(locs[...,3])}
-        #     else:
-        #         par_dict = {"pol_lambda": ar.sigmoid(locs[...,0]),
-        #                     "r_lambda": ar.sigmoid(locs[...,1]),
-        #                     "dec_temp": 10*ar.sigmoid(locs[...,2]),
-        #                     "alpha_0": ar.exp(locs[...,3])+1}
-        # else:
-        #     par_dict = {"pol_lambda": ar.sigmoid(locs[...,0]),
-        #                 "r_lambda": ar.sigmoid(locs[...,1]),
-        #                 "dec_temp": 10*ar.sigmoid(locs[...,2])}
-
+    
         return par_dict
 
 
