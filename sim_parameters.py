@@ -24,7 +24,7 @@ deterministic_action = False
 deterministic_reward = False
 print_thoughts = False
 debugging = False
-repetitions = 1
+repetitions = 10
 
 infer_h = True
 infer_dec = True

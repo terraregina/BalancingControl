@@ -1,4 +1,4 @@
-#%% IMPORTS
+######################################################################### IMPORTS
 import json  as js
 from re import L
 import numpy as np
@@ -10,14 +10,12 @@ import pickle
 import jsonpickle as pickle
 import jsonpickle.ext.numpy as jsonpickle_numpy
 import json
-# from planet_sequences import generate_trials_df
 import pandas as pd
 from itertools import combinations, combinations_with_replacement, permutations, product
 import json
 import pandas as pd 
 
-
-#%% FUNCTIONS
+######################################################################### FUNCTIONS
 
 ''' 
 creates all permutations of a vector r which holds possible digits
@@ -27,6 +25,7 @@ for r = [0,1] and length of sequence n = 3
 def sequence_of_length_n(r,n):
     r = [r]*n
     return np.asarray(list(product(*r)))
+
 
 '''
 function calculating the expected reward for a given planet constelation and action sequence
@@ -65,6 +64,7 @@ def create_path(conf, p, stm, sequence, r):
     expectation = expectation.sum(axis=1)
 
     return expectation
+
 
 
 
@@ -215,7 +215,7 @@ def all_possible_trials(habit_seq=3, shuffle=False, extend=False, nr=3, seed = 1
             ntrials = slice.shape[0]
             dt = np.zeros([slice.shape[0], 3 + ns])
             plnts = slice.planet_conf                             # configuration indeces for s1 trials
-            plnts = planet_conf[[plnts.values.tolist()]].tolist() # actual planet configurations for s1 trials
+            plnts = planet_conf[plnts.values.tolist()]            # actual planet configurations for s1 trials
             strts = slice.start.values.tolist()                   # starting points for s1 trials 
             expected_reward = slice.expected_reward.values.tolist()  
             # dt[:,0] = [0]*ntrials      # context index
@@ -435,7 +435,7 @@ def create_config_files_planning(training_blocks, degradation_blocks, extinction
                             blocked = l[-1],shuffle=shuffle,block=block,nr=nr,stm=state_transition_matrix)
 
 
-#%% CALLS
+######################################################################### CALLS
 conf = ['shuffled', 'shuffled_and_blocked', 'blocked','original']
 data_folder='config'
 
@@ -484,7 +484,7 @@ elif matrix == 'old':
 # create_config_files_planning([2],[2],[1],[42], shuffle=True, blocked=True, block=3,nr=3)
 
 
-create_config_files_planning([4],[2],[2],[42], shuffle=True, blocked=True, block=3,nr=3)
+create_config_files_planning([2],[2],[2],[42], shuffle=True, blocked=True, block=3,nr=3)
 
 
 # create_config_files_planning([1],[1],[1],[28],shuffle=True,blocked=True, block=2,nr=3)
@@ -495,7 +495,7 @@ create_config_files_planning([4],[2],[2],[42], shuffle=True, blocked=True, block
 
 
 
-#%% Average reward in each phase
+######################################################################### Average reward in each phase
 import json 
 import pandas as pd
 import numpy as np
@@ -515,7 +515,7 @@ exp_rewards = df.groupby(by=['block','context']).mean('exp_reward')['exp_reward'
 # df.head(10)
 
 
-#%% Check if trials are the same if just shorter training
+######################################################################### Check if trials are the same if just shorter training
 
 import json 
 import pandas as pd
@@ -538,7 +538,7 @@ print(exp_rewards[6:12].sum()/6)
 # df.head(10)
 
 
-#%% OLD FUNCTIONS
+######################################################################### OLD FUNCTIONS
 
 def create_trials_two(data, 
                       switch_cues= False,\

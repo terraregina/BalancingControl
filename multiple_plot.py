@@ -101,6 +101,8 @@ def load_df(names,data_folder='data'):
 
         if use_fitting:
             post_dir_rewards = [p.dirichlet_rew_params[1:,:,:,:,0] for p in perception]
+            if post_dir_rewards[0].shape[-1] == 1:
+                post_dir_rewards = [p[...,0] for p in post_dir_rewards]
             post_dir_rewards = reshape(post_dir_rewards, nt=nt-1)
         else:
             post_dir_rewards = [a.posterior_dirichlet_rew for a in agents]
@@ -138,6 +140,8 @@ def load_df(names,data_folder='data'):
         entropy_context = np.zeros(ntrials*nt*nw)
         if use_fitting:
             post_context = [p.posterior_contexts[...,0] for p in perception]
+            if post_context[0].shape[-1] == 1:
+                post_context = [p[...,0] for p in post_context]
             post_context = reshape(post_context)
         else:
             post_context = [a.posterior_context for a in agents]
@@ -443,6 +447,8 @@ def load_df_reward_dkl(names,planet_reward_probs, planet_reward_probs_switched,d
 
         if use_fitting:
             reward_probs = [p.dirichlet_rew_params[1:,:,:,:,0] for p in perception]
+            if reward_probs[0].shape[-1] == 1:
+                reward_probs = [p[...,0] for p in reward_probs]
             reward_probs = reshape(reward_probs,3)
             reward_probs = [np.insert(probs,0,0,axis=1) for probs in reward_probs]
         else:
@@ -488,9 +494,11 @@ def load_df_reward_dkl(names,planet_reward_probs, planet_reward_probs_switched,d
         dkl_df = [None for _ in range(nw)]
         for w in range(nw):
             q = reward_probs[w]                         
-            e = (db+tb)*tpb                             
-            # q[e:,:,:,:,:] = np.tile(q[e-1,:,:,:,:], (2*tpb,1,1,1,1)) #why would I do this? 
-            q[e:,:,:,:,:] = np.tile(q[e-1,:,:,:,:], (tpb,1,1,1,1)) #why would I do this? 
+            e = (db+tb)*tpb
+            try:                             
+                q[e:,:,:,:,:] = np.tile(q[e-1,:,:,:,:], (2*tpb,1,1,1,1)) 
+            except:
+                q[e:,:,:,:,:] = np.tile(q[e-1,:,:,:,:], (tpb,1,1,1,1)) 
 
             q[q == 0] = 10**(-300)
             norm = 1/(q.sum(axis=2))                    # transform counts to distributions

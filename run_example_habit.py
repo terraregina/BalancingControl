@@ -208,36 +208,40 @@ def run_agent(par_list, trials, T, ns=6, na=2, nr=3, nc=2, npl=2, trial_type=Non
                                     number_of_states = ns)
 
     else:
-        ac_sel = asl.AveragedSelector(trials = trials, T = T,
-                                      number_of_actions = na)
 
-        bayes_prc = prc.HierarchicalPerception(A, 
-                               B, 
-                               C_agent, 
-                               transition_matrix_context, 
-                               state_prior, 
-                               utility, 
-                               prior_pi,
-                               pols,
-                               C_alphas,
-                               C_beta,
-                               trials= trials,
-                               generative_model_context = C,
-                               init_planets = planets[0],
-                               T=T,dec_temp=dec_temp, dec_temp_cont=dec_temp_cont,\
-                               possible_rewards = possible_rewards, r_lambda=rew)
+        raise Exception('Trying to run numpy agent from wrong file!\nTo simulate with the numpy agent or alternatively the torch agent without an extra dimension for the participant use the "run_example_habit_old.py" file')
+    
+    #     ac_sel = asl.AveragedSelector(trials = trials, T = T,
+    #                                   number_of_actions = na)
 
-        bayes_pln = agt.BayesianPlanner(bayes_prc,
-                                        ac_sel,
-                                        pols,
-                                        prior_states = state_prior,
-                                        prior_policies = prior_pi,
-                                        trials = trials,
-                                        prior_context = prior_context,            
-                                        learn_habit = True,
-                                        learn_rew = True,
-                                        number_of_planets = npl,
-                                        number_of_rewards = nr)
+    #     bayes_prc = prc.HierarchicalPerception(A, 
+    #                            B, 
+    #                            C_agent, 
+    #                            transition_matrix_context, 
+    #                            state_prior, 
+    #                            utility, 
+    #                            prior_pi,
+    #                            pols,
+    #                            C_alphas,
+    #                            C_beta,
+    #                            trials= trials,
+    #                            generative_model_context = C,
+    #                            init_planets = planets[0],
+    #                            T=T,dec_temp=dec_temp, dec_temp_cont=dec_temp_cont,\
+    #                            possible_rewards = possible_rewards, r_lambda=rew)
+
+    #     bayes_pln = agt.BayesianPlanner(bayes_prc,
+    #                                     ac_sel,
+    #                                     pols,
+    #                                     prior_states = state_prior,
+    #                                     prior_policies = prior_pi,
+    #                                     trials = trials,
+    #                                     prior_context = prior_context,            
+    #                                     learn_habit = True,
+    #                                     learn_rew = True,
+    #                                     number_of_planets = npl,
+    #                                     number_of_rewards = nr)
+    
     environment = PlanetWorld(A,
                     B,
                     Rho,
@@ -270,8 +274,8 @@ def run_agent(par_list, trials, T, ns=6, na=2, nr=3, nc=2, npl=2, trial_type=Non
     simulate experiment
     """
 
-    # w.simulate_experiment(range(trials))
-    w.simulate_experiment(range(2))
+    w.simulate_experiment(range(trials))
+    # w.simulate_experiment(range(2))
 
     w.h = learn_pol
     w.q = context_trans_prob
@@ -476,7 +480,7 @@ def run_single_sim(lst,
     return fname
 
 
-def pooled(arrays,seed=521312,repetitions=1, data_folder='temp',check_missing = True,debugging=False, use_fitting=False):
+def pooled(arrays,seed=521312,repetitions=1, data_folder='temp',check_missing = False,debugging=False, use_fitting=False):
 
     np.random.seed(seed)
     ar.manual_seed(seed)
