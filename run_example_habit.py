@@ -569,7 +569,7 @@ if __name__ == '__main__':
 
     arrays = [cue_switch, degradation, reward_naive, context_trans_prob, cue_ambiguity,h,\
             training_blocks, degradation_blocks, trials_per_block,dec_temps, dec_context, rews, rewards, utility, conf]
-    pooled(arrays,repetitions=repetitions,check_missing=False,debugging=debugging, use_fitting=use_fitting)
+    pooled(arrays,seed=34242, repetitions=repetitions,check_missing=False,debugging=debugging, use_fitting=use_fitting)
 
 
 

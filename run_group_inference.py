@@ -48,7 +48,9 @@ import sys
 def sample_posterior(inferrer, prefix, total_num_iter_so_far, n_samples=500,data=None):
 
     sample_df = inferrer.sample_posterior(n_samples=n_samples) #inferrer.plot_posteriors(n_samples=1000)
-    sample_df[['inferred_h', 'inferred_dec_temp']] = sample_df.groupby('subject').transform('mean')
+
+    cols = ['inferred_' + par for par in inferrer.agent.perception.param_names]
+    sample_df[cols] = sample_df.groupby('subject').transform('mean')
     sample_df.sort_values('subject', inplace=True)
 
     true_dt = [val['dec_temp'] for val in true_vals]
@@ -56,8 +58,8 @@ def sample_posterior(inferrer, prefix, total_num_iter_so_far, n_samples=500,data
 
 
     sample_df = sample_df.copy()
-    sample_df['true_dec_temp'] = ar.tensor(true_dt).repeat(n_samples)
-    sample_df['true_h'] = ar.tensor(true_h).repeat(n_samples)
+    sample_df['true_dec_temp'] = ar.tensor(true_dt).repeat_interleave(n_samples)
+    sample_df['true_h'] = ar.tensor(true_h).repeat_interleave(n_samples)
 
     sample_file = prefix+'recovered_samples_'+str(total_num_iter_so_far)+'_'+str(sample_df.subject.unique().size)+'agents.csv'
     fname = os.path.join(os.getcwd()+ "/" + "inferences" + "/" , sample_file)
@@ -74,24 +76,26 @@ def plot_posterior(total_df, total_num_iter_so_far, prefix):
         splitter = '\\'
     else:
         splitter = '/'
-    
-    plt.figure()
-    sns.scatterplot(data=total_df, x="true_dec_temp", y="inferred_dec_temp")
-    plt.xlim([0,10])
-    plt.ylim([0,10])
-    plt.xlabel("true dec_temp")
-    plt.ylabel("inferred dec_temp")
-    plt.savefig(os.getcwd() + splitter + 'inferences' + splitter + prefix+"recovered_"+str(total_num_iter_so_far)+"_"+str(total_df.subject.unique().size)+"agents_dec_temp.png")
-    plt.show()
 
-    plt.figure()
-    sns.scatterplot(data=total_df, x="true_h", y="inferred_h")
-    plt.xlim([-0.1, 1.1])
-    plt.ylim([-0.1, 1.1])
-    plt.xlabel("true h")
-    plt.ylabel("inferred h")
-    plt.savefig(os.getcwd() + splitter + 'inferences' + splitter + prefix+"recovered_"+str(total_num_iter_so_far)+"_"+str(total_df.subject.unique().size)+"agents_h.png")
-    plt.show()
+    if 'inferred_dec_temp' in total_df.columns:
+        plt.figure()
+        sns.scatterplot(data=total_df, x="true_dec_temp", y="inferred_dec_temp")
+        plt.xlim([0,10])
+        plt.ylim([0,10])
+        plt.xlabel("true dec_temp")
+        plt.ylabel("inferred dec_temp")
+        plt.savefig(os.getcwd() + splitter + 'inferences' + splitter + prefix+"recovered_"+str(total_num_iter_so_far)+"_"+str(total_df.subject.unique().size)+"agents_dec_temp.png")
+        # plt.show()
+        
+    if 'inferred_h' in total_df.columns:
+        plt.figure()
+        sns.scatterplot(data=total_df, x="true_h", y="inferred_h")
+        plt.xlim([-0.1, 1.1])
+        plt.ylim([-0.1, 1.1])
+        plt.xlabel("true h")
+        plt.ylabel("inferred h")
+        plt.savefig(os.getcwd() + splitter + 'inferences' + splitter + prefix+"recovered_"+str(total_num_iter_so_far)+"_"+str(total_df.subject.unique().size)+"agents_h.png")
+    # plt.show()
 
 
 def load_structured_data(fname):
@@ -136,8 +140,9 @@ def run_inference(fnames):
             
     inference_file = 'inferences' + splitter + 'group_inf_' + '-'.join([str(h) for h in hs]) + '_reps' + str(repetitions)
     
+
+
     nsubs = len(fnames)
-    print('subjects: ',nsubs)
     data = load_structured_data(fnames)
     with open(fnames[0], 'r') as infile:
         loaded = json.load(infile)
@@ -152,11 +157,23 @@ def run_inference(fnames):
     T = world.T #number of time steps in each trial
     npi = na**(T-1)
 
+    pars = {'h':infer_h, 'dec_temp':infer_dec}
+
+    if infer_both:
+        npars = 2
+    else:
+        npars = 1
+
     if infer_h:
         learn_pol = 1
     else:
         learn_pol = h
         
+    if infer_dec:
+        dec_temp = array([1])
+    else:
+        dec_temp = array([dec_temp])
+    
     utility = ar.tensor(world.agent.perception.prior_rewards)
     """
     create matrices
@@ -209,10 +226,7 @@ def run_inference(fnames):
 
     pol_par = alphas
 
-    if infer_dec:
-        dec_temp = array([1])
-    else:
-        dec_temp = array([dec_temp])
+
 
     # perception
     bayes_prc = prc.GroupFittingPerception(
@@ -231,7 +245,9 @@ def run_inference(fnames):
         T=T, dec_temp = dec_temp, dec_temp_cont = dec_temp_cont,
         npart=n_part, nsubs = nsubs, nr=nr, trials=trials)
     
-    bayes_prc.npars = 2
+    
+    bayes_prc.npars = npars
+    bayes_prc.pars = pars
     bayes_prc.mask = None
 
     agent = agt.FittingAgent(bayes_prc, [], pol,
@@ -258,9 +274,9 @@ def run_inference(fnames):
     if os.path.exists(os.path.join(os.getcwd(), param_file)):
         inferrer.init_svi(num_particles=n_part,optim_kwargs={'lr':lr})
         inferrer.load_parameters(param_file)
-        
-    num_steps = 750
-    size_chunk = 50
+         
+    num_steps = 500
+    size_chunk = 3
     # num_steps = 2
     # size_chunk = 1
     converged = False
@@ -277,7 +293,7 @@ def run_inference(fnames):
         inferrer.save_parameters(param_file)
         # converged = inferrer.check_convergence(loss)
         converged = False
-        inferrer.agent.perception.param_names = list(inferrer.agent.perception.locs_to_pars(ar.zeros(2)).keys())
+        # inferrer.agent.perception.param_names = list(inferrer.agent.perception.locs_to_pars(ar.zeros(2)).keys())
         full_df = sample_posterior(inferrer, str(its) + '_'+prefix, 100, data=data)
         plot_posterior(full_df, 100, prefix)
         i += 1
@@ -307,8 +323,9 @@ def start_inference(files_to_fit,pooled=False):
 ''' Unpack simulation files and load true values '''
 
 lr = .01
-n_part = 10
-repetitions = 1
+# n_part = 20
+n_part = 15
+
 data_folder = 'temp'
 
 lst = []
@@ -325,6 +342,7 @@ arrays = [cue_switch, degradation, reward_naive, context_trans_prob, cue_ambigui
 for i in product(*arrays):
     lst.append(list(i))
 
+repetitions = len(lst)
 
 for l in lst:
     switch, degr,learn_rew, q, p, h, tb, db, tpb, dec_temp, dec_temp_cont, rew, utility, config, task = l

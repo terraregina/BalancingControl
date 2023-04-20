@@ -3,7 +3,7 @@ import numpy as np
 
 h = [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]
 # h = [1,2,3,4,5,6,7,8,9,100]
-h=[1,100]
+h=[1]
 cue_ambiguity = [0.5]
 context_trans_prob = [0.7]
 cue_switch = [False]
@@ -12,7 +12,7 @@ training_blocks = [2]
 degradation_blocks=[2]
 degradation = [True]
 trials_per_block=[42]
-dec_temps = [1,2]
+dec_temps = [1,3]
 rews = [0]
 rewards = [[-1,0,1]]#[[-1,1]]
 dec_context = [2]#[100]
@@ -24,9 +24,9 @@ deterministic_action = False
 deterministic_reward = False
 print_thoughts = False
 debugging = False
-repetitions = 10
+repetitions = 3
 
-infer_h = True
+infer_h = False
 infer_dec = True
 init_reward_count_bias = 20
 

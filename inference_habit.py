@@ -70,12 +70,15 @@ class GeneralGroupInference(object):
             locs = pyro.sample('locs', dist.TransformedDistribution(base_dist, [transform]))
 
             self.agent.reset(locs)
-            #self.agent.set_parameters(pol_lambda=lamb_pi, r_lambda=lamb_r, dec_temp=dec_temp)
-            # print(self.agent.perception.alpha_0)
-            # print(self.agent.perception.dirichlet_pol_params_init)
+            # if ar.any(self.agent.perception.alpha_0 < 1):
+            #     raise Exception('alpha_0 is under 1')
+            
+            
+            # print('alpha_0: \n', self.agent.perception.alpha_0.detach().numpy().round(3))
+            # print('alpha_0 mean: \n', self.agent.perception.alpha_0.detach().numpy().mean(axis=0).round(3))
 
             # for tau in pyro.markov(range(self.trials)):
-            for tau in pyro.markov(range(80)):
+            for tau in pyro.markov(range(20)):
                 for t in range(self.T):
 
                     if t==0:
@@ -156,13 +159,20 @@ class GeneralGroupInference(object):
         # pyro.render_model(self.guide, filename='guide.pdf', render_params=True ,render_distributions=True)
     def infer_posterior(self,
                         iter_steps=1000, optim_kwargs={'lr': .01},
-                                     num_particles=10):
+                                     num_particles=10,render_models = True):
         """Perform SVI over free model parameters.
         """
 
         #pyro.clear_param_store()
         if self.svi is None:
             self.init_svi(optim_kwargs, num_particles)
+        
+        if render_models:
+            pyro.render_model( self.model, filename='model.pdf', render_params=True, render_distributions=True)
+
+        if render_models:
+            pyro.render_model( self.guide, filename='guide.pdf', render_params=True, render_distributions=True)
+            
 
         loss = []
         pbar = tqdm(range(iter_steps), position=0)

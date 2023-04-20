@@ -117,11 +117,19 @@ class GroupFittingPerception(object):
 
     def locs_to_pars(self, locs):
 
-        par_dict = {"h": ar.sigmoid(locs[...,0]),
-                    # "pol_lambda": ar.sigmoid(locs[...,0]),
-                    # "r_lambda": ar.sigmoid(locs[...,1]),
-                    "dec_temp": 10*ar.sigmoid(locs[...,1])}
-    
+        pars = [key if self.pars[key] else '' for key in self.pars.keys()]
+        self.param_names = list(filter(lambda x: x != '', pars))
+        
+        par_dict = {}
+
+        for i, par in enumerate(self.param_names):
+                     
+            if par == 'dec_temp':
+                par_dict[par] = 10*ar.sigmoid(locs[...,i])
+            else:
+                par_dict[par] = ar.sigmoid(locs[...,i])
+                
+
         return par_dict
 
 
