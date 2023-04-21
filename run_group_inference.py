@@ -49,7 +49,7 @@ def sample_posterior(inferrer, prefix, total_num_iter_so_far, n_samples=500,data
 
     sample_df = inferrer.sample_posterior(n_samples=n_samples) #inferrer.plot_posteriors(n_samples=1000)
     sample_df[['inferred_h', 'inferred_dec_temp']] = sample_df.groupby('subject').transform('mean')
-    sample_df.sort_values('subject', inplace=True)
+    # sample_df.sort_values('subject', inplace=True)
 
     true_dt = [val['dec_temp'] for val in true_vals]
     true_h = [val['h'] for val in true_vals]
@@ -82,17 +82,19 @@ def plot_posterior(total_df, total_num_iter_so_far, prefix):
     plt.xlabel("true dec_temp")
     plt.ylabel("inferred dec_temp")
     plt.savefig(os.getcwd() + splitter + 'inferences' + splitter + prefix+"recovered_"+str(total_num_iter_so_far)+"_"+str(total_df.subject.unique().size)+"agents_dec_temp.png")
-    plt.show()
+    plt.close()
+    # plt.show()
 
     plt.figure()
     sns.scatterplot(data=total_df, x="true_h", y="inferred_h")
     plt.xlim([-0.1, 1.1])
     plt.ylim([-0.1, 1.1])
+    # plt.ylim([-0.1, 110])
     plt.xlabel("true h")
     plt.ylabel("inferred h")
     plt.savefig(os.getcwd() + splitter + 'inferences' + splitter + prefix+"recovered_"+str(total_num_iter_so_far)+"_"+str(total_df.subject.unique().size)+"agents_h.png")
-    plt.show()
-
+    # plt.show()
+    plt.close()
 
 def load_structured_data(fname):
     data = {}
@@ -259,7 +261,7 @@ def run_inference(fnames):
         inferrer.init_svi(num_particles=n_part,optim_kwargs={'lr':lr})
         inferrer.load_parameters(param_file)
         
-    num_steps = 750
+    num_steps = 2000
     size_chunk = 50
     # num_steps = 2
     # size_chunk = 1

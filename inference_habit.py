@@ -75,7 +75,7 @@ class GeneralGroupInference(object):
             # print(self.agent.perception.dirichlet_pol_params_init)
 
             # for tau in pyro.markov(range(self.trials)):
-            for tau in pyro.markov(range(80)):
+            for tau in pyro.markov(range(84)):
                 for t in range(self.T):
 
                     if t==0:

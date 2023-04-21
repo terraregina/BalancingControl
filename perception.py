@@ -117,7 +117,9 @@ class GroupFittingPerception(object):
 
     def locs_to_pars(self, locs):
 
-        par_dict = {"h": ar.sigmoid(locs[...,0]),
+        par_dict = {
+                    "h": ar.sigmoid(locs[...,0]),
+                    # "h": ar.exp(locs[...,0]+1),
                     # "pol_lambda": ar.sigmoid(locs[...,0]),
                     # "r_lambda": ar.sigmoid(locs[...,1]),
                     "dec_temp": 10*ar.sigmoid(locs[...,1])}
@@ -181,6 +183,8 @@ class GroupFittingPerception(object):
             self.dec_temp = par_dict['dec_temp']
         if 'h' in par_dict.keys():
             self.alpha_0 = 1./par_dict['h']
+            # self.alpha_0 = par_dict['h']
+
         elif 'alpha_0' in par_dict.keys():
             self.alpha_0 = par_dict['alpha_0']
 
@@ -382,7 +386,7 @@ class GroupFittingPerception(object):
 
 
             posterior = ar.pow(posterior,self.dec_temp_cont)
-            posterior /= posterior.sum()
+            posterior /= posterior.sum(axis=0)
             self.posterior_contexts.append(posterior)
 
         if t<self.T-1:
