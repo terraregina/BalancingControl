@@ -12,7 +12,7 @@ training_blocks = [2]
 degradation_blocks=[2]
 degradation = [True]
 trials_per_block=[42]
-dec_temps = [1,3]
+dec_temps = [1]
 rews = [0]
 rewards = [[-1,0,1]]#[[-1,1]]
 dec_context = [2]#[100]
@@ -24,7 +24,7 @@ deterministic_action = False
 deterministic_reward = False
 print_thoughts = False
 debugging = False
-repetitions = 3
+repetitions = 2
 
 infer_h = False
 infer_dec = True

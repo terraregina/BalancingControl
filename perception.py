@@ -390,7 +390,7 @@ class GroupFittingPerception(object):
 
 
             posterior = ar.pow(posterior,self.dec_temp_cont)
-            posterior /= posterior.sum()
+            posterior /= posterior.sum(axis=0)
             self.posterior_contexts.append(posterior)
 
         if t<self.T-1:
