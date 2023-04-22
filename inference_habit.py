@@ -95,9 +95,7 @@ class GeneralGroupInference(object):
                         probs = self.agent.perception.posterior_actions[-1]
                         #print(probs)
                         if ar.any(ar.isnan(probs)):
-                            #print(probs)
-                            #print(param_dict)
-                            print(tau,t)
+                            raise Exception('there was nans')
 
                         curr_response = self.data["actions"][tau, t]
 
@@ -152,8 +150,8 @@ class GeneralGroupInference(object):
                                   vectorize_particles=True))
 
 
-        # pyro.render_model(self.model, filename='model.pdf', render_params=True,render_distributions=True)
-        # pyro.render_model(self.guide, filename='guide.pdf', render_params=True ,render_distributions=True)
+        pyro.render_model(self.model, filename='model.pdf', render_params=True,render_distributions=True)
+        pyro.render_model(self.guide, filename='guide.pdf', render_params=True ,render_distributions=True)
     def infer_posterior(self,
                         iter_steps=1000, optim_kwargs={'lr': .01},
                                      num_particles=10):
@@ -166,6 +164,7 @@ class GeneralGroupInference(object):
 
         loss = []
         pbar = tqdm(range(iter_steps), position=0)
+
         for step in pbar:#range(iter_steps):
             loss.append(ar.tensor(self.svi.step()).to(device))
             pbar.set_description("Mean ELBO %6.2f" % ar.tensor(loss[-20:]).mean())

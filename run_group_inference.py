@@ -7,7 +7,19 @@
 Created on Mon Sep 13 14:09:11 2021
 @author: sarah
 """
+# #%%
 
+# import pandas as pd
+# import numpy as np
+# import seaborn as sns
+
+# fname = '/home/terra/Desktop/BalancingControl/inferences/1250_multiple_fitt_switchrecovered_samples_100_20agents.csv'
+# df = pd.read_csv(fname)
+
+# df.head()
+# fig = sns.scatterplot(data=df, x='true_h', y='inferred_h', hue='true_dec_temp')
+# fig.set_ylim([0,1])
+# #%%
 
 # from curses import erasechar
 import torch as ar
@@ -76,23 +88,23 @@ def plot_posterior(total_df, total_num_iter_so_far, prefix):
         splitter = '/'
     
     plt.figure()
-    sns.scatterplot(data=total_df, x="true_dec_temp", y="inferred_dec_temp")
+    sns.scatterplot(data=total_df, x="true_dec_temp", y="inferred_dec_temp", hue='true_h')
     plt.xlim([0,10])
     plt.ylim([0,10])
     plt.xlabel("true dec_temp")
     plt.ylabel("inferred dec_temp")
-    plt.savefig(os.getcwd() + splitter + 'inferences' + splitter + prefix+"recovered_"+str(total_num_iter_so_far)+"_"+str(total_df.subject.unique().size)+"agents_dec_temp.png")
+    plt.savefig(os.getcwd() + splitter + 'inferences' + splitter + prefix[:-6]+"recovered_"+str(total_num_iter_so_far)+"_"+str(total_df.subject.unique().size)+"agents_dec_temp.png")
     plt.close()
     # plt.show()
 
     plt.figure()
-    sns.scatterplot(data=total_df, x="true_h", y="inferred_h")
+    sns.scatterplot(data=total_df, x="true_h", y="inferred_h", hue='true_dec_temp')
     plt.xlim([-0.1, 1.1])
     plt.ylim([-0.1, 1.1])
     # plt.ylim([-0.1, 110])
     plt.xlabel("true h")
     plt.ylabel("inferred h")
-    plt.savefig(os.getcwd() + splitter + 'inferences' + splitter + prefix+"recovered_"+str(total_num_iter_so_far)+"_"+str(total_df.subject.unique().size)+"agents_h.png")
+    plt.savefig(os.getcwd() + splitter + 'inferences' + splitter  + prefix[:-6]+"recovered_"+str(total_num_iter_so_far)+"_"+str(total_df.subject.unique().size)+"agents_h.png")
     # plt.show()
     plt.close()
 
@@ -136,7 +148,7 @@ def run_inference(fnames):
     else:
         splitter = '/'
             
-    inference_file = 'inferences' + splitter + 'group_inf_' + '-'.join([str(h) for h in hs]) + '_reps' + str(repetitions)
+    inference_file = 'inferences' + splitter + 'group_inf_h_' + '-'.join([str(h) for h in hs])+ '_dt_'+'-'.join([str(dec) for dec in dec_temps])  + '_reps' + str(repetitions)
     
     nsubs = len(fnames)
     print('subjects: ',nsubs)
@@ -244,7 +256,7 @@ def run_inference(fnames):
                     number_of_states = ns)
     
     inferrer = inf.GeneralGroupInference(agent, data)
-    param_file = inference_file + '_infh' + str(int(infer_h)) + '_infd' +  str(int(infer_dec)) +'_' + str(lr)+ '.save'
+    param_file = inference_file + '_ih' + str(int(infer_h)) + '_id' +  str(int(infer_dec)) +'_' + 'lr' + str(lr)+ '.save'
     if sys.platform == 'win32':
         param_file =  param_file.replace('/','\\')
     ###################################
@@ -310,7 +322,6 @@ def start_inference(files_to_fit,pooled=False):
 
 lr = .01
 n_part = 10
-repetitions = 1
 data_folder = 'temp'
 
 lst = []
@@ -356,7 +367,9 @@ for l in lst:
     worlds = pickle.decode(loaded)
     meta = worlds[-1]
 
-    for wi, world in enumerate(worlds[:-1]):
+    # for wi, world in enumerate(worlds[:-1]):
+    for wi in range(repetitions):
+        world = worlds[wi]
         individual_world = [world,meta]
         fname = os.path.join(os.getcwd(), data_folder + '/' + name  + '_rep' + str(wi) +  ".json")
         if sys.platform == "win32":
